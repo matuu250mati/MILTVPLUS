@@ -182,7 +182,7 @@ class _PlayerPanel extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(color: const Color(0xFF030407), borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withOpacity(.08))),
+          border: Border.all(color: Colors.white.withValues(alpha: .08))),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         alignment: Alignment.center,
@@ -223,14 +223,14 @@ class _ChannelList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: AppTheme.panel.withOpacity(.92), borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(.07))),
+        decoration: BoxDecoration(color: AppTheme.panel.withValues(alpha: .92), borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: .07))),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(padding: EdgeInsets.fromLTRB(16, 17, 16, 12),
                 child: Text('CANALES', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2))),
-            const Divider(height: 1, color: Color(0x223FFFFFFF)),
+            const Divider(height: 1, color: Color(0x223FFFFF)),
             Expanded(
               child: channels.isEmpty
                   ? const Center(child: Padding(padding: EdgeInsets.all(18),
@@ -241,7 +241,7 @@ class _ChannelList extends StatelessWidget {
                       separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0x1AFFFFFF)),
                       itemBuilder: (context, index) => ListTile(
                         selected: selected == index,
-                        selectedTileColor: AppTheme.accent.withOpacity(.08),
+                        selectedTileColor: AppTheme.accent.withValues(alpha: .08),
                         onTap: () => onSelect(index),
                         leading: Icon(Icons.circle, size: 9, color: selected == index ? AppTheme.accent : AppTheme.muted),
                         title: Text(channels[index].name, maxLines: 1, overflow: TextOverflow.ellipsis),
