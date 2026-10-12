@@ -10,15 +10,18 @@ Aplicación multimedia para Android desarrollada con Flutter, con identidad visu
 - Sección +18 protegida por PIN numérico con hash guardado mediante almacenamiento seguro.
 - GitHub Actions para análisis, tests y generación de APK release.
 
-## Ejecución local
+## Preparar Android localmente
 Requisitos: Flutter stable, Android SDK y Java 17.
 
+Como el repositorio genera los archivos nativos con la versión de Flutter disponible, ejecutá:
+
 ```bash
+bash tool/bootstrap_android.sh
 flutter pub get
 flutter run
 ```
 
-La carpeta nativa Android se genera con Flutter. En CI se crea en un directorio temporal y se copia al proyecto para usar los archivos de Gradle compatibles con la versión estable de Flutter instalada en ese runner.
+El script reemplaza la carpeta `android/` con una estructura creada por Flutter stable. El workflow de GitHub Actions usa el mismo procedimiento en un runner limpio.
 
 ## TV en vivo
 En TV EN VIVO, usá **AGREGAR** e ingresá un nombre y una URL HTTP(S) HLS válida (normalmente `.m3u8`). Se deben usar únicamente fuentes propias o autorizadas. La lista de canales de esta primera versión se mantiene en memoria y se reinicia al cerrar la app.
