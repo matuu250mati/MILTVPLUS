@@ -76,9 +76,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       selected = index;
     });
     final old = controller;
-    controller = null;
-    await old?.dispose();
     try {
+      // Keep the current stream alive while the next source initializes.
       final next = VideoPlayerController.networkUrl(Uri.parse(channel.streamUrl));
       await next.initialize().timeout(const Duration(seconds: 20));
       if (!mounted) {
@@ -90,6 +89,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         controller = next;
         loading = false;
       });
+      await old?.dispose();
     } catch (_) {
       if (!mounted) return;
       setState(() {
