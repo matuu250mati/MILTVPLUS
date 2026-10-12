@@ -45,8 +45,36 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Validate Supabase secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
+            echo "::error::Missing GitHub Actions secret SUPABASE_URL."
+            exit 1
+          fi
+          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
+            echo "::error::Missing GitHub Actions secret SUPABASE_ANON_KEY."
+            exit 1
+          fi
+          if [[ ! "$SUPABASE_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?(/.*)?$ ]]; then
+            echo "::error::SUPABASE_URL must be a valid HTTPS URL."
+            exit 1
+          fi
+
       - name: Build release APK
-        run: flutter build apk --release
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
+            --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
