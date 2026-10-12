@@ -75,7 +75,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
             android:value="2" />
     </application>
 </manifest>
+MANIFEST
 
-# Remaining workflow uses same generated Android scaffold and this manifest.
 echo "Estructura Android generada y manifiesto 1000 TV Plus configurado para móviles, Android TV y TV Box."
 echo "Siguiente paso: cd al proyecto y ejecutar flutter pub get."
