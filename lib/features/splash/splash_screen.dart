@@ -90,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: LinearProgressIndicator(
                         minHeight: 2,
                         backgroundColor: Colors.white12,
-                        valueColor: const AlwaysStoppedAnimation(AppTheme.accent),
+                        valueColor: AlwaysStoppedAnimation(AppTheme.accent),
                       ),
                     ),
                   ],
