@@ -37,6 +37,7 @@ jobs:
         shell: bash
         run: |
           flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$RUNNER_TEMP/miltv-scaffold"
+          rm -rf android
           cp -R "$RUNNER_TEMP/miltv-scaffold/android" ./android
 
       - name: Resolve dependencies
