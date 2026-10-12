@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/media_models.dart';
 
 class ChannelsScreen extends StatefulWidget {
-  const ChannelsScreen({Key? key}) : super(key: key);
+  const ChannelsScreen({super.key});
 
   @override
   State<ChannelsScreen> createState() => _ChannelsScreenState();
@@ -24,17 +24,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     try {
       final response = await _supabase.from('channels').select();
       final data = List<Map<String, dynamic>>.from(response);
+      if (!mounted) return;
       setState(() {
         channels = data.map((json) => Channel.fromJson(json)).toList();
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar canales: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar canales: $e')),
+      );
     }
   }
 
@@ -68,13 +68,15 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     final channel = channels[index];
                     return InkWell(
                       onTap: () {
-                        // Reproductor HLS
+                        // La navegación al reproductor se integra en el módulo TV.
                       },
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.grey[900],
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.red.withOpacity(0.5)),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -85,12 +87,20 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                                     height: 60,
                                     fit: BoxFit.contain,
                                     errorBuilder: (context, error, stackTrace) =>
-                                        const Icon(Icons.tv, size: 50, color: Colors.white),
+                                        const Icon(
+                                      Icons.tv,
+                                      size: 50,
+                                      color: Colors.white,
+                                    ),
                                   )
-                                : const Icon(Icons.tv, size: 50, color: Colors.white),
+                                : const Icon(
+                                    Icons.tv,
+                                    size: 50,
+                                    color: Colors.white,
+                                  ),
                             const SizedBox(height: 8),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
                               child: Text(
                                 channel.name,
                                 textAlign: TextAlign.center,
