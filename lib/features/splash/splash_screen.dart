@@ -85,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ),
                     ),
                     const SizedBox(height: 35),
-                    SizedBox(
+                    const SizedBox(
                       width: 88,
                       child: LinearProgressIndicator(
                         minHeight: 2,
