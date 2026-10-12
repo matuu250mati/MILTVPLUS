@@ -4,6 +4,7 @@ import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
+import '../settings/settings_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -21,6 +22,7 @@ class _AppShellState extends State<AppShell> {
     _NavItem('ANIME', Icons.animation_rounded),
     _NavItem('EXPLORAR', Icons.explore_outlined),
     _NavItem('+18', Icons.lock_outline_rounded),
+    _NavItem('PERFIL', Icons.manage_accounts_outlined),
   ];
 
   int selected = 0;
@@ -40,8 +42,10 @@ class _AppShellState extends State<AppShell> {
         return const CatalogScreen(category: 'ANIME');
       case 5:
         return const CatalogScreen(category: 'EXPLORAR');
-      default:
+      case 6:
         return const AdultGateScreen();
+      default:
+        return const SettingsScreen();
     }
   }
 
@@ -78,19 +82,20 @@ class _AppShellState extends State<AppShell> {
                                 color: AppTheme.accent,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.play_arrow_rounded,
-                                  color: Colors.black, size: 29),
+                              child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 29),
                             ),
                             if (menuExpanded) ...[
                               const SizedBox(width: 10),
                               const Expanded(
-                                child: Text('MILTV\nPLUS',
-                                    style: TextStyle(
-                                      height: .98,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.3,
-                                    )),
+                                child: Text(
+                                  'MILTV\nPLUS',
+                                  style: TextStyle(
+                                    height: .98,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.3,
+                                  ),
+                                ),
                               ),
                             ],
                           ],
@@ -135,17 +140,17 @@ class _AppShellState extends State<AppShell> {
                                         if (menuExpanded) ...[
                                           const SizedBox(width: 12),
                                           Expanded(
-                                            child: Text(item.label,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  letterSpacing: .6,
-                                                  fontWeight: active
-                                                      ? FontWeight.w800
-                                                      : FontWeight.w600,
-                                                  color: active ? Colors.white : AppTheme.muted,
-                                                )),
+                                            child: Text(
+                                              item.label,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                letterSpacing: .6,
+                                                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                                                color: active ? Colors.white : AppTheme.muted,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ],
