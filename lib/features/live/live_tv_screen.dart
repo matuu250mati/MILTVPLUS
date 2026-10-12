@@ -103,10 +103,28 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       selected = index;
     });
     final old = controller;
+    VideoPlayerController? next;
     try {
-      // Keep the current stream alive while the next source initializes.
-      final next = VideoPlayerController.networkUrl(Uri.parse(channel.streamUrl));
-      await next.initialize().timeout(const Duration(seconds: 20));
+      Object? lastError;
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        final candidate =
+            VideoPlayerController.networkUrl(Uri.parse(channel.streamUrl));
+        try {
+          await candidate.initialize().timeout(const Duration(seconds: 20));
+          next = candidate;
+          break;
+        } catch (exception) {
+          lastError = exception;
+          await candidate.dispose();
+          if (attempt < 3) {
+            await Future<void>.delayed(Duration(seconds: attempt));
+          }
+        }
+      }
+
+      if (next == null) {
+        throw StateError('HLS initialization failed after retries: $lastError');
+      }
       if (!mounted) {
         await next.dispose();
         return;
@@ -121,10 +139,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'No se pudo abrir la señal. Verificá URL, conexión, formato HLS y permisos de la fuente.';
+        error =
+            'No se pudo abrir la señal tras 3 intentos. Verificá URL, conexión, formato HLS y permisos de la fuente.';
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
