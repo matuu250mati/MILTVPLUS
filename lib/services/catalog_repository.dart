@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../main.dart';
+import '../core/supabase_config.dart';
 
 /// Read-only access to the published MILTV PLUS catalog.
 /// RLS requires a signed-in Supabase user for catalog queries.
