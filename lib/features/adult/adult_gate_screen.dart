@@ -90,7 +90,7 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: AppTheme.panel, borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(.08))),
+                border: Border.all(color: Colors.white.withValues(alpha: .08))),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -116,8 +116,8 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
           padding: const EdgeInsets.all(22),
           child: Container(
             padding: const EdgeInsets.all(26),
-            decoration: BoxDecoration(color: AppTheme.panel.withOpacity(.96), borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(.09))),
+            decoration: BoxDecoration(color: AppTheme.panel.withValues(alpha: .96), borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: .09))),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
