@@ -24,7 +24,7 @@ class _AppShellState extends State<AppShell> {
   ];
 
   int selected = 0;
-  bool expanded = true;
+  bool? expanded;
 
   Widget page() {
     switch (selected) {
@@ -48,6 +48,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 760;
+    final menuExpanded = expanded ?? wide;
     return Scaffold(
       body: Stack(
         children: [
@@ -57,7 +58,7 @@ class _AppShellState extends State<AppShell> {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
-                  width: expanded ? (wide ? 224 : 190) : 72,
+                  width: menuExpanded ? 224 : 72,
                   margin: const EdgeInsets.fromLTRB(10, 10, 0, 10),
                   decoration: BoxDecoration(
                     color: const Color(0xCC111521),
@@ -80,7 +81,7 @@ class _AppShellState extends State<AppShell> {
                               child: const Icon(Icons.play_arrow_rounded,
                                   color: Colors.black, size: 29),
                             ),
-                            if (expanded) ...[
+                            if (menuExpanded) ...[
                               const SizedBox(width: 10),
                               const Expanded(
                                 child: Text('MILTV\nPLUS',
@@ -111,7 +112,7 @@ class _AppShellState extends State<AppShell> {
                                   onTap: () => setState(() => selected = index),
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: expanded ? 12 : 0,
+                                      horizontal: menuExpanded ? 12 : 0,
                                       vertical: 13,
                                     ),
                                     decoration: BoxDecoration(
@@ -124,14 +125,14 @@ class _AppShellState extends State<AppShell> {
                                           : null,
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: expanded
+                                      mainAxisAlignment: menuExpanded
                                           ? MainAxisAlignment.start
                                           : MainAxisAlignment.center,
                                       children: [
                                         Icon(item.icon,
                                             size: 20,
                                             color: active ? AppTheme.accent : AppTheme.muted),
-                                        if (expanded) ...[
+                                        if (menuExpanded) ...[
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(item.label,
@@ -157,9 +158,9 @@ class _AppShellState extends State<AppShell> {
                         ),
                       ),
                       IconButton(
-                        tooltip: expanded ? 'Contraer menú' : 'Expandir menú',
-                        onPressed: () => setState(() => expanded = !expanded),
-                        icon: Icon(expanded
+                        tooltip: menuExpanded ? 'Contraer menú' : 'Expandir menú',
+                        onPressed: () => setState(() => expanded = !menuExpanded),
+                        icon: Icon(menuExpanded
                             ? Icons.keyboard_double_arrow_left_rounded
                             : Icons.keyboard_double_arrow_right_rounded),
                       ),
