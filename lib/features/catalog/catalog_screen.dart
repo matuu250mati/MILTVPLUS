@@ -82,14 +82,14 @@ class _MediaCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(17),
               gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color, AppTheme.panel]),
-              border: Border.all(color: Colors.white.withOpacity(.07)),
+              border: Border.all(color: Colors.white.withValues(alpha: .07)),
             ),
             child: Stack(
               children: [
                 Positioned(
                   right: 10,
                   bottom: 2,
-                  child: Text(item.symbol, style: TextStyle(fontSize: 70, color: Colors.white.withOpacity(.09))),
+                  child: Text(item.symbol, style: TextStyle(fontSize: 70, color: Colors.white.withValues(alpha: .09))),
                 ),
                 Center(child: Text(item.symbol, style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w300, color: AppTheme.accent))),
                 const Positioned(top: 10, left: 10, child: Icon(Icons.play_circle_outline_rounded, color: Colors.white70)),
