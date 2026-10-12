@@ -23,7 +23,7 @@ class HomeScreen extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [Color(0xFF343B61), Color(0xFF171C2D), Color(0xFF111521)],
             ),
-            border: Border.all(color: Colors.white.withOpacity(.12)),
+            border: Border.all(color: Colors.white.withValues(alpha: .12)),
           ),
           child: Stack(
             children: [
@@ -32,7 +32,7 @@ class HomeScreen extends StatelessWidget {
                 bottom: -30,
                 child: Icon(Icons.movie_filter_rounded,
                     size: compact ? 150 : 220,
-                    color: Colors.white.withOpacity(.05)),
+                    color: Colors.white.withValues(alpha: .05)),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,9 +91,9 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
-          color: AppTheme.accent.withOpacity(.12),
+          color: AppTheme.accent.withValues(alpha: .12),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppTheme.accent.withOpacity(.35)),
+          border: Border.all(color: AppTheme.accent.withValues(alpha: .35)),
         ),
         child: Text(label, style: const TextStyle(color: AppTheme.accent, fontSize: 9, letterSpacing: 1, fontWeight: FontWeight.w800)),
       );
@@ -110,7 +110,7 @@ class _CategoryTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.panel,
           borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: Colors.white.withOpacity(.06)),
+          border: Border.all(color: Colors.white.withValues(alpha: .06)),
         ),
         child: Row(
           children: [
