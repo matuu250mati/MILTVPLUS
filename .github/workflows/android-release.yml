@@ -33,12 +33,8 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Generate Android platform scaffold
-        shell: bash
-        run: |
-          flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$RUNNER_TEMP/miltv-scaffold"
-          rm -rf android
-          cp -R "$RUNNER_TEMP/miltv-scaffold/android" ./android
+      - name: Generate compatible Android scaffold
+        run: bash tool/bootstrap_android.sh
 
       - name: Resolve dependencies
         run: flutter pub get
