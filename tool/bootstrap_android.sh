@@ -16,6 +16,22 @@ cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
 # Android TV / TV Box y móviles: reemplaza el manifiesto generado por Flutter
 # por uno mínimo y mantenible para MIL TV Plus.
+mkdir -p "$root_dir/android/app/src/main/res/drawable"
+cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#071426" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@mipmap/ic_launcher"
+        android:width="104dp"
+        android:height="104dp"
+        android:gravity="center" />
+</layer-list>
+BANNER
+
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature
@@ -33,6 +49,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
         android:name="${applicationName}"
         android:label="MIL TV Plus"
         android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/tv_banner"
         android:usesCleartextTraffic="false"
         android:hardwareAccelerated="true"
         android:allowBackup="false"
