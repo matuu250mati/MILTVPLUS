@@ -1,6 +1,6 @@
-# MILTV PLUS
+# 1000 TV Plus
 
-Aplicación multimedia para Android desarrollada con Flutter, con identidad visual original y navegación inspirada en interfaces modernas de TV.
+Aplicación de entretenimiento desarrollada con Flutter, con identidad visual original y navegación adaptada a celulares, Android TV y TV Box compatibles.
 
 ## Incluye
 - Intro animada y navegación lateral retráctil.
@@ -21,7 +21,7 @@ flutter pub get
 flutter run
 ```
 
-El script reemplaza la carpeta `android/` con una estructura creada por Flutter stable. El workflow de GitHub Actions usa el mismo procedimiento en un runner limpio.
+El script genera la carpeta `android/` con Flutter stable y aplica el manifiesto para móviles, Android TV y TV Box. El workflow de GitHub Actions usa el mismo procedimiento en un runner limpio.
 
 ## TV en vivo
 En TV EN VIVO, usá **AGREGAR** e ingresá un nombre y una URL HTTP(S) HLS válida (normalmente `.m3u8`). Se deben usar únicamente fuentes propias o autorizadas. La lista de canales de esta primera versión se mantiene en memoria y se reinicia al cerrar la app.
@@ -30,4 +30,4 @@ En TV EN VIVO, usá **AGREGAR** e ingresá un nombre y una URL HTTP(S) HLS váli
 La primera vez se configura un PIN de 4 a 8 dígitos; en accesos posteriores se valida. El PIN no se guarda en texto plano. Este control es local a la app y no reemplaza los controles parentales del dispositivo.
 
 ## Compilación APK
-El workflow `.github/workflows/android-release.yml` se ejecuta en cada push a `main` o manualmente desde **GitHub → Actions**. Al finalizar, el APK aparece como artefacto `MILTVPLUS-android-release`. La compilación solo se considera verificada cuando el workflow termina correctamente.
+El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o manualmente desde **GitHub → Actions**. Al finalizar, el APK aparece como artefacto `MILTVPLUS-release-apk`. La compilación solo se considera verificada cuando el workflow termina correctamente.
