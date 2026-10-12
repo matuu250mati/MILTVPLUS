@@ -10,7 +10,7 @@ class MiltvPlusApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'MILTV PLUS',
+        title: '1000 TV Plus',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         home: const _IntroCoordinator(),
