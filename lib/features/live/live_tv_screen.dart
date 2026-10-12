@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
 import '../../services/stream_service.dart';
+import '../../services/channel_storage_service.dart';
 
 class LiveTvScreen extends StatefulWidget {
   const LiveTvScreen({super.key});
@@ -13,10 +14,27 @@ class LiveTvScreen extends StatefulWidget {
 class _LiveTvScreenState extends State<LiveTvScreen> {
   final channels = <TvChannel>[];
   final service = const StreamService();
+  final channelStorage = ChannelStorageService();
   VideoPlayerController? controller;
   String? error;
   bool loading = false;
   int selected = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    loadSavedChannels();
+  }
+
+  Future<void> loadSavedChannels() async {
+    try {
+      final saved = await channelStorage.load();
+      if (!mounted) return;
+      setState(() => channels.addAll(saved));
+    } catch (_) {
+      // Playback UI remains available if local preferences cannot be read.
+    }
+  }
 
   @override
   void dispose() {
@@ -64,6 +82,15 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     urlController.dispose();
     if (result != null && mounted) {
       setState(() => channels.add(result));
+      try {
+        await channelStorage.save(channels);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('El canal se agregó, pero no se pudo guardar en este dispositivo.')),
+          );
+        }
+      }
       await play(channels.length - 1);
     }
   }
