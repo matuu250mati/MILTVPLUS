@@ -14,8 +14,7 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 rm -rf "$root_dir/android"
 cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
-# Android TV / TV Box y móviles: reemplaza el manifiesto generado por Flutter
-# por uno mínimo y mantenible para MIL TV Plus.
+# Android TV / TV Box y móviles: manifiesto para 1000 TV Plus.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"
 cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
@@ -47,7 +46,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 
     <application
         android:name="${applicationName}"
-        android:label="MIL TV Plus"
+        android:label="1000 TV Plus"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/tv_banner"
         android:usesCleartextTraffic="false"
@@ -76,7 +75,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
             android:value="2" />
     </application>
 </manifest>
-MANIFEST
 
-echo "Estructura Android generada y manifiesto MIL TV Plus configurado para móviles, Android TV y TV Box."
+# Remaining workflow uses same generated Android scaffold and this manifest.
+echo "Estructura Android generada y manifiesto 1000 TV Plus configurado para móviles, Android TV y TV Box."
 echo "Siguiente paso: cd al proyecto y ejecutar flutter pub get."
