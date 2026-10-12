@@ -63,7 +63,7 @@ class _AppShellState extends State<AppShell> {
                   decoration: BoxDecoration(
                     color: const Color(0xCC111521),
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.white.withOpacity(.08)),
+                    border: Border.all(color: Colors.white.withValues(alpha: .08)),
                   ),
                   child: Column(
                     children: [
@@ -117,11 +117,11 @@ class _AppShellState extends State<AppShell> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: active
-                                          ? AppTheme.accent.withOpacity(.13)
+                                          ? AppTheme.accent.withValues(alpha: .13)
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(13),
                                       border: active
-                                          ? Border.all(color: AppTheme.accent.withOpacity(.35))
+                                          ? Border.all(color: AppTheme.accent.withValues(alpha: .35))
                                           : null,
                                     ),
                                     child: Row(
