@@ -42,7 +42,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final auth = Supabase.instance.client.auth;
       if (_phoneMode) {
         final phone = _pendingPhone ??
-            '+549${_phone.text.replaceAll(RegExp(r'\\D'), '')}';
+            '+549' + _phone.text.replaceAll(RegExp(r'\D'), '');
         if (!_otpSent) {
           await auth.signInWithOtp(phone: phone);
           if (!mounted) return;
@@ -50,7 +50,7 @@ class _AuthScreenState extends State<AuthScreen> {
             _pendingPhone = phone;
             _otpSent = true;
             _error = false;
-            _message = 'Te enviamos un código por SMS a $phone. Ingresalo para verificar tu número.';
+            _message = 'Te enviamos un código por SMS a ' + phone + '. Ingresalo para verificar tu número.';
           });
         } else {
           await auth.verifyOTP(
@@ -190,7 +190,69 @@ class _AuthScreenState extends State<AuthScreen> {
                       textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted)),
                     const SizedBox(height: 26),
                     if (!_phoneMode) ...[
-${emailChunk}
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username, AutofillHints.email],
+                      decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+                        return value.contains('@') && !value.endsWith('@') ? null : 'Ingresá un correo válido.';
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: _hidePassword,
+                      autofillHints: _register ? const [AutofillHints.newPassword] : const [AutofillHints.password],
+                      decoration: InputDecoration(
+                        labelText: 'Contraseña',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                          icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        ),
+                      ),
+                      validator: (v) => (v ?? '').length >= 6 ? null : 'Usá al menos 6 caracteres.',
+                    ),
+                    if (!_register) Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: _busy ? null : _resetPassword, child: const Text('Olvidé mi contraseña')),
+                    ) else const SizedBox(height: 10),
+                    if (_message != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: (_error ? Colors.redAccent : AppTheme.accent).withValues(alpha: .10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(_message!, style: TextStyle(
+                          color: _error ? Colors.redAccent.shade100 : AppTheme.accent, height: 1.4,
+                        )),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                    FilledButton(
+                      onPressed: _busy ? null : _submit,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        child: _busy
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(_register ? 'CREAR CUENTA' : 'INICIAR SESIÓN'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _busy ? null : () => setState(() { _register = !_register; _message = null; }),
+                      child: Text(_register ? 'Ya tengo cuenta · Iniciar sesión' : '¿Primera vez? · Crear cuenta'),
+                    ),
+                      TextButton(
+                        onPressed: _busy ? null : () => setState(() {
+                          _phoneMode = true;
+                          _message = null;
+                        }),
+                        child: const Text('Continuar con número de celular (+54 9)'),
+                      ),
                     ] else ...[
                       TextFormField(
                         controller: _phone,
@@ -205,7 +267,7 @@ ${emailChunk}
                         ),
                         validator: (value) {
                           if (!_phoneMode) return null;
-                          final digits = (value ?? '').replaceAll(RegExp(r'\\D'), '');
+                          final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
                           return digits.length >= 10
                               ? null
                               : 'Ingresá el código de área y número (10 dígitos).';
@@ -228,8 +290,8 @@ ${emailChunk}
                         ),
                       ],
                       if (_message != null) ...[
+                        const SizedBox(height: 14),
                         Container(
-                          margin: const EdgeInsets.only(top: 16),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: (_error ? Colors.redAccent : AppTheme.accent)
