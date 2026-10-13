@@ -60,4 +60,20 @@ class CatalogService {
             ))
         .toList(growable: false);
   }
+
+  Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
+    final response = await _supabase
+        .from('episodes')
+        .select()
+        .eq('series_id', seriesId)
+        .eq('is_published', true)
+        .order('season_number', ascending: true)
+        .order('episode_number', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((item) => EpisodeModel.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ))
+        .toList(growable: false);
+  }
 }
