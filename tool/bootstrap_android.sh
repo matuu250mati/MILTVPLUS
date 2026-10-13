@@ -313,6 +313,38 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_indicator_select
 </selector>
 FOCUS_INDICATOR_SELECTOR
 
+
+# Selectores para foco y selección, adaptados semánticamente a la paleta MILTV PLUS.
+# Los IDs @7F060xxx son propios del APK de origen y no revelan sus valores reales.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_selector.xml" <<'FOCUS_SELECTED_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_selected="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/textColorPrimary" />
+</selector>
+FOCUS_SELECTED_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_secondary_selector.xml" <<'FOCUS_SELECTED_SECONDARY_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_selected="true"
+        android:color="?android:attr/textColorPrimary" />
+    <item android:color="?android:attr/textColorSecondary" />
+</selector>
+FOCUS_SELECTED_SECONDARY_SELECTOR
+
+# El tercer XML recibido usa el mismo color en los tres estados; equivale al
+# miltvplus_focus_indicator_selector.xml definido arriba y no necesita duplicarse.
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
