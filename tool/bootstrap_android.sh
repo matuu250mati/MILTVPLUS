@@ -10,7 +10,7 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
-if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
+if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/miltvplus_branding_version.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
   echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
   exit 0
 fi
@@ -937,6 +937,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
         android:name="${applicationName}"
         android:label="MILTVPLUS"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:banner="@drawable/tv_banner"
         android:usesCleartextTraffic="false"
         android:hardwareAccelerated="true"
@@ -965,6 +966,114 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
     </application>
 </manifest>
 MANIFEST
+
+# Iconos legacy de launcher para Android anterior a los iconos adaptativos (API 25 y anteriores).
+# Se generan con Python estándar para que la compilación no dependa de Pillow/ImageMagick.
+python3 - "$root_dir/android/app/src/main/res" <<'PY_ICON'
+import os
+import struct
+import sys
+import zlib
+
+res = sys.argv[1]
+size = 576
+background = (7, 20, 38, 255)
+accent = (184, 255, 53, 255)
+cyan = (56, 217, 255, 255)
+white = (255, 255, 255, 255)
+pixels = bytearray(background * (size * size))
+
+def put(x, y, color):
+    if 0 <= x < size and 0 <= y < size:
+        offset = (y * size + x) * 4
+        pixels[offset:offset + 4] = bytes(color)
+
+def rect(x, y, w, h, color):
+    for yy in range(max(0, y), min(size, y + h)):
+        start = (yy * size + max(0, x)) * 4
+        end = (yy * size + min(size, x + w)) * 4
+        if end > start:
+            pixels[start:end] = bytes(color) * ((end - start) // 4)
+
+def circle(cx, cy, radius, color):
+    r2 = radius * radius
+    for yy in range(max(0, cy - radius), min(size, cy + radius + 1)):
+        dy = yy - cy
+        for xx in range(max(0, cx - radius), min(size, cx + radius + 1)):
+            dx = xx - cx
+            if dx * dx + dy * dy <= r2:
+                put(xx, yy, color)
+
+def rounded_rect(x, y, w, h, radius, color):
+    rect(x + radius, y, w - 2 * radius, h, color)
+    rect(x, y + radius, w, h - 2 * radius, color)
+    circle(x + radius, y + radius, radius, color)
+    circle(x + w - radius - 1, y + radius, radius, color)
+    circle(x + radius, y + h - radius - 1, radius, color)
+    circle(x + w - radius - 1, y + h - radius - 1, radius, color)
+
+def line(x1, y1, x2, y2, thickness, color):
+    steps = max(abs(x2 - x1), abs(y2 - y1), 1)
+    radius = max(1, thickness // 2)
+    for i in range(steps + 1):
+        x = round(x1 + (x2 - x1) * i / steps)
+        y = round(y1 + (y2 - y1) * i / steps)
+        rect(x - radius, y - radius, thickness, thickness, color)
+
+def triangle(points, color):
+    (x1, y1), (x2, y2), (x3, y3) = points
+    ymin, ymax = min(y1, y2, y3), max(y1, y2, y3)
+    for y in range(ymin, ymax + 1):
+        intersections = []
+        for (ax, ay), (bx, by) in (((x1, y1), (x2, y2)), ((x2, y2), (x3, y3)), ((x3, y3), (x1, y1))):
+            if ay == by or y < min(ay, by) or y >= max(ay, by):
+                continue
+            intersections.append(round(ax + (y - ay) * (bx - ax) / (by - ay)))
+        if len(intersections) >= 2:
+            rect(min(intersections), y, max(intersections) - min(intersections) + 1, 1, color)
+
+# Futuristic TV silhouette, antennae, high-contrast screen, play symbol, and stand.
+line(228, 180, 176, 124, 15, cyan)
+line(348, 180, 400, 124, 15, cyan)
+circle(174, 122, 12, accent)
+circle(402, 122, 12, accent)
+rounded_rect(104, 176, 368, 238, 42, accent)
+rounded_rect(132, 204, 312, 182, 26, (3, 11, 22, 255))
+triangle([(244, 236), (244, 354), (346, 295)], white)
+rounded_rect(260, 410, 56, 42, 10, accent)
+rounded_rect(208, 448, 160, 28, 12, accent)
+rounded_rect(154, 332, 16, 16, 6, cyan)
+rounded_rect(406, 332, 16, 16, 6, cyan)
+
+def png_chunk(kind, data):
+    return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+def write_png(path, target):
+    # Every target size divides 576; nearest-neighbour scaling keeps the logo crisp.
+    scale = size // target
+    raw = bytearray()
+    for y in range(target):
+        raw.append(0)
+        for x in range(target):
+            source = ((y * scale) * size + x * scale) * 4
+            raw.extend(pixels[source:source + 4])
+    data = b"\x89PNG\r\n\x1a\n"
+    data += png_chunk(b"IHDR", struct.pack(">IIBBBBB", target, target, 8, 6, 0, 0, 0))
+    data += png_chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+    data += png_chunk(b"IEND", b"")
+    with open(path, "wb") as output:
+        output.write(data)
+
+for density, target in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
+    folder = os.path.join(res, "mipmap-" + density)
+    os.makedirs(folder, exist_ok=True)
+    write_png(os.path.join(folder, "ic_launcher.png"), target)
+    write_png(os.path.join(folder, "ic_launcher_round.png"), target)
+
+with open(os.path.join(res, "mipmap-anydpi-v26", "miltvplus_branding_version.txt"), "w", encoding="utf-8") as marker:
+    marker.write("MILTVPLUS launcher branding v1\n")
+print("Iconos de launcher MILTVPLUS generados para mdpi, hdpi, xhdpi, xxhdpi y xxxhdpi.")
+PY_ICON
 
 echo "Estructura Android generada con selectores de color MILTVPLUS y manifiesto para móviles, Android TV y TV Box."
 echo "Siguiente paso: ejecutar flutter pub get, flutter analyze y las pruebas del proyecto."
