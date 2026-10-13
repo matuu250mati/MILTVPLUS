@@ -767,6 +767,33 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.x
 </vector>
 PLATFORM_ROBOT
 
+# Icono adaptativo propio de MILTV PLUS (Android 8.0+).
+# Se reemplazan las referencias numéricas del APK de origen por recursos locales.
+mkdir -p "$root_dir/android/app/src/main/res/mipmap-anydpi-v26"
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_icon_background.xml" <<'ICON_BACKGROUND'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#071426" />
+</shape>
+ICON_BACKGROUND
+
+cat > "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" <<'ADAPTIVE_ICON'
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/miltvplus_icon_background" />
+    <foreground android:drawable="@drawable/miltvplus_ic_platform_robot" />
+</adaptive-icon>
+ADAPTIVE_ICON
+
+cat > "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" <<'ADAPTIVE_ICON_ROUND'
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/miltvplus_icon_background" />
+    <foreground android:drawable="@drawable/miltvplus_ic_platform_robot" />
+</adaptive-icon>
+ADAPTIVE_ICON_ROUND
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
