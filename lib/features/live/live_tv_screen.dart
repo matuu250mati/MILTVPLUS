@@ -153,13 +153,67 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     }
   }
 
+  static const _curatedFreePlaylist =
+      'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+  static const _globalPublicPlaylist =
+      'https://iptv-org.github.io/iptv/index.m3u';
+
   Future<void> importPlaylist() async {
-    // No se precarga una lista de terceros: el usuario debe indicar su fuente real y autorizada.
+    final source = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Fuentes de TV en vivo'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.verified_outlined),
+                title: const Text('Lista pública curada'),
+                subtitle: const Text('Free-TV · señales gratuitas seleccionadas'),
+                onTap: () => Navigator.pop(dialogContext, 'free-tv'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.public_rounded),
+                title: const Text('Catálogo público global'),
+                subtitle: const Text('IPTV-org · catálogo comunitario internacional'),
+                onTap: () => Navigator.pop(dialogContext, 'iptv-org'),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.link_rounded),
+                title: const Text('Usar mi propia lista M3U'),
+                subtitle: const Text('Ingresar una URL pública o autorizada'),
+                onTap: () => Navigator.pop(dialogContext, 'custom'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CANCELAR'),
+          ),
+        ],
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    if (source == 'free-tv') {
+      await _importPlaylistUrl(_curatedFreePlaylist, 'Free-TV');
+      return;
+    }
+    if (source == 'iptv-org') {
+      await _importPlaylistUrl(_globalPublicPlaylist, 'IPTV-org');
+      return;
+    }
+
     final urlController = TextEditingController();
     final playlistUrl = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Importar lista M3U'),
+        title: const Text('Importar lista M3U propia'),
         content: SizedBox(
           width: 520,
           child: TextField(
@@ -169,7 +223,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             maxLines: 3,
             decoration: const InputDecoration(
               labelText: 'URL pública o autorizada de la lista',
-              hintText: 'https://servidor/lista.m3u8',
+              hintText: 'https://servidor/lista.m3u',
             ),
           ),
         ),
@@ -187,7 +241,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     );
     urlController.dispose();
     if (playlistUrl == null || playlistUrl.isEmpty || !mounted) return;
+    await _importPlaylistUrl(playlistUrl, 'lista propia');
+  }
 
+  Future<void> _importPlaylistUrl(String playlistUrl, String sourceName) async {
+    if (!mounted) return;
     setState(() {
       _loadingChannels = true;
       error = null;
@@ -218,14 +276,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Importación terminada: ${imported.length} señales leídas; ${combined.length} canales únicos guardados. La reproducción se verifica al abrir cada canal.',
+            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados. La reproducción se confirma al abrir cada canal.',
           ),
         ),
       );
     } catch (exception) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar la lista: $exception')),
+        SnackBar(content: Text('No se pudo importar $sourceName: $exception')),
       );
     } finally {
       if (mounted) setState(() => _loadingChannels = false);
@@ -332,7 +390,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             OutlinedButton.icon(
               onPressed: _loadingChannels ? null : importPlaylist,
               icon: const Icon(Icons.playlist_add_rounded),
-              label: const Text('IMPORTAR M3U'),
+              label: const Text('FUENTES DE TV'),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
