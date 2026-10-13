@@ -14,8 +14,11 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 rm -rf "$root_dir/android"
 cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
-# Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
+# Recursos visuales propios de MILTV PLUS.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"
+mkdir -p "$root_dir/android/app/src/main/res/color"
+mkdir -p "$root_dir/android/app/src/main/res/values"
+
 cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
@@ -31,6 +34,25 @@ cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
 </layer-list>
 BANNER
 
+cat > "$root_dir/android/app/src/main/res/values/colors.xml" <<'COLORS'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="miltvplus_surface">#121212</color>
+    <color name="miltvplus_accent">#E50914</color>
+</resources>
+COLORS
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_accelerated_selector.xml" <<'SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:color="@color/miltvplus_surface"
+        android:state_accelerated="false" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+SELECTOR
+
+# Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature
@@ -87,5 +109,5 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 </manifest>
 MANIFEST
 
-echo "Estructura Android generada y manifiesto MILTV PLUS configurado para móviles, Android TV y TV Box."
-echo "Siguiente paso: cd al proyecto y ejecutar flutter pub get."
+echo "Estructura Android generada con recursos visuales MILTV PLUS y manifiesto para móviles, Android TV y TV Box."
+echo "Siguiente paso: ejecutar flutter pub get, flutter analyze y las pruebas del proyecto."
