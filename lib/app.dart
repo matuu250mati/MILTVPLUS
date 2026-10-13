@@ -11,7 +11,7 @@ class MiltvPlusApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'MILK TV PLUS',
+        title: 'MILTVPLUS',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         routes: LegacyRouteRegistry.routes,
