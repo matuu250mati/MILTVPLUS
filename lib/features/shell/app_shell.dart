@@ -115,13 +115,17 @@ class _AppShellState extends State<AppShell> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
                 children: [
-                  for (var index = 1; index < items.length; index++)
-                    if (index == 6)
-                      const Divider(height: 18, color: Color(0x303FFFFFFF))
-                    else
-                      const SizedBox.shrink(),
-                  for (var index = 0; index < items.length; index++)
-                    _drawerItem(index),
+                  _drawerItem(1),
+                  _drawerItem(0),
+                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  _drawerItem(2),
+                  _drawerItem(3),
+                  _drawerItem(4),
+                  _drawerItem(5),
+                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  _drawerItem(6),
+                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  _drawerItem(7),
                 ],
               ),
             ),
