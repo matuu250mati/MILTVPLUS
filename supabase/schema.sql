@@ -1,5 +1,5 @@
 -- MILTV PLUS catalog schema. Run in Supabase SQL Editor.
--- Only authenticated users can read published catalog entries.
+-- Published catalog metadata is publicly readable; write access remains server-side only.
 create extension if not exists pgcrypto;
 
 create table if not exists public.channels (
@@ -80,7 +80,7 @@ alter table public.episodes enable row level security;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
-  on public.channels for select to authenticated using (is_published);
+  on public.channels for select to anon, authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published movies" on public.movies;
 create policy "Authenticated users read published movies"
@@ -92,7 +92,7 @@ create policy "Authenticated users read published series"
 
 drop policy if exists "Authenticated users read published episodes" on public.episodes;
 create policy "Authenticated users read published episodes"
-  on public.episodes for select to authenticated
+  on public.episodes for select to anon, authenticated
   using (
     is_published and exists (
       select 1 from public.series s
