@@ -6,6 +6,7 @@ import '../../services/catalog_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
 import '../../services/m3u_playlist_service.dart';
+import 'live_player_screen.dart';
 
 class LiveTvScreen extends StatefulWidget {
   const LiveTvScreen({super.key});
@@ -400,89 +401,17 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   }
 
   Future<void> play(int index) async {
-    if (index < 0 || index >= channels.length) return;
-
-    final requestId = ++_playRequestId;
-    final channel = channels[index];
-    final old = controller;
-    setState(() {
-      loading = true;
-      error = null;
-      selected = index;
-      controller = null;
-    });
-
-    // Stop the previous signal immediately so audio never leaks across channels.
-    try {
-      await old?.pause();
-    } catch (_) {
-      // A controller may already be shutting down during rapid channel changes.
-    }
-    try {
-      await old?.dispose();
-    } catch (_) {
-      // Continue opening the requested channel even if cleanup of the old one fails.
-    }
-
-    final streamUri = Uri.tryParse(channel.streamUrl.trim());
-    if (streamUri == null ||
-        streamUri.host.isEmpty ||
-        streamUri.userInfo.isNotEmpty ||
-        (streamUri.scheme != 'https' && streamUri.scheme != 'http')) {
-      if (mounted && requestId == _playRequestId) {
-        setState(() {
-          loading = false;
-          error = 'La URL de esta señal no es válida. Quitá credenciales embebidas y usá una URL HTTP(S) directa.';
-        });
-      }
-      return;
-    }
-
-    VideoPlayerController? next;
-    Object? lastError;
-    try {
-      for (var attempt = 1; attempt <= 3; attempt++) {
-        final candidate = VideoPlayerController.networkUrl(streamUri);
-        try {
-          await candidate.initialize().timeout(const Duration(seconds: 20));
-          next = candidate;
-          break;
-        } catch (exception) {
-          lastError = exception;
-          await candidate.dispose();
-          if (attempt < 3) {
-            await Future<void>.delayed(Duration(seconds: attempt));
-          }
-        }
-      }
-
-      if (next == null) {
-        throw StateError('HLS initialization failed after retries: $lastError');
-      }
-      if (!mounted || requestId != _playRequestId) {
-        await next.dispose();
-        return;
-      }
-
-      await next.play();
-      if (!mounted || requestId != _playRequestId) {
-        await next.dispose();
-        return;
-      }
-      setState(() {
-        controller = next;
-        loading = false;
-      });
-    } catch (_) {
-      await next?.dispose();
-      if (!mounted || requestId != _playRequestId) return;
-      setState(() {
-        controller = null;
-        loading = false;
-        error =
-            'No se pudo abrir la señal tras 3 intentos. Verificá URL, conexión, formato HLS y permisos de la fuente.';
-      });
-    }
+    if (index < 0 || index >= channels.length || !mounted) return;
+    // Open the selected signal directly in the dedicated immersive player.
+    // The player owns its controller and disposes it when the viewer exits.
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LivePlayerScreen(
+          channels: List<TvChannel>.unmodifiable(channels),
+          initialIndex: index,
+        ),
+      ),
+    );
   }
 
   @override
