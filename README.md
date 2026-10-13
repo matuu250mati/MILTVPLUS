@@ -64,3 +64,23 @@ La migración permite leer solo filas publicadas de `movies` y `series` para usu
 anónimos y autenticados, necesario para explorar el catálogo sin iniciar sesión. No agrega
 políticas de escritura desde la app. Las URLs de reproducción solo deben publicarse cuando
 se tenga autorización para distribuir ese contenido.
+
+## Publicación de APK y descarga estable
+
+El workflow de Android genera el APK de release, un archivo SHA-256 y artefactos de compilación. Para publicar una versión permanente:
+
+1. Actualizá `version:` en `pubspec.yaml` (por ejemplo, `1.0.0+1`).
+2. Confirmá que las comprobaciones de Flutter y la compilación Android estén verdes.
+3. Creá y subí un tag que coincida con la versión pública, sin el sufijo de build: por ejemplo, `v1.0.0`.
+4. El workflow valida que el tag coincida con `pubspec.yaml`, vuelve a analizar/probar/compilar y publica el APK junto con sus checksums en GitHub Releases.
+
+La URL estable prevista para el sitio oficial es:
+
+`https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS-android.apk`
+
+También se publica una copia con versión en el nombre del archivo. El checksum SHA-256 permite comprobar que el APK descargado no se alteró durante la transferencia.
+
+**Downloader:** el código numérico de Downloader no se puede inventar ni generar solo desde el APK. Primero hay que publicar y probar la URL definitiva; luego se crea el código con el servicio de acortamiento compatible con Downloader y se verifica desde un dispositivo real. El sitio debe apuntar a la URL estable anterior o a una redirección bajo el dominio oficial.
+
+El enlace estable solo estará disponible después de publicar el primer tag de versión; los artefactos de Actions son temporales y se conservan 14 días.
+
