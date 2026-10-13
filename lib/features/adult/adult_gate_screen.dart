@@ -19,6 +19,7 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
   bool unlocked = false;
   bool accountVerified = false;
   bool ageConfirmed = false;
+  bool ageCheckboxChecked = false;
   String? error;
 
   @override
@@ -115,15 +116,15 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
                   const SizedBox(height: 12),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    value: ageConfirmed,
-                    onChanged: (value) => setState(() => ageConfirmed = value ?? false),
+                    value: ageCheckboxChecked,
+                    onChanged: (value) => setState(() => ageCheckboxChecked = value ?? false),
                     title: const Text('Confirmo que tengo 18 años o más.'),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
                   const SizedBox(height: 8),
                   SizedBox(width: double.infinity,
                     child: FilledButton(
-                      onPressed: ageConfirmed ? () => setState(() {}) : null,
+                      onPressed: ageCheckboxChecked ? () => setState(() => ageConfirmed = true) : null,
                       child: const Text('CONTINUAR'),
                     ),
                   ),
