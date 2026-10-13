@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
-import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
