@@ -63,7 +63,7 @@ jobs:
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
-          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\\.supabase\\.co$ ]]; then
+          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\.supabase\.co$ ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
