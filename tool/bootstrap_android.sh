@@ -63,6 +63,19 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_accelerated_selector_s
 </selector>
 SELECTOR_SECONDARY
 
+# Selector para controles habilitados/deshabilitados.
+# Se reemplazan los IDs numéricos decompilados por atributos Android con nombre.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_selector.xml" <<'ENABLED_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item android:color="?attr/colorControlNormal" />
+</selector>
+ENABLED_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
