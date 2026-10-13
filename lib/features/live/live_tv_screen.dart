@@ -115,7 +115,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             onPressed: () {
               final name = nameController.text.trim();
               final url = urlController.text.trim();
-              if (name.isEmpty || !service.isSupportedHlsUrl(url)) {
+              final parsedUrl = Uri.tryParse(url);
+              if (name.isEmpty || !service.isSupportedHlsUrl(url) || parsedUrl == null || parsedUrl.userInfo.isNotEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTP(S) HLS válida.')));
                 return;
               }
@@ -129,6 +130,15 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     nameController.dispose();
     urlController.dispose();
     if (result != null && mounted) {
+      final duplicate = channels.any((channel) =>
+          channel.name.trim().toLowerCase() == result.name.trim().toLowerCase() &&
+          channel.streamUrl.trim() == result.streamUrl.trim());
+      if (duplicate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ese canal ya está guardado.')),
+        );
+        return;
+      }
       setState(() => channels.add(result));
       try {
         await channelStorage.save(channels);
@@ -144,9 +154,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   }
 
   Future<void> importPlaylist() async {
-    final urlController = TextEditingController(
-      text: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
-    );
+    // No se precarga una lista de terceros: el usuario debe indicar su fuente real y autorizada.
+    final urlController = TextEditingController();
     final playlistUrl = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
