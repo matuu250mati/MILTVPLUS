@@ -263,9 +263,9 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                   ),
                 ),
               if (_controlsVisible)
-                Positioned.fill(
+                const Positioned.fill(
                   child: DecoratedBox(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
