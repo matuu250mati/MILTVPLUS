@@ -54,3 +54,13 @@ El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o man
 ## Estado real y próximos hitos
 
 Se conectaron las acciones de reproducción de películas y episodios al reproductor. Eso no implica que ya existan títulos publicados ni que las URLs del proveedor estén activas. Antes de distribuir una versión se deben pasar `flutter analyze`, `flutter test`, build APK y pruebas de reproducción con fuentes autorizadas en el dispositivo objetivo. La compilación y la reproducción no se consideran confirmadas hasta superar esas pruebas.
+
+
+## Supabase: acceso al catálogo publicado
+
+Si se ejecuta el SQL inicial en un proyecto que ya tiene tablas creadas, aplicá también
+`supabase/migrations/20261013_public_published_catalog.sql` desde el SQL Editor de Supabase.
+La migración permite leer solo filas publicadas de `movies` y `series` para usuarios
+anónimos y autenticados, necesario para explorar el catálogo sin iniciar sesión. No agrega
+políticas de escritura desde la app. Las URLs de reproducción solo deben publicarse cuando
+se tenga autorización para distribuir ese contenido.
