@@ -36,6 +36,9 @@ jobs:
       - name: Generate compatible Android scaffold
         run: bash tool/bootstrap_android.sh
 
+      - name: Validate Android TV manifest and security settings
+        run: bash tool/validate_android_tv.sh
+
       - name: Resolve dependencies
         run: flutter pub get
 
