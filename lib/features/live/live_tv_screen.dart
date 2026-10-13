@@ -25,7 +25,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   bool loading = false;
   bool _loadingChannels = false;
   int selected = -1;
-  int _playRequestId = 0;
   String _channelQuery = '';
   final TextEditingController _channelSearchController = TextEditingController();
 
