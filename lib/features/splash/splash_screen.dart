@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 25),
                     const Text(
-                      'MILTV PLUS',
+                      'MILK TV PLUS',
                       style: TextStyle(
                         fontSize: 27,
                         letterSpacing: 5,
