@@ -10,8 +10,8 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
-if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" ]]; then
-  echo "El proyecto Android ya está completo; se conserva sin regenerarlo."
+if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" ]]; then
+  echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
   exit 0
 fi
 
@@ -793,6 +793,7 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.x
         android:fillColor="#38D9FF"
         android:pathData="M77,39 L81,39 L81,43 L77,43 Z" />
 </vector>
+PLATFORM_ROBOT
 
 # Icono adaptativo propio de MILTVPLUS (Android 8.0+).
 # Se reemplazan las referencias numéricas del APK de origen por recursos locales.
