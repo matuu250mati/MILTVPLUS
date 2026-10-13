@@ -38,6 +38,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     if (_loadingChannels) return;
     setState(() => _loadingChannels = true);
     var remoteLoaded = false;
+    var publicFallbackLoaded = false;
     try {
       final saved = await channelStorage.load();
       final merged = <String, TvChannel>{};
@@ -61,6 +62,24 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Keep local channels usable when Supabase is offline or the user is signed out.
       }
 
+      // On a fresh install, load a curated free-to-air source so the screen
+      // does not start empty when neither local channels nor Supabase are configured.
+      if (merged.isEmpty) {
+        try {
+          final publicChannels =
+              await m3uPlaylistService.importFromUrl(_curatedFreePlaylist);
+          for (final channel in publicChannels) {
+            addUnique(channel);
+          }
+          publicFallbackLoaded = publicChannels.isNotEmpty;
+          if (publicFallbackLoaded) {
+            await channelStorage.save(merged.values.toList(growable: false));
+          }
+        } catch (_) {
+          // Keep the screen usable even when the public playlist is unavailable.
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         channels
@@ -70,9 +89,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       });
 
       if (showFeedback) {
-        final message = remoteLoaded
-            ? 'Lista recargada: ${channels.length} señales disponibles.'
-            : 'Lista local recargada. No se pudo actualizar el catálogo remoto.';
+        final message = publicFallbackLoaded
+            ? 'Lista pública inicial cargada: ${channels.length} señales. La reproducción se verifica al abrir cada canal.'
+            : remoteLoaded
+                ? 'Lista recargada: ${channels.length} señales disponibles.'
+                : 'Lista local recargada. No se pudo actualizar el catálogo remoto.';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
