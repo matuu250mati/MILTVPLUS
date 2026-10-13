@@ -28,6 +28,19 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   String _channelQuery = '';
   final TextEditingController _channelSearchController = TextEditingController();
 
+  String _streamIdentity(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null || uri.host.isEmpty) return value.trim();
+    return uri
+        .replace(
+          scheme: uri.scheme.toLowerCase(),
+          host: uri.host.toLowerCase(),
+          path: uri.normalizePath().path,
+          fragment: '',
+        )
+        .toString();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +57,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
 
       void addUnique(TvChannel channel) {
-        final key = channel.streamUrl.trim();
+        final key = _streamIdentity(channel.streamUrl);
         merged.putIfAbsent(key, () => channel);
       }
 
@@ -154,12 +167,10 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     nameController.dispose();
     urlController.dispose();
     if (result != null && mounted) {
-      final normalizedUrl = Uri.parse(result.streamUrl).normalizePath().toString();
-      final duplicate = channels.any((channel) {
-        final existingUrl = Uri.tryParse(channel.streamUrl.trim());
-        return existingUrl != null &&
-            existingUrl.normalizePath().toString() == normalizedUrl;
-      });
+      final normalizedUrl = _streamIdentity(result.streamUrl);
+      final duplicate = channels.any(
+        (channel) => _streamIdentity(channel.streamUrl) == normalizedUrl,
+      );
       if (duplicate) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ese canal ya está guardado.')),
@@ -353,7 +364,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
       for (final channel in channels) {
         merged.putIfAbsent(
-          channel.streamUrl.trim(),
+          _streamIdentity(channel.streamUrl),
           () => channel,
         );
       }
