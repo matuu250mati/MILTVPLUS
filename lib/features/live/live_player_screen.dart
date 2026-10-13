@@ -134,8 +134,9 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
         await next.dispose();
         return;
       }
+      _controller = next;
+      next.addListener(() => _handleControllerUpdate(next, request));
       setState(() {
-        _controller = next;
         _loading = false;
       });
       _showControls();
@@ -148,6 +149,23 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
         _error = 'La señal no respondió a tiempo. Puede estar caída, bloqueada por región o requerir otra URL autorizada.';
       });
     }
+  }
+
+  void _handleControllerUpdate(VideoPlayerController controller, int request) {
+    if (!mounted ||
+        request != _requestId ||
+        !identical(_controller, controller) ||
+        !controller.value.hasError ||
+        _error != null) {
+      return;
+    }
+    // Some streams fail only after initialization (expired tokens, segment
+    // errors, or a server stopping the live feed). Surface a recoverable error
+    // instead of leaving a black player with controls that appear functional.
+    setState(() {
+      _loading = false;
+      _error = 'La reproducción se interrumpió. Revisá la URL autorizada o probá otra señal.';
+    });
   }
 
   Future<void> _loadVariants(String source, int request) async {
