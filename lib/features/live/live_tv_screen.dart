@@ -237,8 +237,16 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     });
 
     // Stop the previous signal immediately so audio never leaks across channels.
-    await old?.pause();
-    await old?.dispose();
+    try {
+      await old?.pause();
+    } catch (_) {
+      // A controller may already be shutting down during rapid channel changes.
+    }
+    try {
+      await old?.dispose();
+    } catch (_) {
+      // Continue opening the requested channel even if cleanup of the old one fails.
+    }
 
     VideoPlayerController? next;
     Object? lastError;
