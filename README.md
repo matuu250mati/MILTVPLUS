@@ -44,6 +44,13 @@ El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o man
 - **Formatos de reproducción previstos:** HLS (.m3u8) y MP4 cuando el códec sea compatible con el dispositivo; subtítulos y pistas de audio dependen del formato y del reproductor.
 - **Catálogo:** conectar únicamente fuentes propias o licenciadas. No se incluyen películas, canales ni enlaces de terceros sin autorización.
 
+## Catálogo VOD y reproducción
+
+- Las tarjetas de películas abren el reproductor nativo cuando el registro publicado tiene `url_stream`.
+- Las tarjetas de series consultan `episodes`, muestran temporada/episodio y abren el reproductor con la URL del episodio publicado.
+- El reproductor valida URLs HTTP(S), inicializa `video_player`, ofrece reintento y muestra errores de reproducción sin simular que el título se reprodujo.
+- Para que el catálogo tenga títulos reales, el proveedor autorizado debe publicar metadatos y URLs de reproducción en Supabase: `movies`, `series` y `episodes`. La app no inventa títulos ni extrae catálogos privados sin un endpoint/configuración proporcionados.
+
 ## Estado real y próximos hitos
 
-Esta rama es una base funcional en desarrollo, no una copia completa de otra plataforma. Las pantallas de catálogo y TV en vivo necesitan validación integral con datos autorizados y dispositivos reales. Antes de distribuir una versión se deben pasar análisis, pruebas automatizadas, build APK, pruebas táctiles y pruebas con mando en Android TV. La compatibilidad no se considera confirmada hasta superar esas pruebas.
+Se conectaron las acciones de reproducción de películas y episodios al reproductor. Eso no implica que ya existan títulos publicados ni que las URLs del proveedor estén activas. Antes de distribuir una versión se deben pasar `flutter analyze`, `flutter test`, build APK y pruebas de reproducción con fuentes autorizadas en el dispositivo objetivo. La compilación y la reproducción no se consideran confirmadas hasta superar esas pruebas.
