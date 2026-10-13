@@ -76,6 +76,7 @@ class HomeScreen extends StatelessWidget {
             _CategoryTile('ANIME', Icons.animation_rounded, onTap: () => onNavigate(4)),
             _CategoryTile('DESTACADOS', Icons.auto_awesome_rounded, onTap: () => onNavigate(1)),
             _CategoryTile('EXPLORAR', Icons.explore_rounded, onTap: () => onNavigate(5)),
+            _CategoryTile('+18 · ADULTOS', Icons.lock_outline_rounded, onTap: () => onNavigate(6)),
           ],
         ),
       ],
