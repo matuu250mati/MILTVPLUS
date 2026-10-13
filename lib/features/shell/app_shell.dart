@@ -49,42 +49,6 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
-  void _openMoreMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTheme.panel,
-      showDragHandle: true,
-      isScrollControlled: false,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('MÁS SECCIONES',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-              ),
-              const SizedBox(height: 10),
-              for (final index in [4, 5, 6, 7])
-                ListTile(
-                  leading: Icon(items[index].icon, color: AppTheme.accent),
-                  title: Text(items[index].label),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    setState(() => selected = index);
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _pageView() => AnimatedSwitcher(
         duration: const Duration(milliseconds: 220),
         child: KeyedSubtree(key: ValueKey(selected), child: page()),
