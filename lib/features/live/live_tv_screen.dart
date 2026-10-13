@@ -154,9 +154,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     nameController.dispose();
     urlController.dispose();
     if (result != null && mounted) {
-      final duplicate = channels.any((channel) =>
-          channel.name.trim().toLowerCase() == result.name.trim().toLowerCase() &&
-          channel.streamUrl.trim() == result.streamUrl.trim());
+      final normalizedUrl = Uri.parse(result.streamUrl).normalizePath().toString();
+      final duplicate = channels.any((channel) {
+        final existingUrl = Uri.tryParse(channel.streamUrl.trim());
+        return existingUrl != null &&
+            existingUrl.normalizePath().toString() == normalizedUrl;
+      });
       if (duplicate) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ese canal ya está guardado.')),
@@ -246,6 +249,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         title: const Text('Fuentes de TV en vivo'),
         content: SizedBox(
           width: 520,
+          height: 480,
           child: ListView(
             shrinkWrap: true,
             children: [
