@@ -14,15 +14,14 @@ void main() {
     expect(isValidSupabaseUrl('https://project-ref.supabase.co?apikey=test'), isFalse);
   });
 
-  testWidgets('MILTV PLUS intro opens authentication when Supabase is not configured', (tester) async {
+  testWidgets('MILTV PLUS intro opens browseable home without requiring an account', (tester) async {
     await tester.pumpWidget(const MiltvPlusApp());
     expect(find.text('MILTV PLUS'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.'),
-      findsOneWidget,
-    );
-    expect(find.text('TV EN VIVO'), findsNothing);
+    expect(find.text('TV EN VIVO'), findsOneWidget);
+    expect(find.text('EXPLORÁ POR CATEGORÍA'), findsOneWidget);
+    expect(find.text('INICIAR SESIÓN'), findsNothing);
+    expect(find.text('Películas'), findsOneWidget);
   });
 }
