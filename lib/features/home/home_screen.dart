@@ -10,14 +10,14 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 620;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+      padding: EdgeInsets.fromLTRB(compact ? 12 : 18, 10, compact ? 12 : 18, 24),
       children: [
         const Text('Buenas noches',
             style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         const SizedBox(height: 22),
         Container(
-          height: compact ? 300 : 360,
-          padding: const EdgeInsets.all(26),
+          height: compact ? 286 : 360,
+          padding: EdgeInsets.all(compact ? 18 : 26),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
             gradient: const LinearGradient(
@@ -41,13 +41,13 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const _Pill(label: 'TU CENTRO DE ENTRETENIMIENTO'),
-                  const SizedBox(height: 18),
-                  const Text('Todo lo que\nquerés ver.',
-                      style: TextStyle(fontSize: 42, height: 1, fontWeight: FontWeight.w900, letterSpacing: -1.6)),
-                  const SizedBox(height: 14),
+                  SizedBox(height: compact ? 12 : 18),
+                  Text('Todo lo que\nquerés ver.',
+                      style: TextStyle(fontSize: compact ? 34 : 42, height: 1.02, fontWeight: FontWeight.w900, letterSpacing: compact ? -1.1 : -1.6)),
+                  const SizedBox(height: 12),
                   const Text('TV en vivo, películas, series y anime en una sola experiencia.',
                       style: TextStyle(color: AppTheme.muted, height: 1.5)),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: () => onNavigate(0),
                     icon: const Icon(Icons.play_arrow_rounded),
