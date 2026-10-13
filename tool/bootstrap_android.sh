@@ -767,14 +767,32 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.x
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Silueta de televisor futurista: mantener todo dentro de la zona segura adaptativa. -->
     <path
-        android:fillColor="@color/miltvplus_accent"
-        android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z" />
+        android:fillColor="#B8FF35"
+        android:pathData="M39,24 L31,16 C30.2,15.2 30.2,13.9 31,13.1 C31.8,12.3 33.1,12.3 33.9,13.1 L44.8,24 Z" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328z" />
+        android:fillColor="#B8FF35"
+        android:pathData="M69,24 L77,16 C77.8,15.2 77.8,13.9 77,13.1 C76.2,12.3 74.9,12.3 74.1,13.1 L63.2,24 Z" />
+    <path
+        android:fillColor="#B8FF35"
+        android:pathData="M25,27 L83,27 C87.4,27 91,30.6 91,35 L91,69 C91,73.4 87.4,77 83,77 L25,77 C20.6,77 17,73.4 17,69 L17,35 C17,30.6 20.6,27 25,27 Z" />
+    <path
+        android:fillColor="#071426"
+        android:pathData="M27,33 L81,33 C83.2,33 85,34.8 85,37 L85,67 C85,69.2 83.2,71 81,71 L27,71 C24.8,71 23,69.2 23,67 L23,37 C23,34.8 24.8,33 27,33 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,39.5 C44,38.7 44.9,38.2 45.6,38.7 L67,51.3 C67.9,51.8 67.9,53.2 67,53.7 L45.6,66.3 C44.9,66.8 44,66.3 44,65.5 Z" />
+    <path
+        android:fillColor="#B8FF35"
+        android:pathData="M39,81 L69,81 L74,87 L34,87 Z" />
+    <path
+        android:fillColor="#B8FF35"
+        android:pathData="M45,89 L63,89 L63,93 L45,93 Z" />
+    <path
+        android:fillColor="#38D9FF"
+        android:pathData="M77,39 L81,39 L81,43 L77,43 Z" />
 </vector>
-PLATFORM_ROBOT
 
 # Icono adaptativo propio de MILTVPLUS (Android 8.0+).
 # Se reemplazan las referencias numéricas del APK de origen por recursos locales.
