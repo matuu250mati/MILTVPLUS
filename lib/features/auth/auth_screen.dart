@@ -52,7 +52,12 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } on AuthException catch (e) {
-      if (mounted) { setState(() { _error = true; _message = e.message; }); }
+      if (mounted) {
+        setState(() {
+          _error = true;
+          _message = e.message;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -95,7 +100,9 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
