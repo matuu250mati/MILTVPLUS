@@ -794,6 +794,19 @@ cat > "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xm
 </adaptive-icon>
 ADAPTIVE_ICON_ROUND
 
+# Selector equivalente al XML recibido: estado deshabilitado atenuado y estado normal con acento.
+# Los atributos ?01010038 y ?7F0400B4 del APK decompilado no son portables entre proyectos.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_accent_selector.xml" <<'ENABLED_ACCENT_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+ENABLED_ACCENT_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
