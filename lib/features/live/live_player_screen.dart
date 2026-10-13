@@ -266,7 +266,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: const BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [Color(0xCC000000), Colors.transparent, Color(0xD9000000)],
