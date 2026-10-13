@@ -807,6 +807,20 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_accent_selecto
 </selector>
 ENABLED_ACCENT_SELECTOR
 
+# Fondo redondeado con gradiente de marca, adaptado del XML de referencia.
+# Los IDs de color numéricos del APK original no son portables; se usan colores MILTV PLUS.
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_brand_gradient.xml" <<'BRAND_GRADIENT'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="7dp" />
+    <gradient
+        android:startColor="@color/miltvplus_accent"
+        android:endColor="@color/miltvplus_surface"
+        android:angle="0" />
+</shape>
+BRAND_GRADIENT
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
