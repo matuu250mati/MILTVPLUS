@@ -94,7 +94,7 @@ class _AppShellState extends State<AppShell> {
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'MILTV PLUS',
+                    'MILK TV PLUS',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -134,7 +134,7 @@ class _AppShellState extends State<AppShell> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'MILTV PLUS · Entretenimiento',
+                  'MILK TV PLUS · Entretenimiento',
                   style: TextStyle(color: AppTheme.muted, fontSize: 11),
                 ),
               ),
@@ -254,4 +254,11 @@ class _AmbientBackground extends StatelessWidget {
         ),
         child: SizedBox.expand(),
       );
+}
+
+class _NavItem {
+  const _NavItem(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
 }
