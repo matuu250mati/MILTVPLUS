@@ -74,6 +74,15 @@ El workflow de Android genera el APK de release, un archivo SHA-256 y artefactos
 3. Creá y subí un tag que coincida con la versión pública, sin el sufijo de build: por ejemplo, `v1.0.0`.
 4. El workflow valida que el tag coincida con `pubspec.yaml`, vuelve a analizar/probar/compilar y publica el APK junto con sus checksums en GitHub Releases.
 
+Antes de publicar el primer tag, configurá una clave de firma de producción estable. Generala en un equipo/entorno privado (no en el repositorio) con:
+
+```bash
+keytool -genkeypair -v -keystore miltvplus-upload.jks -alias miltvplus -keyalg RSA -keysize 2048 -validity 10000
+base64 -w 0 miltvplus-upload.jks
+```
+
+Guardá la salida Base64 y los valores de la clave en **Settings → Secrets and variables → Actions** como `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`. El workflow solo publica tags si estos cuatro secretos están configurados y la clave se puede validar. No subas el archivo `.jks` ni contraseñas al repositorio. Conservá una copia de seguridad privada de la clave: las futuras actualizaciones Android deben firmarse con la misma clave.
+
 La URL estable prevista para el sitio oficial es:
 
 `https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS-android.apk`

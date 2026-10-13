@@ -10,7 +10,7 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
-if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
+if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/miltvplus_signing_configured.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
   echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
   exit 0
 fi
@@ -22,6 +22,36 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 mkdir -p "$root_dir/android"
 # -n evita sobrescribir cualquier archivo nativo que ya exista.
 cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+
+# Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
+# y nunca se almacena en el repositorio. Sin key.properties, Flutter conserva la firma debug
+# para builds de desarrollo; las publicaciones por tag exigen una clave de release real.
+if [[ ! -f "$root_dir/android/app/miltvplus_signing_configured.txt" ]]; then
+  cat >> "$root_dir/android/app/build.gradle.kts" <<'SIGNING_CONFIG'
+// MILTVPLUS production signing: enabled only when android/key.properties is present.
+val miltvSigningPropertiesFile = rootProject.file("key.properties")
+if (miltvSigningPropertiesFile.exists()) {
+    val miltvSigningProperties = java.util.Properties()
+    miltvSigningPropertiesFile.inputStream().use { miltvSigningProperties.load(it) }
+    android {
+        signingConfigs {
+            create("miltvRelease") {
+                keyAlias = miltvSigningProperties.getProperty("keyAlias")
+                keyPassword = miltvSigningProperties.getProperty("keyPassword")
+                storeFile = rootProject.file(miltvSigningProperties.getProperty("storeFile"))
+                storePassword = miltvSigningProperties.getProperty("storePassword")
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("miltvRelease")
+            }
+        }
+    }
+}
+SIGNING_CONFIG
+  touch "$root_dir/android/app/miltvplus_signing_configured.txt"
+fi
 
 # Recursos visuales propios de MILTVPLUS.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"

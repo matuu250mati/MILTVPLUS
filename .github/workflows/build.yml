@@ -77,6 +77,27 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
+      - name: Configure production APK signing
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "\${ANDROID_KEYSTORE_BASE64//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret."; exit 1; }
+          [[ -n "\${ANDROID_KEYSTORE_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret."; exit 1; }
+          [[ -n "\${ANDROID_KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_ALIAS secret."; exit 1; }
+          [[ -n "\${ANDROID_KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          test -s android/upload-keystore.jks
+          printf 'storeFile=upload-keystore.jks\\nstorePassword=%s\\nkeyAlias=%s\\nkeyPassword=%s\\n' \\
+            "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > android/key.properties
+          keytool -list -keystore android/upload-keystore.jks \\
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+
       - name: Verify release tag matches pubspec version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash

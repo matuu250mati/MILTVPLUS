@@ -27,3 +27,6 @@ android/app/release/
 # OS
 .DS_Store
 Thumbs.db
+
+# Android release signing material (never commit)
+*.jks
