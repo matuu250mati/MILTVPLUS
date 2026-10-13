@@ -7,11 +7,18 @@ if ! command -v flutter >/dev/null 2>&1; then
 fi
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Nunca eliminar ni regenerar un proyecto Android que ya existe.
+# El scaffold solo se crea en repositorios que todavía no tienen android/.
+if [[ -d "$root_dir/android" ]]; then
+  echo "El directorio android/ ya existe; se conserva sin modificaciones."
+  exit 0
+fi
+
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$tmp_dir/miltv-scaffold"
-rm -rf "$root_dir/android"
 cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
 # Recursos visuales propios de MILTVPLUS.
