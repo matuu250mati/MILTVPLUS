@@ -6,6 +6,7 @@ manifest="$root_dir/android/app/src/main/AndroidManifest.xml"
 banner="$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png"
 adaptive_icon="$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
 icon_foreground="$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.xml"
+legacy_icon_root="$root_dir/android/app/src/main/res"
 
 if [[ ! -f "$manifest" ]]; then
   echo "::error::AndroidManifest.xml no existe después de preparar Android."
@@ -19,8 +20,21 @@ if [[ ! -f "$adaptive_icon" || ! -f "$icon_foreground" ]]; then
   echo "::error::Falta el icono adaptativo personalizado de MILTVPLUS."
   exit 1
 fi
+for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+  for icon_name in ic_launcher.png ic_launcher_round.png; do
+    if [[ ! -f "$legacy_icon_root/mipmap-$density/$icon_name" ]]; then
+      echo "::error::Falta el icono $icon_name para la densidad $density."
+      exit 1
+    fi
+  done
+done
 
-python3 - "$manifest" "$banner" <<'PY'
+python3 - "$manifest" "$banner" \
+  "$legacy_icon_root/mipmap-mdpi/ic_launcher.png" \
+  "$legacy_icon_root/mipmap-hdpi/ic_launcher.png" \
+  "$legacy_icon_root/mipmap-xhdpi/ic_launcher.png" \
+  "$legacy_icon_root/mipmap-xxhdpi/ic_launcher.png" \
+  "$legacy_icon_root/mipmap-xxxhdpi/ic_launcher.png" <<'PY'
 import struct
 import sys
 import xml.etree.ElementTree as ET
@@ -48,6 +62,10 @@ if application.get(android + "banner") != "@drawable/tv_banner":
     raise SystemExit("Android TV validation failed: application banner is missing or incorrect")
 if application.get(android + "usesCleartextTraffic") != "false":
     raise SystemExit("Android security validation failed: cleartext traffic must be disabled")
+if application.get(android + "icon") != "@mipmap/ic_launcher":
+    raise SystemExit("Icon validation failed: application icon must use MILTVPLUS launcher resources")
+if application.get(android + "roundIcon") != "@mipmap/ic_launcher_round":
+    raise SystemExit("Icon validation failed: application round icon must use MILTVPLUS launcher resources")
 
 activity = application.find("activity")
 if activity is None:
@@ -109,5 +127,15 @@ for row in range(height):
         if raw[row_start + 1 + pixel * 4 + 3] != 255:
             raise SystemExit("Android TV validation failed: banner background must be fully opaque")
 
-print("Android manifest validated: mobile + Android TV launcher, adaptive MILTVPLUS icon, banner, internet, cleartext disabled, Flutter embedding v2.")
+expected_sizes = (48, 72, 96, 144, 192)
+for icon_path, expected_size in zip(sys.argv[3:], expected_sizes):
+    with open(icon_path, "rb") as icon_file:
+        icon_png = icon_file.read()
+    if not icon_png.startswith(b"\x89PNG\r\n\x1a\n") or len(icon_png) < 33:
+        raise SystemExit(f"Icon validation failed: {icon_path} is not a PNG")
+    icon_width, icon_height = struct.unpack(">II", icon_png[16:24])
+    if (icon_width, icon_height) != (expected_size, expected_size):
+        raise SystemExit(f"Icon validation failed: {icon_path} must be {expected_size}x{expected_size}")
+
+print("Android manifest validated: mobile + Android TV, adaptive and legacy MILTVPLUS icons, banner, internet, cleartext disabled, Flutter embedding v2.")
 PY
