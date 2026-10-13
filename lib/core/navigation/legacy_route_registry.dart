@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/catalog/catalog_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/security/security_restricted_screen.dart';
 
 /// Compatibility registry for the legacy Android module paths.
 /// These are Flutter route names, not network endpoints.
@@ -47,6 +48,7 @@ abstract final class LegacyRouteRegistry {
   };
 
   static Map<String, WidgetBuilder> get routes => {
+        '/security/restricted': (_) => const SecurityRestrictedScreen(),
         'http://module_vod/VodDetailsActivity': (_) =>
             const LegacyFeaturePlaceholderScreen(
               title: 'DETALLES DEL CONTENIDO',
