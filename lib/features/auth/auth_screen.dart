@@ -47,6 +47,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ? 'Cuenta creada. Revisá tu correo y confirmá la dirección antes de iniciar sesión.'
               : 'Cuenta creada correctamente.';
         });
+        if (response.session != null) widget.onAuthenticated?.call();
       } else {
         await auth.signInWithPassword(
           email: _email.text.trim(),
