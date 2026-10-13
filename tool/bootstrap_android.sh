@@ -10,7 +10,7 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
-if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/miltvplus_branding_version.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
+if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
   echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
   exit 0
 fi
@@ -1070,7 +1070,7 @@ for density, target in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 14
     write_png(os.path.join(folder, "ic_launcher.png"), target)
     write_png(os.path.join(folder, "ic_launcher_round.png"), target)
 
-with open(os.path.join(res, "mipmap-anydpi-v26", "miltvplus_branding_version.txt"), "w", encoding="utf-8") as marker:
+with open(os.path.join(os.path.dirname(res), "miltvplus_branding_version.txt"), "w", encoding="utf-8") as marker:
     marker.write("MILTVPLUS launcher branding v1\n")
 print("Iconos de launcher MILTVPLUS generados para mdpi, hdpi, xhdpi, xxhdpi y xxxhdpi.")
 PY_ICON
