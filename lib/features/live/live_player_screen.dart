@@ -31,7 +31,6 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   bool _loading = true;
   bool _controlsVisible = true;
   bool _variantsLoading = false;
-  String? _selectedQualityUrl;
   Timer? _hideControlsTimer;
 
   TvChannel get _channel => widget.channels[_index];
@@ -98,7 +97,6 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       _loading = true;
       _error = null;
       _variants = const [];
-      _selectedQualityUrl = streamOverride;
       _controlsVisible = true;
     });
     try {
@@ -311,7 +309,6 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                       if (_variants.isNotEmpty)
                         PopupMenuButton<HlsVariant>(
                           tooltip: 'Calidad de imagen',
-                          initialValue: _variants.where((v) => v.url == _selectedQualityUrl).firstOrNull,
                           onSelected: _chooseQuality,
                           color: const Color(0xFF17191F),
                           itemBuilder: (context) => [
