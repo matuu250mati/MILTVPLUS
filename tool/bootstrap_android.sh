@@ -28,20 +28,80 @@ mkdir -p "$root_dir/android/app/src/main/res/drawable"
 mkdir -p "$root_dir/android/app/src/main/res/color"
 mkdir -p "$root_dir/android/app/src/main/res/values"
 
-cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#071426" />
-        </shape>
-    </item>
-    <item
-        android:drawable="@mipmap/ic_launcher"
-        android:width="104dp"
-        android:height="104dp"
-        android:gravity="center" />
-</layer-list>
-BANNER
+mkdir -p "$root_dir/android/app/src/main/res/drawable-nodpi"
+python3 - "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" <<'PY_BANNER'
+import struct
+import sys
+import zlib
+
+width, height = 320, 180
+background = (7, 20, 38, 255)
+accent = (184, 255, 53, 255)
+white = (255, 255, 255, 255)
+cyan = (56, 217, 255, 255)
+pixels = bytearray(background * (width * height))
+
+def rect(x, y, w, h, color):
+    for yy in range(max(0, y), min(height, y + h)):
+        for xx in range(max(0, x), min(width, x + w)):
+            offset = (yy * width + xx) * 4
+            pixels[offset:offset + 4] = bytes(color)
+
+def line(x1, y1, x2, y2, thickness, color):
+    dx, dy = abs(x2 - x1), abs(y2 - y1)
+    steps = max(dx, dy, 1)
+    for i in range(steps + 1):
+        x = round(x1 + (x2 - x1) * i / steps)
+        y = round(y1 + (y2 - y1) * i / steps)
+        rect(x - thickness // 2, y - thickness // 2, thickness, thickness, color)
+
+# TV outline, stand, and play symbol.
+rect(24, 54, 62, 48, accent)
+rect(30, 60, 50, 36, background)
+line(55, 48, 43, 36, 4, accent)
+line(55, 48, 67, 36, 4, accent)
+rect(48, 103, 14, 6, accent)
+rect(39, 110, 32, 5, accent)
+for i in range(20):
+    rect(46 + i, 67 + i, 1, 1, cyan)
+    rect(46 + i, 85 - i, 1, 1, cyan)
+# Clear play triangle.
+for row in range(19):
+    span = max(1, row // 2)
+    for xx in range(0, span + 1):
+        rect(48 + xx, 66 + row, 1, 1, white)
+
+font = {
+'M':("10001","11011","10101","10101","10001","10001","10001"),
+'I':("11111","00100","00100","00100","00100","00100","11111"),
+'L':("10000","10000","10000","10000","10000","10000","11111"),
+'T':("11111","00100","00100","00100","00100","00100","00100"),
+'V':("10001","10001","10001","10001","10001","01010","00100"),
+'P':("11110","10001","10001","11110","10000","10000","10000"),
+'U':("10001","10001","10001","10001","10001","10001","01110"),
+'S':("01111","10000","10000","01110","00001","00001","11110"),
+}
+x, y, scale, gap = 100, 72, 4, 4
+for letter in "MILTVPLUS":
+    glyph = font[letter]
+    for gy, row in enumerate(glyph):
+        for gx, bit in enumerate(row):
+            if bit == "1":
+                rect(x + gx * scale, y + gy * scale, scale, scale, white if letter in "MILTV" else accent)
+    x += 5 * scale + gap
+
+def chunk(kind, data):
+    return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+raw = b"".join(b"\x00" + bytes(pixels[y * width * 4:(y + 1) * width * 4]) for y in range(height))
+png = b"\x89PNG\r\n\x1a\n"
+png += chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+png += chunk(b"IDAT", zlib.compress(raw, 9))
+png += chunk(b"IEND", b"")
+with open(sys.argv[1], "wb") as output:
+    output.write(png)
+print(f"Banner Android TV generado: {width}x{height}, fondo opaco.")
+PY_BANNER
 
 cat > "$root_dir/android/app/src/main/res/values/colors.xml" <<'COLORS'
 <?xml version="1.0" encoding="utf-8"?>
