@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
+import 'catalog_player_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key, required this.category});
@@ -178,6 +179,7 @@ class _CatalogEntry {
     required this.posterUrl,
     required this.year,
     required this.synopsis,
+    required this.streamUrl,
   });
 
   final String title;
@@ -186,6 +188,7 @@ class _CatalogEntry {
   final String? posterUrl;
   final int? year;
   final String? synopsis;
+  final String? streamUrl;
 
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
         title: movie.title,
@@ -194,6 +197,7 @@ class _CatalogEntry {
         posterUrl: movie.logo,
         year: movie.releaseYear,
         synopsis: movie.synopsis,
+        streamUrl: movie.urlStream,
       );
 
   factory _CatalogEntry.fromSeries(SeriesModel series) => _CatalogEntry(
@@ -203,6 +207,7 @@ class _CatalogEntry {
         posterUrl: series.logo,
         year: series.releaseYear,
         synopsis: series.synopsis,
+        streamUrl: null,
       );
 }
 
@@ -212,9 +217,21 @@ class _CatalogCard extends StatelessWidget {
   final _CatalogEntry entry;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: entry.streamUrl == null || entry.streamUrl!.trim().isEmpty
+            ? null
+            : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CatalogPlayerScreen(
+                      title: entry.title,
+                      streamUrl: entry.streamUrl!,
+                    ),
+                  ),
+                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Expanded(
             child: Container(
               width: double.infinity,
@@ -249,7 +266,8 @@ class _CatalogCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
           ),
-        ],
+          ],
+        ),
       );
 }
 
