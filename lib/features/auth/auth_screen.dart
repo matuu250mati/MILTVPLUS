@@ -36,7 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _email.text.trim(),
           password: _password.text,
         );
-        if (!mounted) return;
+        if (!mounted) { return; }
         setState(() {
           _error = false;
           _message = response.session == null
@@ -50,7 +50,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } on AuthException catch (e) {
-      if (mounted) setState(() { _error = true; _message = e.message; });
+      if (mounted) { setState(() { _error = true; _message = e.message; }); }
     } catch (_) {
       if (mounted) setState(() {
         _error = true;
@@ -78,7 +78,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _message = 'Si la cuenta existe, vas a recibir un correo para restablecer la contraseña.';
       });
     } on AuthException catch (e) {
-      if (mounted) setState(() { _error = true; _message = e.message; });
+      if (mounted) { setState(() { _error = true; _message = e.message; }); }
     } catch (_) {
       if (mounted) setState(() {
         _error = true;
