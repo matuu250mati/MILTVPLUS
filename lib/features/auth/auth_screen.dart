@@ -4,7 +4,9 @@ import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  const AuthScreen({super.key, this.onAuthenticated});
+
+  final VoidCallback? onAuthenticated;
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -50,6 +52,7 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _email.text.trim(),
           password: _password.text,
         );
+        if (mounted) widget.onAuthenticated?.call();
       }
     } on AuthException catch (e) {
       if (mounted) {
