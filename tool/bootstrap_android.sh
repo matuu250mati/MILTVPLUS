@@ -181,6 +181,43 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_interaction_state_sele
 </selector>
 INTERACTION_STATE_SELECTOR
 
+# Selectores de estado adicionales adaptados a la paleta y al tema de MILTV PLUS.
+# Los IDs numéricos del APK de origen no se pueden resolver sin su tabla de recursos.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_state_selector_tertiary.xml" <<'ENABLED_STATE_TERTIARY'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+ENABLED_STATE_TERTIARY
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_state_selector_quaternary.xml" <<'ENABLED_STATE_QUATERNARY'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="?android:attr/textColorPrimary" />
+</selector>
+ENABLED_STATE_QUATERNARY
+
+# Selector de control marcado: atenuado cuando está deshabilitado, acento al marcarse.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_state_selector.xml" <<'CHECKED_STATE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item
+        android:state_checked="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/colorControlNormal" />
+</selector>
+CHECKED_STATE_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
