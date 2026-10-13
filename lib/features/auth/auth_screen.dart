@@ -268,7 +268,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         validator: (value) {
                           if (!_phoneMode) return null;
                           final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-                          return digits.length >= 10
+                          return digits.length == 10
                               ? null
                               : 'Ingresá el código de área y número (10 dígitos).';
                         },
