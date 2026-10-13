@@ -152,8 +152,8 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   }
 
   Future<void> _chooseQuality(HlsVariant variant) async {
-    if (variant.url == _channel.streamUrl) {
-      _selectedQualityUrl = null;
+    if (variant.url.isEmpty || variant.url == _channel.streamUrl) {
+      await _openChannel(_index);
       return;
     }
     await _openChannel(_index, streamOverride: variant.url);
