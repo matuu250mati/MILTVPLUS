@@ -3,7 +3,7 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$root_dir/android/app/src/main/AndroidManifest.xml"
-banner="$root_dir/android/app/src/main/res/drawable/tv_banner.xml"
+banner="$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png"
 adaptive_icon="$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
 icon_foreground="$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.xml"
 
@@ -20,11 +20,14 @@ if [[ ! -f "$adaptive_icon" || ! -f "$icon_foreground" ]]; then
   exit 1
 fi
 
-python3 - "$manifest" <<'PY'
+python3 - "$manifest" "$banner" <<'PY'
+import struct
 import sys
 import xml.etree.ElementTree as ET
+import zlib
 
 path = sys.argv[1]
+banner_path = sys.argv[2]
 android = "{http://schemas.android.com/apk/res/android}"
 tree = ET.parse(path)
 root = tree.getroot()
@@ -76,6 +79,35 @@ if foreground is None or foreground.get(android + "drawable") != "@drawable/milt
     raise SystemExit("Icon validation failed: custom MILTVPLUS foreground is missing")
 if background is None or background.get(android + "drawable") != "@drawable/miltvplus_icon_background":
     raise SystemExit("Icon validation failed: MILTVPLUS background is missing")
+
+# Android TV requiere un banner opaco 320x180 con marca visible.
+with open(banner_path, "rb") as banner_file:
+    png = banner_file.read()
+if not png.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(png) < 33:
+    raise SystemExit("Android TV validation failed: banner is not a valid PNG")
+width, height, bit_depth, color_type, compression, filtering, interlace = struct.unpack(">IIBBBBB", png[16:29])
+if (width, height) != (320, 180) or bit_depth != 8 or color_type != 6:
+    raise SystemExit("Android TV validation failed: banner must be a 320x180 RGBA PNG")
+offset = 8
+compressed = bytearray()
+while offset + 12 <= len(png):
+    length = struct.unpack(">I", png[offset:offset + 4])[0]
+    kind = png[offset + 4:offset + 8]
+    data = png[offset + 8:offset + 8 + length]
+    if kind == b"IDAT":
+        compressed.extend(data)
+    offset += length + 12
+    if kind == b"IEND":
+        break
+raw = zlib.decompress(bytes(compressed))
+row_bytes = 1 + width * 4
+if len(raw) != row_bytes * height:
+    raise SystemExit("Android TV validation failed: banner PNG pixel data is incomplete")
+for row in range(height):
+    row_start = row * row_bytes
+    for pixel in range(width):
+        if raw[row_start + 1 + pixel * 4 + 3] != 255:
+            raise SystemExit("Android TV validation failed: banner background must be fully opaque")
 
 print("Android manifest validated: mobile + Android TV launcher, adaptive MILTVPLUS icon, banner, internet, cleartext disabled, Flutter embedding v2.")
 PY
