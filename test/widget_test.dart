@@ -1,3 +1,4 @@
+import 'dart:ui' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miltv_plus/app.dart';
 import 'package:miltv_plus/core/supabase_config.dart';
