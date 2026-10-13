@@ -142,7 +142,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Nombre del canal')),
               const SizedBox(height: 12),
               TextField(controller: urlController, keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(labelText: 'URL HLS (.m3u8)', hintText: 'https://servidor/stream.m3u8')),
+                  decoration: const InputDecoration(labelText: 'URL directa de señal (HLS/MP4)', hintText: 'https://servidor/stream.m3u8')),
             ],
           ),
         ),
@@ -154,7 +154,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               final url = urlController.text.trim();
               final parsedUrl = Uri.tryParse(url);
               if (name.isEmpty || !service.isSupportedHlsUrl(url) || parsedUrl == null || parsedUrl.userInfo.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTP(S) HLS válida.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTP(S) directa de una señal autorizada.')));
                 return;
               }
               Navigator.pop(dialogContext, TvChannel(name: name, streamUrl: url));
@@ -502,7 +502,7 @@ class _PlayerPanel extends StatelessWidget {
             Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70))),
           if (!ready && !loading && error == null)
             const Positioned(bottom: 28, left: 20, right: 20,
-                child: Text('Agregá una URL HLS autorizada para comenzar.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))),
+                child: Text('Agregá una URL directa de señal autorizada para comenzar.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))),
           if (ready)
             Positioned(
               bottom: 10,
@@ -597,7 +597,7 @@ class _ChannelList extends StatelessWidget {
                             onTap: () => onSelect(channelIndex),
                             leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
                             title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: const Text('HLS', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+                            subtitle: const Text('TV EN VIVO', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
                           );
                         },
                       ),
