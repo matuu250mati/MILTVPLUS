@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'core/navigation/legacy_route_registry.dart';
 import 'core/theme/app_theme.dart';
 import 'features/shell/app_shell.dart';
 import 'features/splash/splash_screen.dart';
@@ -13,6 +14,7 @@ class MiltvPlusApp extends StatelessWidget {
         title: 'MILTV PLUS',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
+        routes: LegacyRouteRegistry.routes,
         home: const _IntroCoordinator(),
       );
 }
