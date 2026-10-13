@@ -182,6 +182,63 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   static const _globalPublicPlaylist =
       'https://iptv-org.github.io/iptv/index.m3u';
 
+  static const _publicPlaylistSources = <({String id, String title, String subtitle, String url})>[
+    (
+      id: 'argentina',
+      title: 'Argentina',
+      subtitle: 'IPTV-org · canales catalogados por país',
+      url: 'https://iptv-org.github.io/iptv/countries/ar.m3u',
+    ),
+    (
+      id: 'spanish',
+      title: 'Canales en español',
+      subtitle: 'IPTV-org · canales catalogados por idioma',
+      url: 'https://iptv-org.github.io/iptv/languages/spa.m3u',
+    ),
+    (
+      id: 'news',
+      title: 'Noticias',
+      subtitle: 'IPTV-org · canales informativos en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/news.m3u',
+    ),
+    (
+      id: 'sports',
+      title: 'Deportes',
+      subtitle: 'IPTV-org · canales deportivos en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/sports.m3u',
+    ),
+    (
+      id: 'movies',
+      title: 'Canales de películas',
+      subtitle: 'IPTV-org · canales lineales, no catálogo VOD',
+      url: 'https://iptv-org.github.io/iptv/categories/movies.m3u',
+    ),
+    (
+      id: 'series',
+      title: 'Canales de series',
+      subtitle: 'IPTV-org · canales lineales, no episodios a demanda',
+      url: 'https://iptv-org.github.io/iptv/categories/series.m3u',
+    ),
+    (
+      id: 'documentary',
+      title: 'Documentales',
+      subtitle: 'IPTV-org · canales documentales en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/documentary.m3u',
+    ),
+    (
+      id: 'kids',
+      title: 'Infantiles',
+      subtitle: 'IPTV-org · canales infantiles en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/kids.m3u',
+    ),
+    (
+      id: 'music',
+      title: 'Música',
+      subtitle: 'IPTV-org · canales musicales en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/music.m3u',
+    ),
+  ];
+
   Future<void> importPlaylist() async {
     final source = await showDialog<String>(
       context: context,
@@ -189,8 +246,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         title: const Text('Fuentes de TV en vivo'),
         content: SizedBox(
           width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: ListView(
+            shrinkWrap: true,
             children: [
               ListTile(
                 leading: const Icon(Icons.verified_outlined),
@@ -204,6 +261,13 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                 subtitle: const Text('IPTV-org · catálogo comunitario internacional'),
                 onTap: () => Navigator.pop(dialogContext, 'iptv-org'),
               ),
+              const Divider(),
+              ..._publicPlaylistSources.map((item) => ListTile(
+                    leading: const Icon(Icons.live_tv_rounded),
+                    title: Text(item.title),
+                    subtitle: Text(item.subtitle),
+                    onTap: () => Navigator.pop(dialogContext, item.id),
+                  )),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.link_rounded),
@@ -231,6 +295,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     if (source == 'iptv-org') {
       await _importPlaylistUrl(_globalPublicPlaylist, 'IPTV-org');
       return;
+    }
+    for (final item in _publicPlaylistSources) {
+      if (source == item.id) {
+        await _importPlaylistUrl(item.url, item.title);
+        return;
+      }
     }
 
     final urlController = TextEditingController();
