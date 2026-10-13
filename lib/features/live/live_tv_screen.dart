@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
+import '../../models/media_models.dart';
+import '../../services/catalog_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
 
@@ -15,6 +17,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   final channels = <TvChannel>[];
   final service = const StreamService();
   final channelStorage = ChannelStorageService();
+  final catalogService = CatalogService();
   VideoPlayerController? controller;
   String? error;
   bool loading = false;
@@ -31,6 +34,22 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final saved = await channelStorage.load();
       if (!mounted) return;
       setState(() => channels.addAll(saved));
+      try {
+        final remoteChannels = await catalogService.getChannels();
+        if (!mounted) return;
+        final existing = channels.map((channel) => channel.name).toSet();
+        final additions = remoteChannels
+            .where((channel) => !existing.contains(channel.title))
+            .map((channel) => TvChannel(name: channel.title, streamUrl: channel.urlStream))
+            .toList(growable: false);
+        if (additions.isNotEmpty) setState(() => channels.addAll(additions));
+      } catch (exception) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudieron cargar los canales de Supabase. Revisá la configuración y la sesión.')),
+          );
+        }
+      }
     } catch (_) {
       // Playback UI remains available if local preferences cannot be read.
     }
