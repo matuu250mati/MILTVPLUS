@@ -44,39 +44,43 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Validate Supabase secrets
+      - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: \${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
+          if [[ -z "\${SUPABASE_URL//[[:space:]]/}" ]]; then
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
           fi
-          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
-            echo "::error::Configure the SUPABASE_ANON_KEY repository secret."
+          if [[ -z "\${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
+            echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
             exit 1
           fi
-          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\.supabase\.co$ ]]; then
-            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co with no path, query, fragment, trailing slash, or dashboard URL."
+          SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
+          while [[ "$SUPABASE_URL" == */ ]]; do
+            SUPABASE_URL="\${SUPABASE_URL%/}"
+          done
+          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\\.supabase\\.co$ ]]; then
+            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
-            echo "::error::SUPABASE_ANON_KEY contains whitespace; copy the full publishable/anon key from Supabase API settings."
+            echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
             exit 1
           fi
+          echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
       - name: Build release APK
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
           flutter build apk --release \
-            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
+            --dart-define="SUPABASE_URL=$SUPABASE_URL_NORMALIZED" \
             --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
       - name: Upload release APK
