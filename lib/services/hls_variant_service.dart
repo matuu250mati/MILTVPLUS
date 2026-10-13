@@ -51,7 +51,9 @@ class HlsVariantService {
         final resolved = Uri.tryParse(candidate);
         if (resolved == null || !resolved.hasAuthority ||
             (resolved.scheme != 'https' && resolved.scheme != 'http') ||
-            resolved.userInfo.isNotEmpty) continue;
+            resolved.userInfo.isNotEmpty) {
+          continue;
+        }
         final height = int.tryParse(resolution?.group(2) ?? '');
         final width = int.tryParse(resolution?.group(1) ?? '');
         variants.add(HlsVariant(
