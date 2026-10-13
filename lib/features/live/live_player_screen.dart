@@ -33,18 +33,28 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   bool _variantsLoading = false;
   Timer? _hideControlsTimer;
 
-  TvChannel get _channel => widget.channels[_index];
+  TvChannel get _channel => widget.channels.isEmpty
+      ? const TvChannel(name: 'Sin canales disponibles', streamUrl: '')
+      : widget.channels[_index];
 
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex.clamp(0, widget.channels.length - 1).toInt();
+    _index = widget.channels.isEmpty
+        ? 0
+        : widget.initialIndex.clamp(0, widget.channels.length - 1).toInt();
+    if (widget.channels.isEmpty) {
+      _loading = false;
+      _error = 'No hay canales disponibles. Importá una lista M3U o recargá el catálogo.';
+    }
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _openChannel(_index);
+    if (widget.channels.isNotEmpty) {
+      _openChannel(_index);
+    }
   }
 
   @override
@@ -97,6 +107,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       _loading = true;
       _error = null;
       _variants = const [];
+      _variantsLoading = false;
       _controlsVisible = true;
     });
     try {
@@ -173,10 +184,12 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.channelUp) {
+      if (widget.channels.isEmpty) return KeyEventResult.handled;
       _openChannel((_index - 1 + widget.channels.length) % widget.channels.length);
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowDown || key == LogicalKeyboardKey.channelDown) {
+      if (widget.channels.isEmpty) return KeyEventResult.handled;
       _openChannel((_index + 1) % widget.channels.length);
       return KeyEventResult.handled;
     }
