@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -188,6 +189,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: _saving ? null : _saveSettings,
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('GUARDAR CONEXIÓN'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.verified_user_outlined, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Cuenta MILTV PLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                Supabase.instance.client.auth.currentUser?.email ?? 'Sesión no disponible',
+                style: const TextStyle(color: AppTheme.muted),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await Supabase.instance.client.auth.signOut();
+                    } catch (_) {
+                      if (mounted) _showMessage('No se pudo cerrar la sesión. Intentá de nuevo.');
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('CERRAR SESIÓN'),
                 ),
               ),
             ],
