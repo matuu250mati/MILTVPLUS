@@ -18,6 +18,7 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
   bool loading = true;
   bool unlocked = false;
   bool accountVerified = false;
+  bool ageConfirmed = false;
   String? error;
 
   @override
@@ -87,6 +88,51 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
         if (!mounted) return;
         setState(() => accountVerified = true);
       });
+    }
+    if (!ageConfirmed) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.panel,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white.withValues(alpha: .08)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.gpp_good_rounded, size: 48, color: AppTheme.accent),
+                  const SizedBox(height: 14),
+                  const Text('CONTENIDO PARA ADULTOS', textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 10),
+                  const Text('Esta sección es exclusiva para mayores de 18 años. Para continuar necesitás una cuenta MILTV PLUS y confirmar tu edad.',
+                      textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5)),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: ageConfirmed,
+                    onChanged: (value) => setState(() => ageConfirmed = value ?? false),
+                    title: const Text('Confirmo que tengo 18 años o más.'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(width: double.infinity,
+                    child: FilledButton(
+                      onPressed: ageConfirmed ? () => setState(() {}) : null,
+                      child: const Text('CONTINUAR'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
     if (loading) return const Center(child: CircularProgressIndicator());
     if (unlocked) {
