@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_item.dart';
+import '../../models/media_models.dart';
+import '../../services/catalog_service.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key, required this.category});
@@ -14,6 +16,96 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final _searchController = TextEditingController();
   String _genreFilter = 'Todos';
   String _yearFilter = 'Todos';
+  final _catalogService = CatalogService();
+  late Future<List<MovieModel>> _moviesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _moviesFuture = _catalogService.getMovies();
+  }
+
+  Widget _buildRemoteMovies() {
+    final query = _searchController.text.trim().toLowerCase();
+    return FutureBuilder<List<MovieModel>>(
+      future: _moviesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.cloud_off_rounded, size: 42),
+                const SizedBox(height: 12),
+                const Text('No se pudo cargar el catálogo de Supabase.', textAlign: TextAlign.center),
+                const SizedBox(height: 8),
+                Text(snapshot.error.toString(), textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () => setState(() { _moviesFuture = _catalogService.getMovies(); }),
+                  icon: const Icon(Icons.refresh_rounded), label: const Text('REINTENTAR'),
+                ),
+              ]),
+            ),
+          );
+        }
+        final movies = (snapshot.data ?? const <MovieModel>[]).where((movie) {
+          final searchable = '${movie.title} ${movie.category} ${movie.genres.join(' ')} ${movie.synopsis ?? ''}'.toLowerCase();
+          return query.isEmpty || searchable.contains(query);
+        }).toList(growable: false);
+        if (movies.isEmpty) {
+          return Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(query.isEmpty
+                ? 'No hay películas visibles. Verificá que estén publicadas y que la sesión tenga permiso de lectura.'
+                : 'No hay películas que coincidan con la búsqueda.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.muted, height: 1.5)),
+          ));
+        }
+        return LayoutBuilder(builder: (context, constraints) {
+          final columns = constraints.maxWidth > 900 ? 4 : constraints.maxWidth > 550 ? 3 : 2;
+          return GridView.builder(
+            padding: const EdgeInsets.only(bottom: 24),
+            itemCount: movies.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns, crossAxisSpacing: 14,
+              mainAxisSpacing: 14, childAspectRatio: .68,
+            ),
+            itemBuilder: (context, index) {
+              final movie = movies[index];
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Container(
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: AppTheme.panel,
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: Colors.white.withValues(alpha: .07)),
+                  ),
+                  child: movie.logo == null || movie.logo!.isEmpty
+                      ? const Center(child: Icon(Icons.movie_outlined, size: 48, color: AppTheme.accent))
+                      : Image.network(movie.logo!, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.movie_outlined, size: 48, color: AppTheme.accent))),
+                )),
+                const SizedBox(height: 9),
+                Text(movie.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text([if (movie.releaseYear != null) movie.releaseYear.toString(), movie.category].join(' · '),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppTheme.muted, fontSize: 11)),
+              ]);
+            },
+          );
+        });
+      },
+    );
+  }
 
   List<MediaItem> get items {
     if (widget.category == 'PELÍCULAS') {
@@ -73,6 +165,32 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.category == 'PELÍCULAS') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('PELÍCULAS', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: -.5)),
+          const SizedBox(height: 7),
+          const Text('Catálogo conectado a Supabase.', style: TextStyle(color: AppTheme.muted)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Buscar película o género',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchController.text.isEmpty ? null : IconButton(
+                tooltip: 'Borrar búsqueda',
+                onPressed: () { _searchController.clear(); setState(() {}); },
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: _buildRemoteMovies()),
+        ]),
+      );
+    }
     final query = _searchController.text.trim().toLowerCase();
     final filtered = items.where((item) {
       final matchesQuery = query.isEmpty ||
