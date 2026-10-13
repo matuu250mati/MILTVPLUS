@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../models/tv_channel.dart';
@@ -11,8 +13,7 @@ class M3uPlaylistService {
               connectTimeout: const Duration(seconds: 15),
               receiveTimeout: const Duration(seconds: 30),
               maxRedirects: 5,
-              maxContentLength: 20 * 1024 * 1024,
-              responseType: ResponseType.plain,
+              responseType: ResponseType.stream,
               followRedirects: true,
               validateStatus: (status) => status != null && status >= 200 && status < 300,
             ));
@@ -29,9 +30,22 @@ class M3uPlaylistService {
       throw const FormatException('Ingresá una URL HTTP(S) válida para la lista M3U.');
     }
 
-    final response = await _dio.get<String>(uri.toString());
-    final body = response.data;
-    if (body == null || body.trim().isEmpty) {
+    final response = await _dio.get<ResponseBody>(uri.toString());
+    final responseBody = response.data;
+    if (responseBody == null) {
+      throw const FormatException('La respuesta no contiene una lista M3U.');
+    }
+
+    const maxPlaylistBytes = 20 * 1024 * 1024;
+    final bytes = <int>[];
+    await for (final chunk in responseBody.stream) {
+      if (bytes.length + chunk.length > maxPlaylistBytes) {
+        throw const FormatException('La lista supera el límite de 20 MB.');
+      }
+      bytes.addAll(chunk);
+    }
+    final body = utf8.decode(bytes, allowMalformed: true);
+    if (body.trim().isEmpty) {
       throw const FormatException('La lista recibida está vacía.');
     }
 
