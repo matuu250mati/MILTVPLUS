@@ -413,12 +413,25 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       // Continue opening the requested channel even if cleanup of the old one fails.
     }
 
+    final streamUri = Uri.tryParse(channel.streamUrl.trim());
+    if (streamUri == null ||
+        streamUri.host.isEmpty ||
+        streamUri.userInfo.isNotEmpty ||
+        (streamUri.scheme != 'https' && streamUri.scheme != 'http')) {
+      if (mounted && requestId == _playRequestId) {
+        setState(() {
+          loading = false;
+          error = 'La URL de esta señal no es válida. Quitá credenciales embebidas y usá una URL HTTP(S) directa.';
+        });
+      }
+      return;
+    }
+
     VideoPlayerController? next;
     Object? lastError;
     try {
       for (var attempt = 1; attempt <= 3; attempt++) {
-        final candidate =
-            VideoPlayerController.networkUrl(Uri.parse(channel.streamUrl));
+        final candidate = VideoPlayerController.networkUrl(streamUri);
         try {
           await candidate.initialize().timeout(const Duration(seconds: 20));
           next = candidate;
