@@ -88,6 +88,21 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_text_enabled_selector.
 </selector>
 TEXT_ENABLED_SELECTOR
 
+# Selector para estado presionado: usa el acento de MILTV PLUS con distinta opacidad.
+# Los IDs numéricos del XML decompilado no son portables entre aplicaciones.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector.xml" <<'PRESSED_ALPHA_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_pressed="true"
+        android:color="@color/miltvplus_accent"
+        android:alpha="0.65" />
+    <item
+        android:color="@color/miltvplus_accent"
+        android:alpha="1.0" />
+</selector>
+PRESSED_ALPHA_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
