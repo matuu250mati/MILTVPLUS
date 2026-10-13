@@ -72,7 +72,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_selector.xml" 
         android:state_enabled="false"
         android:color="?android:attr/textColorSecondary"
         android:alpha="?android:attr/disabledAlpha" />
-    <item android:color="?attr/colorControlNormal" />
+    <item android:color="?android:attr/colorControlNormal" />
 </selector>
 ENABLED_SELECTOR
 
