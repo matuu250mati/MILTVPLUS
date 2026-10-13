@@ -17,7 +17,7 @@ class SecurityRestrictedScreen extends StatelessWidget {
     const red = Color(0xFFFF3548);
     const background = Color(0xFF08090D);
     return PopScope(
-      canPop: false,
+      canPop: true,
       child: Scaffold(
         backgroundColor: background,
         body: SafeArea(
