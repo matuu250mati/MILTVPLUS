@@ -39,7 +39,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex.clamp(0, widget.channels.length - 1);
+    _index = widget.initialIndex.clamp(0, widget.channels.length - 1).toInt();
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
