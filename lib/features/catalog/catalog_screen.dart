@@ -130,6 +130,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
         MediaItem(title: 'Espíritu Rojo', subtitle: 'Anime · Fantasía', category: 'ANIME', symbol: '火'),
       ];
     }
+    if (widget.category == 'DEPORTES') {
+      return const [
+        MediaItem(title: 'En vivo', subtitle: 'Deportes · Directo', category: 'DEPORTES', symbol: '⚽'),
+        MediaItem(title: 'Resumen deportivo', subtitle: 'Destacados · Recap', category: 'DEPORTES', symbol: '🏆'),
+        MediaItem(title: 'Documentales deportivos', subtitle: 'Documental · Archivo', category: 'DEPORTES', symbol: '◉'),
+      ];
+    }
+    if (widget.category == 'INFANTIL') {
+      return const [
+        MediaItem(title: 'Pequeñas aventuras', subtitle: 'Animación · Familiar', category: 'INFANTIL', symbol: '★'),
+        MediaItem(title: 'Planeta curioso', subtitle: 'Educativo · Infantil', category: 'INFANTIL', symbol: '◎'),
+        MediaItem(title: 'Cuentos de colores', subtitle: 'Cuentos · Familiar', category: 'INFANTIL', symbol: '✿'),
+      ];
+    }
+    if (widget.category == 'GRATIS') {
+      return const [
+        MediaItem(title: 'Cine abierto', subtitle: 'Selección gratuita', category: 'GRATIS', symbol: '✦'),
+        MediaItem(title: 'Clásicos para descubrir', subtitle: 'Dominio público', category: 'GRATIS', symbol: '◈'),
+        MediaItem(title: 'Canales abiertos', subtitle: 'TV · Fuente autorizada', category: 'GRATIS', symbol: '▣'),
+      ];
+    }
     return const [
       MediaItem(title: 'Novedades', subtitle: 'Explorá lo nuevo', category: 'EXPLORAR', symbol: '✦'),
       MediaItem(title: 'Recomendados', subtitle: 'Selección editorial', category: 'EXPLORAR', symbol: '◈'),
