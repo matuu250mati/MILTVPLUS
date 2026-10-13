@@ -24,7 +24,9 @@ flutter run
 El script genera la carpeta `android/` con Flutter stable y aplica el manifiesto para móviles, Android TV y TV Box. El workflow de GitHub Actions usa el mismo procedimiento en un runner limpio.
 
 ## TV en vivo
-En TV EN VIVO, usá **AGREGAR** e ingresá un nombre y una URL HTTP(S) HLS válida (normalmente `.m3u8`). Se deben usar únicamente fuentes propias o autorizadas. La lista de canales de esta primera versión se mantiene en memoria y se reinicia al cerrar la app.
+En TV EN VIVO, abrí **FUENTES DE TV** para importar listas públicas por país, idioma o categoría (Argentina, español, noticias, deportes, canales de películas, canales de series, documentales, infantiles y música), además de las listas global y curada. También podés importar una URL M3U propia o autorizada. Los canales se combinan sin duplicar URLs y se guardan localmente.
+
+Una lista M3U de “canales de películas” o “canales de series” contiene canales lineales en vivo; **no** equivale a un catálogo bajo demanda tipo Netflix. La sección de películas/series consume metadatos y URLs publicados en las tablas `movies`, `series` y `episodes` de Supabase. Para incorporar un proveedor privado de VOD hace falta su endpoint/API o un formato de exportación autorizado, la estructura de autenticación y los campos de catálogo/episodios. No se deben pegar contraseñas, tokens ni claves privadas en el código o en el repositorio. No se encontró una URL privada de proveedor en los archivos consultados, por lo que no se inventaron endpoints ni enlaces.
 
 ## Sección +18
 La primera vez se configura un PIN de 4 a 8 dígitos; en accesos posteriores se valida. El PIN no se guarda en texto plano. Este control es local a la app y no reemplaza los controles parentales del dispositivo.
