@@ -1,4 +1,4 @@
-# 1000 TV Plus
+# MILTV PLUS
 
 Aplicación de entretenimiento desarrollada con Flutter, con identidad visual original y navegación adaptada a celulares, Android TV y TV Box compatibles.
 
