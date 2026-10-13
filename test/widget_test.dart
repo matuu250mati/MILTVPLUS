@@ -27,6 +27,6 @@ void main() {
     expect(find.text('TV EN VIVO'), findsOneWidget);
     expect(find.text('EXPLORÁ POR CATEGORÍA'), findsOneWidget);
     expect(find.text('INICIAR SESIÓN'), findsNothing);
-    expect(find.text('Películas'), findsOneWidget);
+    expect(find.text('PELÍCULAS'), findsOneWidget);
   });
 }
