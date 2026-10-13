@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/supabase_config.dart';
 
 /// Read-only access to the published MILTV PLUS catalog.
-/// RLS requires a signed-in Supabase user for catalog queries.
+/// Public reads are limited by RLS to published entries; writes remain server-side.
 class CatalogRepository {
   const CatalogRepository();
 
@@ -21,7 +21,7 @@ class CatalogRepository {
 
   Future<List<Map<String, dynamic>>> episodes(String seriesId) async {
     final client = _client;
-    if (client == null || client.auth.currentSession == null) return [];
+    if (client == null) return [];
     final rows = await client
         .from('episodes')
         .select()
@@ -37,7 +37,7 @@ class CatalogRepository {
     required String orderBy,
   }) async {
     final client = _client;
-    if (client == null || client.auth.currentSession == null) return [];
+    if (client == null) return [];
     final rows = await client
         .from(table)
         .select()
