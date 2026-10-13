@@ -25,6 +25,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   bool _loadingChannels = false;
   int selected = -1;
   int _playRequestId = 0;
+  String _channelQuery = '';
 
   @override
   void initState() {
@@ -41,7 +42,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
 
       void addUnique(TvChannel channel) {
-        final key = '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}';
+        final key = channel.streamUrl.trim();
         merged.putIfAbsent(key, () => channel);
       }
 
@@ -255,7 +256,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
       for (final channel in channels) {
         merged.putIfAbsent(
-          '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}',
+          channel.streamUrl.trim(),
           () => channel,
         );
       }
@@ -407,7 +408,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 3, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(height: 12),
-                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, onSelect: play)),
+                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
                   ],
                 )
               : Row(
@@ -469,40 +470,85 @@ class _PlayerPanel extends StatelessWidget {
 }
 
 class _ChannelList extends StatelessWidget {
-  const _ChannelList({required this.channels, required this.selected, required this.onSelect});
+  const _ChannelList({
+    required this.channels,
+    required this.selected,
+    required this.query,
+    required this.onQueryChanged,
+    required this.onSelect,
+  });
   final List<TvChannel> channels;
   final int selected;
+  final String query;
+  final ValueChanged<String> onQueryChanged;
   final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: AppTheme.panel.withValues(alpha: .92), borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: .07))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(padding: EdgeInsets.fromLTRB(16, 17, 16, 12),
-                child: Text('CANALES', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2))),
-            const Divider(height: 1, color: Color(0x223FFFFF)),
-            Expanded(
-              child: channels.isEmpty
-                  ? const Center(child: Padding(padding: EdgeInsets.all(18),
-                      child: Text('Todavía no hay canales. Agregá una URL HLS desde el botón superior.',
-                          textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5))))
-                  : ListView.separated(
-                      itemCount: channels.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0x1AFFFFFF)),
-                      itemBuilder: (context, index) => ListTile(
-                        selected: selected == index,
-                        selectedTileColor: AppTheme.accent.withValues(alpha: .08),
-                        onTap: () => onSelect(index),
-                        leading: Icon(Icons.circle, size: 9, color: selected == index ? AppTheme.accent : AppTheme.muted),
-                        title: Text(channels[index].name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: const Text('HLS', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+  Widget build(BuildContext context) {
+    final normalizedQuery = query.trim().toLowerCase();
+    final filteredIndices = <int>[
+      for (var i = 0; i < channels.length; i++)
+        if (normalizedQuery.isEmpty ||
+            channels[i].name.toLowerCase().contains(normalizedQuery) ||
+            channels[i].streamUrl.toLowerCase().contains(normalizedQuery))
+          i,
+    ];
+    return Container(
+      decoration: BoxDecoration(color: AppTheme.panel.withValues(alpha: .92), borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withValues(alpha: .07))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(padding: EdgeInsets.fromLTRB(16, 17, 16, 12),
+              child: Text('CANALES', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: TextField(
+              onChanged: onQueryChanged,
+              decoration: InputDecoration(
+                hintText: 'Buscar canal o país...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Borrar búsqueda',
+                        onPressed: () => onQueryChanged(''),
+                        icon: const Icon(Icons.close_rounded),
                       ),
-                    ),
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-          ],
-        ),
-      );
+          ),
+          const Divider(height: 1, color: Color(0x223FFFFF)),
+          Expanded(
+            child: channels.isEmpty
+                ? const Center(child: Padding(padding: EdgeInsets.all(18),
+                    child: Text('Todavía no hay canales. Elegí una fuente pública o importá tu lista M3U.',
+                        textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5))))
+                : filteredIndices.isEmpty
+                    ? const Center(child: Padding(padding: EdgeInsets.all(18),
+                        child: Text('No se encontraron canales con esa búsqueda.',
+                            textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))))
+                    : ListView.separated(
+                        itemCount: filteredIndices.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0x1AFFFFFF)),
+                        itemBuilder: (context, index) {
+                          final channelIndex = filteredIndices[index];
+                          final channel = channels[channelIndex];
+                          return ListTile(
+                            selected: selected == channelIndex,
+                            selectedTileColor: AppTheme.accent.withValues(alpha: .08),
+                            onTap: () => onSelect(channelIndex),
+                            leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
+                            title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: const Text('HLS', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
 }
