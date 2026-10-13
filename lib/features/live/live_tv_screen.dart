@@ -26,6 +26,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   int selected = -1;
   int _playRequestId = 0;
   String _channelQuery = '';
+  final TextEditingController _channelSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -88,6 +89,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   @override
   void dispose() {
     controller?.dispose();
+    _channelSearchController.dispose();
     super.dispose();
   }
 
@@ -262,7 +264,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       }
       for (final channel in imported) {
         merged.putIfAbsent(
-          '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}',
+          channel.streamUrl.trim(),
           () => channel,
         );
       }
@@ -415,7 +417,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 7, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(width: 14),
-                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, onSelect: play)),
+                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
                   ],
                 ),
         ),
@@ -504,6 +506,7 @@ class _ChannelList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: TextField(
+              controller: _channelSearchController,
               onChanged: onQueryChanged,
               decoration: InputDecoration(
                 hintText: 'Buscar canal o país...',
@@ -512,7 +515,10 @@ class _ChannelList extends StatelessWidget {
                     ? null
                     : IconButton(
                         tooltip: 'Borrar búsqueda',
-                        onPressed: () => onQueryChanged(''),
+                        onPressed: () {
+                          _channelSearchController.clear();
+                          onQueryChanged('');
+                        },
                         icon: const Icon(Icons.close_rounded),
                       ),
                 isDense: true,
