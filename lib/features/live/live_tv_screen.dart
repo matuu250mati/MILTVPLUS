@@ -438,7 +438,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 7, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(width: 14),
-                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
                   ],
                 ),
         ),
