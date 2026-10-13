@@ -10,8 +10,8 @@ Future<void> main() async {
 
   if (isSupabaseConfigured) {
     await Supabase.initialize(
-      url: supabaseUrl,
-      publishableKey: supabaseAnonKey,
+      url: normalizedSupabaseUrl,
+      publishableKey: supabaseAnonKey.trim(),
     );
   }
 
