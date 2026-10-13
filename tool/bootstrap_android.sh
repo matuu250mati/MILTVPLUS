@@ -494,6 +494,132 @@ cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_out_fast.xml
 </set>
 SLIDE_FADE_OUT_FAST
 
+
+# Iconos vectoriales de navegación y acciones para MILTV PLUS.
+# Se reemplazan las referencias numéricas del APK original por recursos/atributos nombrados.
+mkdir -p "$root_dir/android/app/src/main/res/drawable"
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_back.xml" <<'ICON_BACK'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:autoMirrored="true"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/miltvplus_accent">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M20,11L7.8,11l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13L20,13L20,11z" />
+</vector>
+ICON_BACK
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_expand.xml" <<'ICON_EXPAND'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/miltvplus_accent">
+    <group
+        android:name="arrow"
+        android:pivotX="12"
+        android:pivotY="12"
+        android:rotation="90">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M7,14 L12,9 L17,14 L7,14 Z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M0,0 L24,0 L24,24 L0,24 Z" />
+    </group>
+</vector>
+ICON_EXPAND
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_close.xml" <<'ICON_CLOSE'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/miltvplus_accent">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M19,6.41L17.59,5,12,10.59,6.41,5,5,6.41,10.59,12,5,17.59,6.41,19,12,13.41,17.59,19,19,17.59,13.41,12z" />
+</vector>
+ICON_CLOSE
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_chevron_right.xml" <<'ICON_CHEVRON_RIGHT'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/miltvplus_accent">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10,6l-1.4,1.4 4.6,4.6 -4.6,4.6 1.4,1.4 6,-6z" />
+</vector>
+ICON_CHEVRON_RIGHT
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_copy.xml" <<'ICON_COPY'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:autoMirrored="true"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,1L4,1c-1.1,0 -2,0.9 -2,2v14h2L4,3h12L16,1zM19,5L8,5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2L21,7c0,-1.1 -0.9,-2 -2,-2zM19,21L8,21L8,7h11v14z" />
+</vector>
+ICON_COPY
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_tools.xml" <<'ICON_TOOLS'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:autoMirrored="true"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.64,7.64c0.23,-0.5 0.36,-1.05 0.36,-1.64 0,-2.21 -1.79,-4 -4,-4S2,3.79 2,6s1.79,4 4,4c0.59,0 1.14,-0.13 1.64,-0.36L10,12l-2.36,2.36C7.14,14.13 6.59,14 6,14c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4c0,-0.59 -0.13,-1.14 -0.36,-1.64L12,14l7,7h3v-1L9.64,7.64zM6,8c-1.1,0 -2,-0.89 -2,-2s0.9,-2 2,-2 2,0.89 2,2 -0.9,2 -2,2zM6,20c-1.1,0 -2,-0.89 -2,-2s0.9,-2 2,-2 2,0.89 2,2 -0.9,2 -2,2zM12,12.5c-0.28,0 -0.5,-0.22 -0.5,-0.5s0.22,-0.5 0.5,-0.5 0.5,0.22 0.5,0.5 -0.22,0.5 -0.5,0.5zM19,3l-6,6 2,2 7,-7L22,3z" />
+</vector>
+ICON_TOOLS
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_more_vertical.xml" <<'ICON_MORE_VERTICAL'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/miltvplus_accent">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2c-1.1,0 -2,0.9 -2,2S10.9,8 12,8zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2c1.1,0 2,-0.9 2,-2S13.1,10 12,10zM12,16c1.1,0 2,0.9 2,2s-0.9,2 -2,2c-1.1,0 -2,-0.9 -2,-2S10.9,16 12,16z" />
+</vector>
+ICON_MORE_VERTICAL
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_clipboard.xml" <<'ICON_CLIPBOARD'
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19,2h-4.18C14.4,0.84 13.3,0 12,0c-1.3,0 -2.4,0.84 -2.82,2L5,2c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2L21,4c0,-1.1 -0.9,-2 -2,-2zM12,2c0.55,0 1,0.45 1,1s-0.45,1 -1,1 -1,-0.45 -1,-1 0.45,-1 1,-1zM19,20L5,20L5,4h2v3h10L17,4h2v16z" />
+</vector>
+ICON_CLIPBOARD
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
