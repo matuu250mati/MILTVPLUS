@@ -29,7 +29,10 @@ class M3uPlaylistParser {
       final uri = Uri.tryParse(line);
       if (uri == null ||
           uri.host.isEmpty ||
-          (uri.scheme != 'http' && uri.scheme != 'https')) {
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          _isWebPageOnlyHost(uri.host)) {
+        // Web-player pages (for example, YouTube or Twitch channel pages) are
+        // not direct media streams and cannot be opened by video_player.
         pendingName = null;
         continue;
       }
@@ -42,6 +45,30 @@ class M3uPlaylistParser {
     }
 
     return List<TvChannel>.unmodifiable(channels);
+  }
+
+  bool _isWebPageOnlyHost(String host) {
+    final normalized = host.toLowerCase();
+    const hosts = <String>{
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'youtu.be',
+      'twitch.tv',
+      'www.twitch.tv',
+      'facebook.com',
+      'www.facebook.com',
+      'fb.watch',
+      'vimeo.com',
+      'www.vimeo.com',
+      'dailymotion.com',
+      'www.dailymotion.com',
+      'tiktok.com',
+      'www.tiktok.com',
+      'instagram.com',
+      'www.instagram.com',
+    };
+    return hosts.contains(normalized);
   }
 
   String _fallbackName(Uri uri, int index) {
