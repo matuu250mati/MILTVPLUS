@@ -206,20 +206,28 @@ class _AppShellState extends State<AppShell> {
               height: 66,
               backgroundColor: const Color(0xFF10131E),
               indicatorColor: AppTheme.accent.withValues(alpha: .16),
-              selectedIndex: selected <= 3 ? selected : 4,
+              selectedIndex: selected == 0 ? 1 : selected == 1 ? 0 : selected == 7 ? 3 : 2,
               onDestinationSelected: (index) {
-                if (index == 4) {
-                  _openMoreMenu();
-                } else {
-                  setState(() => selected = index);
+                switch (index) {
+                  case 0:
+                    setState(() => selected = 1);
+                    break;
+                  case 1:
+                    setState(() => selected = 0);
+                    break;
+                  case 2:
+                    setState(() => selected = 5);
+                    break;
+                  case 3:
+                    setState(() => selected = 7);
+                    break;
                 }
               },
               destinations: const [
-                NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv_rounded), label: 'TV'),
                 NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
-                NavigationDestination(icon: Icon(Icons.movie_outlined), selectedIcon: Icon(Icons.movie_rounded), label: 'Películas'),
-                NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library_rounded), label: 'Series'),
-                NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Más'),
+                NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv_rounded), label: 'TV'),
+                NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore_rounded), label: 'Explorar'),
+                NavigationDestination(icon: Icon(Icons.account_circle_outlined), selectedIcon: Icon(Icons.account_circle_rounded), label: 'Perfil'),
               ],
             ),
     );
