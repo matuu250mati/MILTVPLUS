@@ -120,7 +120,8 @@ class _AuthScreenState extends State<AuthScreen> {
               Text('MILTV PLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
               SizedBox(height: 12),
               Text(
-                'Acceso bloqueado: configurá SUPABASE_URL y SUPABASE_ANON_KEY (publishable key) en los parámetros de compilación.',
+                supabaseConfigurationError ??
+                    'La configuración de Supabase no está disponible.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppTheme.muted, height: 1.5),
               ),
