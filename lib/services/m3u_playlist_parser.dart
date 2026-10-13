@@ -8,6 +8,7 @@ class M3uPlaylistParser {
   List<TvChannel> parse(String source) {
     final lines = source.replaceAll('\r', '').split('\n');
     final channels = <TvChannel>[];
+    final seen = <String>{};
     String? pendingName;
 
     for (final rawLine in lines) {
@@ -29,6 +30,7 @@ class M3uPlaylistParser {
       final uri = Uri.tryParse(line);
       if (uri == null ||
           uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty ||
           (uri.scheme != 'http' && uri.scheme != 'https') ||
           _isWebPageOnlyHost(uri.host)) {
         // Web-player pages (for example, YouTube or Twitch channel pages) are
@@ -37,10 +39,15 @@ class M3uPlaylistParser {
         continue;
       }
 
-      channels.add(TvChannel(
-        name: pendingName ?? _fallbackName(uri, channels.length + 1),
-        streamUrl: uri.toString(),
-      ));
+      final streamUrl = uri.toString();
+      // Playlist providers sometimes repeat the same stream under several labels.
+      // Keep the first occurrence so the channel list stays usable and predictable.
+      if (seen.add(streamUrl)) {
+        channels.add(TvChannel(
+          name: pendingName ?? _fallbackName(uri, channels.length + 1),
+          streamUrl: streamUrl,
+        ));
+      }
       pendingName = null;
     }
 
