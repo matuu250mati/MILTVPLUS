@@ -131,6 +131,18 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_control_state_selector
 </selector>
 CONTROL_STATE_SELECTOR
 
+# Segundo selector de estado para texto/íconos secundarios.
+# Usa nombres semánticos en lugar de IDs numéricos del APK de origen.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_control_state_selector_secondary.xml" <<'CONTROL_STATE_SELECTOR_SECONDARY'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="?android:attr/textColorPrimary" />
+</selector>
+CONTROL_STATE_SELECTOR_SECONDARY
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
