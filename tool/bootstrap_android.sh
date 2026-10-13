@@ -143,6 +143,18 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_control_state_selector
 </selector>
 CONTROL_STATE_SELECTOR_SECONDARY
 
+# Selector de estado adicional para controles con énfasis de marca.
+# Los IDs numéricos del XML decompilado no permiten conocer los colores originales.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_brand_state_selector.xml" <<'BRAND_STATE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+BRAND_STATE_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
