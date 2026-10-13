@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
@@ -26,7 +28,6 @@ class _AppShellState extends State<AppShell> {
   ];
 
   int selected = 1;
-  bool? expanded;
 
   Widget page() {
     switch (selected) {
@@ -54,154 +55,184 @@ class _AppShellState extends State<AppShell> {
         child: KeyedSubtree(key: ValueKey(selected), child: page()),
       );
 
+  Widget _buildDrawer() {
+    final user = isSupabaseConfigured
+        ? Supabase.instance.client.auth.currentUser
+        : null;
+    final email = user?.email;
+    return Drawer(
+      width: 304,
+      backgroundColor: const Color(0xFF10131E),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF20243C), Color(0xFF10131E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.black,
+                      size: 39,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'MILTV PLUS',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    email ?? 'Explorá el contenido sin iniciar sesión',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppTheme.muted, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+                children: [
+                  for (var index = 1; index < items.length; index++)
+                    if (index == 6)
+                      const Divider(height: 18, color: Color(0x303FFFFFFF))
+                    else
+                      const SizedBox.shrink(),
+                  for (var index = 0; index < items.length; index++)
+                    _drawerItem(index),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 8, 18, 18),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'MILTV PLUS · Entretenimiento',
+                  style: TextStyle(color: AppTheme.muted, fontSize: 11),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerItem(int index) {
+    final item = items[index];
+    final active = selected == index;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        selected: active,
+        selectedTileColor: AppTheme.accent.withValues(alpha: .13),
+        leading: Icon(
+          item.icon,
+          color: active ? AppTheme.accent : AppTheme.muted,
+        ),
+        title: Text(
+          item.label == 'TV EN VIVO'
+              ? 'TV en Vivo'
+              : item.label == 'PELÍCULAS'
+                  ? 'Películas'
+                  : item.label == 'SERIES'
+                      ? 'Series'
+                      : item.label == 'ANIME'
+                          ? 'Anime'
+                          : item.label == 'EXPLORAR'
+                              ? 'Explorar'
+                              : item.label == '+18'
+                                  ? 'Zona +18'
+                                  : item.label == 'PERFIL'
+                                      ? 'Mi Cuenta / Perfil'
+                                      : 'Inicio',
+          style: TextStyle(
+            color: active ? Colors.white : AppTheme.muted,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+        onTap: () {
+          Navigator.of(context).pop();
+          setState(() => selected = index);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 760;
-    final compact = MediaQuery.sizeOf(context).width < 600;
-    final menuExpanded = expanded ?? wide;
-
     return Scaffold(
       backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF080A10),
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: AppTheme.accent),
+        titleSpacing: 4,
+        title: const Row(
+          children: [
+            Text(
+              'MILTV',
+              style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1),
+            ),
+            SizedBox(width: 5),
+            Text(
+              'PLUS',
+              style: TextStyle(
+                color: AppTheme.accent,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Mi cuenta',
+            onPressed: () => setState(() => selected = 7),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      drawer: _buildDrawer(),
       body: Stack(
         children: [
           const _AmbientBackground(),
           SafeArea(
-            child: wide
-                ? Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: menuExpanded ? 218 : 68,
-                        margin: const EdgeInsets.fromLTRB(10, 10, 0, 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xCC111521),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.white.withValues(alpha: .08)),
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 18, 12, 20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accent,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 29),
-                                  ),
-                                  if (menuExpanded) ...[
-                                    const SizedBox(width: 10),
-                                    const Expanded(
-                                      child: Text('MILTV\nPLUS',
-                                          style: TextStyle(height: .98, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                itemCount: items.length,
-                                itemBuilder: (context, index) {
-                                  final item = items[index];
-                                  final active = selected == index;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 5),
-                                    child: Tooltip(
-                                      message: item.label,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(13),
-                                        onTap: () => setState(() => selected = index),
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(horizontal: menuExpanded ? 12 : 0, vertical: 12),
-                                          decoration: BoxDecoration(
-                                            color: active ? AppTheme.accent.withValues(alpha: .13) : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(13),
-                                            border: active ? Border.all(color: AppTheme.accent.withValues(alpha: .35)) : null,
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: menuExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-                                            children: [
-                                              Icon(item.icon, size: 20, color: active ? AppTheme.accent : AppTheme.muted),
-                                              if (menuExpanded) ...[
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                                      style: TextStyle(fontSize: 11, letterSpacing: .4, fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                                                          color: active ? Colors.white : AppTheme.muted)),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: menuExpanded ? 'Contraer menú' : 'Expandir menú',
-                              onPressed: () => setState(() => expanded = !menuExpanded),
-                              icon: Icon(menuExpanded ? Icons.keyboard_double_arrow_left_rounded : Icons.keyboard_double_arrow_right_rounded),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        ),
-                      ),
-                      Expanded(child: Padding(padding: const EdgeInsets.all(10), child: _pageView())),
-                    ],
-                  )
-                : Padding(
-                    padding: EdgeInsets.fromLTRB(compact ? 4 : 10, 4, compact ? 4 : 10, 4),
-                    child: _pageView(),
-                  ),
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: _pageView(),
+            ),
           ),
         ],
       ),
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
-              height: 66,
-              backgroundColor: const Color(0xFF10131E),
-              indicatorColor: AppTheme.accent.withValues(alpha: .16),
-              selectedIndex: selected == 0 ? 1 : selected == 1 ? 0 : selected == 7 ? 3 : 2,
-              onDestinationSelected: (index) {
-                switch (index) {
-                  case 0:
-                    setState(() => selected = 1);
-                    break;
-                  case 1:
-                    setState(() => selected = 0);
-                    break;
-                  case 2:
-                    setState(() => selected = 5);
-                    break;
-                  case 3:
-                    setState(() => selected = 7);
-                    break;
-                }
-              },
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
-                NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv_rounded), label: 'TV'),
-                NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore_rounded), label: 'Explorar'),
-                NavigationDestination(icon: Icon(Icons.account_circle_outlined), selectedIcon: Icon(Icons.account_circle_rounded), label: 'Perfil'),
-              ],
-            ),
     );
   }
-}
-
-class _NavItem {
-  const _NavItem(this.label, this.icon);
-  final String label;
-  final IconData icon;
 }
 
 class _AmbientBackground extends StatelessWidget {
