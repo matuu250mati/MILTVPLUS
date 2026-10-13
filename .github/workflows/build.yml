@@ -111,8 +111,8 @@ jobs:
           latest_apk="build/MILTVPLUS-android.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "$apk"
           cp "$apk" "$latest_apk"
-          sha256sum "$apk" > "$apk.sha256"
-          sha256sum "$latest_apk" > "$latest_apk.sha256"
+          (cd build && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
+          (cd build && sha256sum "$(basename "$latest_apk")" > "$(basename "$latest_apk").sha256")
           echo "MILTVPLUS_APK_PATH=$apk" >> "$GITHUB_ENV"
           echo "MILTVPLUS_CHECKSUM_PATH=$apk.sha256" >> "$GITHUB_ENV"
           echo "MILTVPLUS_LATEST_APK_PATH=$latest_apk" >> "$GITHUB_ENV"
