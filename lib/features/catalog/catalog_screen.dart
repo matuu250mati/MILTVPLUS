@@ -48,7 +48,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final entries = movies.map(_CatalogEntry.fromMovie).toList(growable: false);
     final category = widget.category.toLowerCase();
 
-    if (widget.category == 'EXPLORAR') return entries;
+    if (widget.category == 'EXPLORAR' || category == 'películas' || category == 'peliculas') return entries;
 
     return entries.where((entry) {
       final searchable = '${entry.category} ${entry.genres.join(' ')} ${entry.title}'.toLowerCase();
