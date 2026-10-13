@@ -24,6 +24,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   bool loading = false;
   bool _loadingChannels = false;
   int selected = -1;
+  int _playRequestId = 0;
 
   @override
   void initState() {
@@ -223,16 +224,25 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   }
 
   Future<void> play(int index) async {
+    if (index < 0 || index >= channels.length) return;
+
+    final requestId = ++_playRequestId;
     final channel = channels[index];
+    final old = controller;
     setState(() {
       loading = true;
       error = null;
       selected = index;
+      controller = null;
     });
-    final old = controller;
+
+    // Stop the previous signal immediately so audio never leaks across channels.
+    await old?.pause();
+    await old?.dispose();
+
     VideoPlayerController? next;
+    Object? lastError;
     try {
-      Object? lastError;
       for (var attempt = 1; attempt <= 3; attempt++) {
         final candidate =
             VideoPlayerController.networkUrl(Uri.parse(channel.streamUrl));
@@ -252,26 +262,31 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       if (next == null) {
         throw StateError('HLS initialization failed after retries: $lastError');
       }
-      if (!mounted) {
+      if (!mounted || requestId != _playRequestId) {
         await next.dispose();
         return;
       }
+
       await next.play();
+      if (!mounted || requestId != _playRequestId) {
+        await next.dispose();
+        return;
+      }
       setState(() {
         controller = next;
         loading = false;
       });
-      await old?.dispose();
     } catch (_) {
-      if (!mounted) return;
+      await next?.dispose();
+      if (!mounted || requestId != _playRequestId) return;
       setState(() {
+        controller = null;
         loading = false;
         error =
             'No se pudo abrir la señal tras 3 intentos. Verificá URL, conexión, formato HLS y permisos de la fuente.';
       });
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
