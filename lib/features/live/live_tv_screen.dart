@@ -5,6 +5,7 @@ import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
+import '../../services/m3u_playlist_service.dart';
 
 class LiveTvScreen extends StatefulWidget {
   const LiveTvScreen({super.key});
@@ -17,6 +18,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   final service = const StreamService();
   final channelStorage = ChannelStorageService();
   final catalogService = CatalogService();
+  final m3uPlaylistService = M3uPlaylistService();
   VideoPlayerController? controller;
   String? error;
   bool loading = false;
@@ -140,6 +142,86 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     }
   }
 
+  Future<void> importPlaylist() async {
+    final urlController = TextEditingController(
+      text: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
+    );
+    final playlistUrl = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Importar lista M3U'),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: urlController,
+            keyboardType: TextInputType.url,
+            minLines: 1,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'URL pública o autorizada de la lista',
+              hintText: 'https://servidor/lista.m3u8',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CANCELAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, urlController.text.trim()),
+            child: const Text('IMPORTAR'),
+          ),
+        ],
+      ),
+    );
+    urlController.dispose();
+    if (playlistUrl == null || playlistUrl.isEmpty || !mounted) return;
+
+    setState(() {
+      _loadingChannels = true;
+      error = null;
+    });
+    try {
+      final imported = await m3uPlaylistService.importFromUrl(playlistUrl);
+      final merged = <String, TvChannel>{};
+      for (final channel in channels) {
+        merged.putIfAbsent(
+          '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}',
+          () => channel,
+        );
+      }
+      for (final channel in imported) {
+        merged.putIfAbsent(
+          '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}',
+          () => channel,
+        );
+      }
+      final combined = merged.values.toList(growable: false);
+      await channelStorage.save(combined);
+      if (!mounted) return;
+      setState(() {
+        channels
+          ..clear()
+          ..addAll(combined);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Importación terminada: ${imported.length} señales leídas; ${combined.length} canales únicos guardados. La reproducción se verifica al abrir cada canal.',
+          ),
+        ),
+      );
+    } catch (exception) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo importar la lista: $exception')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingChannels = false);
+    }
+  }
+
   Future<void> play(int index) async {
     final channel = channels[index];
     setState(() {
@@ -215,7 +297,17 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
             ),
             const SizedBox(width: 4),
-            FilledButton.icon(onPressed: addChannel, icon: const Icon(Icons.add_rounded), label: const Text('AGREGAR')),
+            OutlinedButton.icon(
+              onPressed: _loadingChannels ? null : importPlaylist,
+              icon: const Icon(Icons.playlist_add_rounded),
+              label: const Text('IMPORTAR M3U'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: addChannel,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('AGREGAR'),
+            ),
           ],
         ),
         const SizedBox(height: 18),
