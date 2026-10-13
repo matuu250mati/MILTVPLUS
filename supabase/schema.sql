@@ -83,12 +83,14 @@ create policy "Authenticated users read published channels"
   on public.channels for select to anon, authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published movies" on public.movies;
-create policy "Authenticated users read published movies"
-  on public.movies for select to authenticated using (is_published);
+drop policy if exists "Public users read published movies" on public.movies;
+create policy "Public users read published movies"
+  on public.movies for select to anon, authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published series" on public.series;
-create policy "Authenticated users read published series"
-  on public.series for select to authenticated using (is_published);
+drop policy if exists "Public users read published series" on public.series;
+create policy "Public users read published series"
+  on public.series for select to anon, authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published episodes" on public.episodes;
 create policy "Authenticated users read published episodes"
