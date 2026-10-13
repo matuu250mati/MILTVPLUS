@@ -59,8 +59,12 @@ jobs:
             echo "::error::Configure the SUPABASE_ANON_KEY repository secret."
             exit 1
           fi
-          if [[ ! "$SUPABASE_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?(/.*)?$ ]]; then
-            echo "::error::SUPABASE_URL must be a valid HTTPS URL."
+          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\.supabase\.co$ ]]; then
+            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co with no path, query, fragment, trailing slash, or dashboard URL."
+            exit 1
+          fi
+          if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
+            echo "::error::SUPABASE_ANON_KEY contains whitespace; copy the full publishable/anon key from Supabase API settings."
             exit 1
           fi
 
