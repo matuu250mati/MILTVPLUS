@@ -103,7 +103,7 @@ class _AppShellState extends State<AppShell> {
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'MILK TV PLUS',
+                    'MILTVPLUS',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -146,7 +146,7 @@ class _AppShellState extends State<AppShell> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'MILK TV PLUS · Entretenimiento',
+                  'MILTVPLUS · Entretenimiento',
                   style: TextStyle(color: AppTheme.muted, fontSize: 11),
                 ),
               ),
