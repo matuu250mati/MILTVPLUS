@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     try {
       final preferences = await SharedPreferences.getInstance();
-      _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILK TV';
+      _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILTVPLUS';
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -210,7 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Icon(Icons.verified_user_outlined, color: AppTheme.accent, size: 25),
                   SizedBox(width: 10),
-                  Text('Cuenta MILTV PLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text('Cuenta MILTVPLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 ],
               ),
               const SizedBox(height: 10),
