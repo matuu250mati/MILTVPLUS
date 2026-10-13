@@ -66,6 +66,14 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     }
   }
 
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _initialize();
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -102,11 +110,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                               Text(_error!, textAlign: TextAlign.center),
                               const SizedBox(height: 12),
                               FilledButton.icon(
-                                onPressed: () => setState(() {
-                                  _loading = true;
-                                  _error = null;
-                                  _initialize();
-                                }),
+                                onPressed: _retry,
                                 icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('REINTENTAR'),
                               ),
