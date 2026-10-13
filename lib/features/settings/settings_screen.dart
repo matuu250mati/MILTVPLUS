@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/supabase_config.dart';
+import '../auth/auth_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -89,6 +90,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _openAuth() async {
+    if (!isSupabaseConfigured) {
+      _showMessage(supabaseConfigurationError ?? 'Supabase no está configurado.');
+      return;
+    }
+    final authenticated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (authContext) => AuthScreen(
+          onAuthenticated: () => Navigator.of(authContext).pop(true),
+        ),
+      ),
+    );
+    if (mounted && authenticated == true) setState(() {});
+  }
+
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -99,6 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
@@ -216,25 +234,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 10),
               Text(
                 isSupabaseConfigured
-                    ? (Supabase.instance.client.auth.currentUser?.email ?? 'No hay una sesión iniciada.')
-                    : 'Cuenta no disponible: falta configurar Supabase.',
+                    ? (user?.email ?? 'No hay una sesión iniciada.')
+                    : (supabaseConfigurationError ?? 'Cuenta no disponible: falta configurar Supabase.'),
                 style: const TextStyle(color: AppTheme.muted),
               ),
               const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: !isSupabaseConfigured || Supabase.instance.client.auth.currentUser == null ? null : () async {
-                    try {
-                      await Supabase.instance.client.auth.signOut();
-                    } catch (_) {
-                      if (mounted) _showMessage('No se pudo cerrar la sesión. Intentá de nuevo.');
-                    }
-                  },
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('CERRAR SESIÓN'),
+              if (user == null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: isSupabaseConfigured ? _openAuth : null,
+                    icon: const Icon(Icons.login_rounded),
+                    label: const Text('INICIAR SESIÓN / CREAR CUENTA'),
+                  ),
                 ),
-              ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        await Supabase.instance.client.auth.signOut();
+                        if (mounted) {
+                          setState(() {});
+                          _showMessage('Sesión cerrada.');
+                        }
+                      } catch (_) {
+                        if (mounted) _showMessage('No se pudo cerrar la sesión. Intentá de nuevo.');
+                      }
+                    },
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('CERRAR SESIÓN'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
