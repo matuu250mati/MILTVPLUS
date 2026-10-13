@@ -20,6 +20,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   VideoPlayerController? controller;
   String? error;
   bool loading = false;
+  bool _loadingChannels = false;
   int selected = -1;
 
   @override
@@ -28,29 +29,55 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     loadSavedChannels();
   }
 
-  Future<void> loadSavedChannels() async {
+  Future<void> loadSavedChannels({bool showFeedback = false}) async {
+    if (_loadingChannels) return;
+    setState(() => _loadingChannels = true);
+    var remoteLoaded = false;
     try {
       final saved = await channelStorage.load();
-      if (!mounted) return;
-      setState(() => channels.addAll(saved));
+      final merged = <String, TvChannel>{};
+
+      void addUnique(TvChannel channel) {
+        final key = '${channel.name.trim().toLowerCase()}|${channel.streamUrl.trim()}';
+        merged.putIfAbsent(key, () => channel);
+      }
+
+      for (final channel in saved) {
+        addUnique(channel);
+      }
+
       try {
         final remoteChannels = await catalogService.getChannels();
-        if (!mounted) return;
-        final existing = channels.map((channel) => channel.name).toSet();
-        final additions = remoteChannels
-            .where((channel) => !existing.contains(channel.title))
-            .map((channel) => TvChannel(name: channel.title, streamUrl: channel.urlStream))
-            .toList(growable: false);
-        if (additions.isNotEmpty) setState(() => channels.addAll(additions));
-      } catch (exception) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudieron cargar los canales de Supabase. Revisá la configuración y la sesión.')),
-          );
+        for (final channel in remoteChannels) {
+          addUnique(TvChannel(name: channel.title, streamUrl: channel.urlStream));
         }
+        remoteLoaded = true;
+      } catch (_) {
+        // Keep local channels usable when Supabase is offline or the user is signed out.
+      }
+
+      if (!mounted) return;
+      setState(() {
+        channels
+          ..clear()
+          ..addAll(merged.values);
+        if (selected >= channels.length) selected = -1;
+      });
+
+      if (showFeedback) {
+        final message = remoteLoaded
+            ? 'Lista recargada: ${channels.length} señales disponibles.'
+            : 'Lista local recargada. No se pudo actualizar el catálogo remoto.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
-      // Playback UI remains available if local preferences cannot be read.
+      if (showFeedback && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo leer la lista local de canales.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingChannels = false);
     }
   }
 
@@ -182,6 +209,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                 ],
               ),
             ),
+            IconButton(
+              tooltip: 'Recargar lista de canales',
+              onPressed: _loadingChannels ? null : () => loadSavedChannels(showFeedback: true),
+              icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
+            ),
+            const SizedBox(width: 4),
             FilledButton.icon(onPressed: addChannel, icon: const Icon(Icons.add_rounded), label: const Text('AGREGAR')),
           ],
         ),
