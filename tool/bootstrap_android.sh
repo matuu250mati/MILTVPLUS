@@ -52,6 +52,17 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_accelerated_selector.x
 </selector>
 SELECTOR
 
+# Variante del segundo selector recibido; mantiene los colores de marca.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_accelerated_selector_secondary.xml" <<'SELECTOR_SECONDARY'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:color="@color/miltvplus_surface"
+        android:state_accelerated="false" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+SELECTOR_SECONDARY
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -109,5 +120,5 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 </manifest>
 MANIFEST
 
-echo "Estructura Android generada con recursos visuales MILTV PLUS y manifiesto para móviles, Android TV y TV Box."
+echo "Estructura Android generada con selectores de color MILTV PLUS y manifiesto para móviles, Android TV y TV Box."
 echo "Siguiente paso: ejecutar flutter pub get, flutter analyze y las pruebas del proyecto."
