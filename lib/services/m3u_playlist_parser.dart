@@ -40,9 +40,9 @@ class M3uPlaylistParser {
       }
 
       final streamUrl = uri.toString();
-      // Playlist providers sometimes repeat the same stream under several labels.
-      // Keep the first occurrence so the channel list stays usable and predictable.
-      if (seen.add(streamUrl)) {
+      // Fragments, host casing, and dot-segments do not identify different media.
+      // Preserve the original URL for playback but deduplicate by canonical identity.
+      if (seen.add(_streamIdentity(uri))) {
         channels.add(TvChannel(
           name: pendingName ?? _fallbackName(uri, channels.length + 1),
           streamUrl: streamUrl,
@@ -52,6 +52,22 @@ class M3uPlaylistParser {
     }
 
     return List<TvChannel>.unmodifiable(channels);
+  }
+
+  String _streamIdentity(Uri uri) {
+    final scheme = uri.scheme.toLowerCase();
+    final host = uri.host.toLowerCase();
+    final isDefaultPort = (scheme == 'https' && uri.port == 443) ||
+        (scheme == 'http' && uri.port == 80);
+    return uri
+        .replace(
+          scheme: scheme,
+          host: host,
+          port: isDefaultPort ? null : (uri.hasPort ? uri.port : null),
+          path: uri.normalizePath().path,
+          fragment: '',
+        )
+        .toString();
   }
 
   bool _isWebPageOnlyHost(String host) {
