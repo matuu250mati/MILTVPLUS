@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     try {
       final preferences = await SharedPreferences.getInstance();
-      _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILTV';
+      _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILK TV';
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
     } finally {
       if (mounted) setState(() => _loading = false);
