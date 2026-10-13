@@ -125,6 +125,8 @@ jobs:
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
+            build/MILTVPLUS-android.apk
+            build/MILTVPLUS-android.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
