@@ -119,6 +119,18 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector
 </selector>
 PRESSED_ALPHA_SELECTOR_SECONDARY
 
+# Selector de color para controles habilitados/deshabilitados, variante de contraste.
+# Los IDs del APK de origen se sustituyen por colores semánticos de MILTV PLUS.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_control_state_selector.xml" <<'CONTROL_STATE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+CONTROL_STATE_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
