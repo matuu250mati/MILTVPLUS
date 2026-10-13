@@ -345,6 +345,43 @@ FOCUS_SELECTED_SECONDARY_SELECTOR
 # El tercer XML recibido usa el mismo color en los tres estados; equivale al
 # miltvplus_focus_indicator_selector.xml definido arriba y no necesita duplicarse.
 
+
+# Selectores adicionales de foco/selección adaptados a los colores semánticos de MILTV PLUS.
+# Los IDs @7F060xxx son locales al APK de origen y no se pueden resolver de forma fiable aquí.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_accent_selector.xml" <<'FOCUS_SELECTED_ACCENT_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_selected="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/textColorPrimary" />
+</selector>
+FOCUS_SELECTED_ACCENT_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_surface_selector.xml" <<'FOCUS_SURFACE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="@color/miltvplus_surface" />
+</selector>
+FOCUS_SURFACE_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_contrast_selector.xml" <<'FOCUS_SELECTED_CONTRAST_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:color="?android:attr/textColorPrimary" />
+</selector>
+FOCUS_SELECTED_CONTRAST_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
