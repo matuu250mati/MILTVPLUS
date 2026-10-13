@@ -382,6 +382,49 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_contras
 </selector>
 FOCUS_SELECTED_CONTRAST_SELECTOR
 
+
+# Selectores adicionales adaptados a los estados de foco, selección e interacción.
+# Los IDs @7F060xxx pertenecen a la tabla de recursos del APK original; se reemplazan
+# por colores semánticos de MILTV PLUS, no por supuestas traducciones de esos IDs.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_accent_surface_selector.xml" <<'FOCUS_ACCENT_SURFACE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="@color/miltvplus_surface" />
+</selector>
+FOCUS_ACCENT_SURFACE_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_text_selector.xml" <<'FOCUS_SELECTED_TEXT_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_selected="true"
+        android:color="?android:attr/textColorPrimary" />
+    <item android:color="?android:attr/textColorSecondary" />
+</selector>
+FOCUS_SELECTED_TEXT_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_pressed_focused_selector.xml" <<'ENABLED_PRESSED_FOCUSED_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item
+        android:state_pressed="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/colorControlNormal" />
+</selector>
+ENABLED_PRESSED_FOCUSED_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
