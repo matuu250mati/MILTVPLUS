@@ -370,7 +370,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       }
       for (final channel in imported) {
         merged.putIfAbsent(
-          channel.streamUrl.trim(),
+          _streamIdentity(channel.streamUrl),
           () => channel,
         );
       }
