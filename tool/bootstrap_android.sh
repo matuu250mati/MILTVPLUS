@@ -274,6 +274,45 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_pressed_selector
 </selector>
 FOCUS_PRESSED_SELECTOR
 
+# Selectores de opacidad, estado marcado y foco para la interfaz MILTV PLUS.
+# Los IDs del APK original se sustituyen por colores semánticos de la marca y del tema.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_overlay_selector.xml" <<'CHECKED_OVERLAY_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/colorForeground"
+        android:alpha="0.1" />
+    <item
+        android:state_checked="true"
+        android:color="@color/miltvplus_accent"
+        android:alpha="0.3" />
+    <item
+        android:color="?android:attr/colorForeground"
+        android:alpha="0.3" />
+</selector>
+CHECKED_OVERLAY_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_text_selector.xml" <<'CHECKED_TEXT_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_checked="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/textColorPrimary" />
+</selector>
+CHECKED_TEXT_SELECTOR
+
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_indicator_selector.xml" <<'FOCUS_INDICATOR_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+FOCUS_INDICATOR_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
