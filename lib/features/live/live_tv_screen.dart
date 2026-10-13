@@ -410,7 +410,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 3, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(height: 12),
-                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
                   ],
                 )
               : Row(
@@ -476,12 +476,14 @@ class _ChannelList extends StatelessWidget {
     required this.channels,
     required this.selected,
     required this.query,
+    required this.searchController,
     required this.onQueryChanged,
     required this.onSelect,
   });
   final List<TvChannel> channels;
   final int selected;
   final String query;
+  final TextEditingController searchController;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<int> onSelect;
 
@@ -506,7 +508,7 @@ class _ChannelList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: TextField(
-              controller: _channelSearchController,
+              controller: searchController,
               onChanged: onQueryChanged,
               decoration: InputDecoration(
                 hintText: 'Buscar canal o país...',
@@ -516,7 +518,7 @@ class _ChannelList extends StatelessWidget {
                     : IconButton(
                         tooltip: 'Borrar búsqueda',
                         onPressed: () {
-                          _channelSearchController.clear();
+                          searchController.clear();
                           onQueryChanged('');
                         },
                         icon: const Icon(Icons.close_rounded),
