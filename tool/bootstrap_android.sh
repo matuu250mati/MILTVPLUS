@@ -14,7 +14,7 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 rm -rf "$root_dir/android"
 cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
-# Android TV / TV Box y móviles: manifiesto para 1000 TV Plus.
+# Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"
 cat > "$root_dir/android/app/src/main/res/drawable/tv_banner.xml" <<'BANNER'
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
@@ -46,7 +46,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 
     <application
         android:name="${applicationName}"
-        android:label="1000 TV Plus"
+        android:label="MILTV PLUS"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/tv_banner"
         android:usesCleartextTraffic="false"
@@ -77,5 +77,5 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 </manifest>
 MANIFEST
 
-echo "Estructura Android generada y manifiesto 1000 TV Plus configurado para móviles, Android TV y TV Box."
+echo "Estructura Android generada y manifiesto MILTV PLUS configurado para móviles, Android TV y TV Box."
 echo "Siguiente paso: cd al proyecto y ejecutar flutter pub get."
