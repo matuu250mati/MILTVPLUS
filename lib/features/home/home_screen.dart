@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.onNavigate});
+
+  final ValueChanged<int> onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +49,7 @@ class HomeScreen extends StatelessWidget {
                       style: TextStyle(color: AppTheme.muted, height: 1.5)),
                   const SizedBox(height: 22),
                   FilledButton.icon(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Elegí TV EN VIVO en el menú lateral.')),
-                    ),
+                    onPressed: () => onNavigate(0),
                     icon: const Icon(Icons.play_arrow_rounded),
                     label: const Text('EMPEZAR A VER'),
                   ),
@@ -69,13 +69,13 @@ class HomeScreen extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 1.8,
-          children: const [
-            _CategoryTile('TV EN VIVO', Icons.live_tv_rounded),
-            _CategoryTile('PELÍCULAS', Icons.local_movies_rounded),
-            _CategoryTile('SERIES', Icons.video_library_rounded),
-            _CategoryTile('ANIME', Icons.animation_rounded),
-            _CategoryTile('DESTACADOS', Icons.auto_awesome_rounded),
-            _CategoryTile('EXPLORAR', Icons.explore_rounded),
+          children: [
+            _CategoryTile('TV EN VIVO', Icons.live_tv_rounded, onTap: () => onNavigate(0)),
+            _CategoryTile('PELÍCULAS', Icons.local_movies_rounded, onTap: () => onNavigate(2)),
+            _CategoryTile('SERIES', Icons.video_library_rounded, onTap: () => onNavigate(3)),
+            _CategoryTile('ANIME', Icons.animation_rounded, onTap: () => onNavigate(4)),
+            _CategoryTile('DESTACADOS', Icons.auto_awesome_rounded, onTap: () => onNavigate(1)),
+            _CategoryTile('EXPLORAR', Icons.explore_rounded, onTap: () => onNavigate(5)),
           ],
         ),
       ],
@@ -100,24 +100,33 @@ class _Pill extends StatelessWidget {
 }
 
 class _CategoryTile extends StatelessWidget {
-  const _CategoryTile(this.label, this.icon);
+  const _CategoryTile(this.label, this.icon, {required this.onTap});
   final String label;
   final IconData icon;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.panel,
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(17),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: Colors.white.withValues(alpha: .06)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppTheme.accent),
-            const SizedBox(width: 10),
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .4))),
-          ],
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(color: Colors.white.withValues(alpha: .06)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: AppTheme.accent),
+                const SizedBox(width: 10),
+                Expanded(child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .4))),
+              ],
+            ),
+          ),
         ),
       );
 }
