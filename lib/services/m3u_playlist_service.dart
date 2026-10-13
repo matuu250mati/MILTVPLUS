@@ -11,7 +11,6 @@ class M3uPlaylistService {
               connectTimeout: const Duration(seconds: 15),
               receiveTimeout: const Duration(seconds: 30),
               responseType: ResponseType.plain,
-              maxContentLength: 20 * 1024 * 1024,
               followRedirects: true,
               validateStatus: (status) => status != null && status >= 200 && status < 300,
             ));
@@ -31,6 +30,10 @@ class M3uPlaylistService {
     final body = response.data;
     if (body == null || body.trim().isEmpty) {
       throw const FormatException('La lista recibida está vacía.');
+    }
+
+    if (body.length > 20 * 1024 * 1024) {
+      throw const FormatException('La lista supera el límite de 20 MB.');
     }
 
     final channels = _parser.parse(body);
