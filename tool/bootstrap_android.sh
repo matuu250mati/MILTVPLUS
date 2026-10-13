@@ -103,6 +103,22 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector
 </selector>
 PRESSED_ALPHA_SELECTOR
 
+# Variante del selector presionado con una opacidad más suave para otros controles.
+# Los recursos numéricos originales no se pueden traducir sin el APK/tabla de recursos de origen.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector_secondary.xml" <<'PRESSED_ALPHA_SELECTOR_SECONDARY'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="true"
+        android:state_pressed="true"
+        android:color="@color/miltvplus_accent"
+        android:alpha="0.55" />
+    <item
+        android:color="@color/miltvplus_accent"
+        android:alpha="0.85" />
+</selector>
+PRESSED_ALPHA_SELECTOR_SECONDARY
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
