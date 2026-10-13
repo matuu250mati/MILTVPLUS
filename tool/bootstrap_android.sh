@@ -425,6 +425,75 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_pressed_focuse
 </selector>
 ENABLED_PRESSED_FOCUSED_SELECTOR
 
+
+# Animaciones de entrada/salida y curva de interpolación para transiciones Android.
+# Los recursos numéricos del APK de origen se sustituyen por duraciones e interpoladores
+# explícitos para que la animación sea reproducible dentro del proyecto MILTV PLUS.
+mkdir -p "$root_dir/android/app/src/main/res/anim"
+mkdir -p "$root_dir/android/app/src/main/res/interpolator"
+
+cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_in.xml" <<'SLIDE_FADE_IN'
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_cubic"
+    android:duration="250">
+    <translate
+        android:fromYDelta="20%p"
+        android:toYDelta="0%" />
+    <alpha
+        android:fromAlpha="0.0"
+        android:toAlpha="1.0" />
+</set>
+SLIDE_FADE_IN
+
+cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_out.xml" <<'SLIDE_FADE_OUT'
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/accelerate_cubic"
+    android:duration="200">
+    <translate
+        android:fromYDelta="0%"
+        android:toYDelta="20%p" />
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0" />
+</set>
+SLIDE_FADE_OUT
+
+cat > "$root_dir/android/app/src/main/res/interpolator/miltvplus_motion_curve.xml" <<'MOTION_CURVE'
+<?xml version="1.0" encoding="utf-8"?>
+<pathInterpolator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:pathData="M 0,0 C 0.05,0 0.133333,0.06 0.166666,0.4 C 0.208333,0.82 0.25,1 1,1" />
+MOTION_CURVE
+
+cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_in_fast.xml" <<'SLIDE_FADE_IN_FAST'
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/linear_out_slow_in"
+    android:duration="250">
+    <translate
+        android:fromYDelta="20%p"
+        android:toYDelta="0%" />
+    <alpha
+        android:fromAlpha="0.0"
+        android:toAlpha="1.0" />
+</set>
+SLIDE_FADE_IN_FAST
+
+cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_out_fast.xml" <<'SLIDE_FADE_OUT_FAST'
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_cubic"
+    android:duration="200">
+    <translate
+        android:fromYDelta="0%"
+        android:toYDelta="20%p" />
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0" />
+</set>
+SLIDE_FADE_OUT_FAST
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
