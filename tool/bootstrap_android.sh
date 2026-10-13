@@ -166,6 +166,21 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_brand_state_selector_s
 </selector>
 BRAND_STATE_SELECTOR_SECONDARY
 
+# Selector de tres estados para botones/elementos seleccionables.
+# Los IDs numéricos del APK original se sustituyen por colores semánticos de MILTV PLUS.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_interaction_state_selector.xml" <<'INTERACTION_STATE_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_pressed="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_selected="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="@color/miltvplus_surface" />
+</selector>
+INTERACTION_STATE_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
