@@ -42,7 +42,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final auth = Supabase.instance.client.auth;
       if (_phoneMode) {
         final phone = _pendingPhone ??
-            '+549' + _phone.text.replaceAll(RegExp(r'\D'), '');
+            '+549${_phone.text.replaceAll(RegExp(r'\D'), '')}';
         if (!_otpSent) {
           await auth.signInWithOtp(phone: phone);
           if (!mounted) return;
@@ -50,7 +50,7 @@ class _AuthScreenState extends State<AuthScreen> {
             _pendingPhone = phone;
             _otpSent = true;
             _error = false;
-            _message = 'Te enviamos un código por SMS a ' + phone + '. Ingresalo para verificar tu número.';
+            _message = 'Te enviamos un código por SMS a $phone. Ingresalo para verificar tu número.';
           });
         } else {
           await auth.verifyOTP(
@@ -144,7 +144,7 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.lock_outline_rounded, size: 54, color: AppTheme.accent),
               const SizedBox(height: 18),
-              const Text('MILTV PLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+              const Text('MILTVPLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
               Text(
                 supabaseConfigurationError ??
