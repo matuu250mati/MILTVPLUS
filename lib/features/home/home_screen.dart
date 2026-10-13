@@ -46,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                   Text('Todo lo que\nquerés ver.',
                       style: TextStyle(fontSize: compact ? 27 : 42, height: 1.0, fontWeight: FontWeight.w900, letterSpacing: compact ? -0.8 : -1.6)),
                   SizedBox(height: compact ? 7 : 12),
-                  const Text('TV en vivo, películas, series y anime en una sola experiencia.',
+                  Text('TV en vivo, películas, series y anime en una sola experiencia.',
                       maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: AppTheme.muted, height: 1.25, fontSize: 12)),
