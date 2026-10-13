@@ -27,7 +27,7 @@ class _AppShellState extends State<AppShell> {
     _NavItem('GRATIS', Icons.card_giftcard_rounded),
     _NavItem('EXPLORAR', Icons.explore_outlined),
     _NavItem('+18', Icons.lock_outline_rounded),
-    _NavItem('PERFIL', Icons.manage_accounts_outlined),
+    _NavItem('CONFIGURACIÓN', Icons.settings_rounded),
   ];
 
   int selected = 1;
@@ -126,7 +126,7 @@ class _AppShellState extends State<AppShell> {
                 children: [
                   _drawerItem(1),
                   _drawerItem(0),
-                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(2),
                   _drawerItem(3),
                   _drawerItem(4),
@@ -189,8 +189,8 @@ class _AppShellState extends State<AppShell> {
                               ? 'Explorar'
                               : item.label == '+18'
                                   ? 'Zona +18'
-                                  : item.label == 'PERFIL'
-                                      ? 'Mi Cuenta / Perfil'
+                                  : item.label == 'CONFIGURACIÓN'
+                                      ? 'Perfil y configuración'
                                       : 'Inicio',
           style: TextStyle(
             color: active ? Colors.white : AppTheme.muted,
@@ -233,9 +233,9 @@ class _AppShellState extends State<AppShell> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Mi cuenta',
+            tooltip: 'Configuración',
             onPressed: () => setState(() => selected = 10),
-            icon: const Icon(Icons.account_circle_outlined),
+            icon: const Icon(Icons.settings_rounded),
           ),
           const SizedBox(width: 4),
         ],
