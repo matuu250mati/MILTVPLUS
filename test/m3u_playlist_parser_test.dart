@@ -50,6 +50,19 @@ https://example.com/other.m3u8
     expect(channels[1].name, 'Canal Dos');
   });
 
+  test('deduplicates equivalent host casing and URL fragments', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1,Original
+https://EXAMPLE.com/live/../live.m3u8#first
+#EXTINF:-1,Duplicate
+https://example.com/live.m3u8#second
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Original');
+  });
+
   test('rejects stream URLs with embedded user information', () {
     final channels = parser.parse('''
 #EXTM3U
