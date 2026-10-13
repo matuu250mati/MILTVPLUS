@@ -663,6 +663,83 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_mic.xml" <<'ICON
 </vector>
 ICON_MIC
 
+# Fondos y selectores de foco/hover para controles de MILTV PLUS.
+# Los recursos numéricos del APK decompilado no se pueden identificar sin su tabla original.
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_focus_glow.xml" <<'FOCUS_GLOW'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#88FFFFFF" />
+</shape>
+FOCUS_GLOW
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_surface_rounded.xml" <<'SURFACE_ROUNDED'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/miltvplus_surface" />
+    <corners android:radius="4dp" />
+</shape>
+SURFACE_ROUNDED
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_accent_rounded.xml" <<'ACCENT_ROUNDED'
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/miltvplus_accent" />
+    <corners android:radius="4dp" />
+</shape>
+ACCENT_ROUNDED
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_selector_focus_hover_background.xml" <<'SELECTOR_FOCUS_HOVER'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item
+        android:state_hovered="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item android:drawable="@drawable/miltvplus_shape_surface_rounded" />
+</selector>
+SELECTOR_FOCUS_HOVER
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_selector_focused_background.xml" <<'SELECTOR_FOCUSED'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item android:drawable="@drawable/miltvplus_shape_surface_rounded" />
+</selector>
+SELECTOR_FOCUSED
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_selector_focus_hover_surface.xml" <<'SELECTOR_FOCUS_HOVER_SURFACE'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item
+        android:state_hovered="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item android:drawable="@color/miltvplus_surface" />
+</selector>
+SELECTOR_FOCUS_HOVER_SURFACE
+
+cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_selector_focus_selected_background.xml" <<'SELECTOR_FOCUS_SELECTED'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_focused="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item
+        android:state_selected="true"
+        android:drawable="@drawable/miltvplus_shape_accent_rounded" />
+    <item android:drawable="@drawable/miltvplus_shape_surface_rounded" />
+</selector>
+SELECTOR_FOCUS_SELECTED
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
