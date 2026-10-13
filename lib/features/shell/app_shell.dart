@@ -16,7 +16,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   static const items = <_NavItem>[
     _NavItem('TV EN VIVO', Icons.live_tv_rounded),
-    _NavItem('DESTACADOS', Icons.auto_awesome_rounded),
+    _NavItem('INICIO', Icons.home_rounded),
     _NavItem('PELÍCULAS', Icons.movie_creation_outlined),
     _NavItem('SERIES', Icons.video_library_outlined),
     _NavItem('ANIME', Icons.animation_rounded),
@@ -25,7 +25,7 @@ class _AppShellState extends State<AppShell> {
     _NavItem('PERFIL', Icons.manage_accounts_outlined),
   ];
 
-  int selected = 0;
+  int selected = 1;
   bool? expanded;
 
   Widget page() {
@@ -49,144 +49,179 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
+  void _openMoreMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      showDragHandle: true,
+      isScrollControlled: false,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('MÁS SECCIONES',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              ),
+              const SizedBox(height: 10),
+              for (final index in [4, 5, 6, 7])
+                ListTile(
+                  leading: Icon(items[index].icon, color: AppTheme.accent),
+                  title: Text(items[index].label),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    setState(() => selected = index);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pageView() => AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        child: KeyedSubtree(key: ValueKey(selected), child: page()),
+      );
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 760;
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final menuExpanded = expanded ?? wide;
+
     return Scaffold(
+      backgroundColor: AppTheme.background,
       body: Stack(
         children: [
           const _AmbientBackground(),
           SafeArea(
-            child: Row(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  width: menuExpanded ? 224 : 72,
-                  margin: const EdgeInsets.fromLTRB(10, 10, 0, 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xCC111521),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.white.withValues(alpha: .08)),
-                  ),
-                  child: Column(
+            child: wide
+                ? Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 18, 12, 24),
-                        child: Row(
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        width: menuExpanded ? 218 : 68,
+                        margin: const EdgeInsets.fromLTRB(10, 10, 0, 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xCC111521),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.white.withValues(alpha: .08)),
+                        ),
+                        child: Column(
                           children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: AppTheme.accent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 29),
-                            ),
-                            if (menuExpanded) ...[
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  'MILTV\nPLUS',
-                                  style: TextStyle(
-                                    height: .98,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.3,
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 18, 12, 20),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 29),
                                   ),
-                                ),
+                                  if (menuExpanded) ...[
+                                    const SizedBox(width: 10),
+                                    const Expanded(
+                                      child: Text('MILTV\nPLUS',
+                                          style: TextStyle(height: .98, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                itemCount: items.length,
+                                itemBuilder: (context, index) {
+                                  final item = items[index];
+                                  final active = selected == index;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 5),
+                                    child: Tooltip(
+                                      message: item.label,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(13),
+                                        onTap: () => setState(() => selected = index),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(horizontal: menuExpanded ? 12 : 0, vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: active ? AppTheme.accent.withValues(alpha: .13) : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(13),
+                                            border: active ? Border.all(color: AppTheme.accent.withValues(alpha: .35)) : null,
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: menuExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+                                            children: [
+                                              Icon(item.icon, size: 20, color: active ? AppTheme.accent : AppTheme.muted),
+                                              if (menuExpanded) ...[
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(fontSize: 11, letterSpacing: .4, fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                                                          color: active ? Colors.white : AppTheme.muted)),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: menuExpanded ? 'Contraer menú' : 'Expandir menú',
+                              onPressed: () => setState(() => expanded = !menuExpanded),
+                              icon: Icon(menuExpanded ? Icons.keyboard_double_arrow_left_rounded : Icons.keyboard_double_arrow_right_rounded),
+                            ),
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            final active = selected == index;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Tooltip(
-                                message: item.label,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(13),
-                                  onTap: () => setState(() => selected = index),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: menuExpanded ? 12 : 0,
-                                      vertical: 13,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: active
-                                          ? AppTheme.accent.withValues(alpha: .13)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(13),
-                                      border: active
-                                          ? Border.all(color: AppTheme.accent.withValues(alpha: .35))
-                                          : null,
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: menuExpanded
-                                          ? MainAxisAlignment.start
-                                          : MainAxisAlignment.center,
-                                      children: [
-                                        Icon(item.icon,
-                                            size: 20,
-                                            color: active ? AppTheme.accent : AppTheme.muted),
-                                        if (menuExpanded) ...[
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Text(
-                                              item.label,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                letterSpacing: .6,
-                                                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                                                color: active ? Colors.white : AppTheme.muted,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: menuExpanded ? 'Contraer menú' : 'Expandir menú',
-                        onPressed: () => setState(() => expanded = !menuExpanded),
-                        icon: Icon(menuExpanded
-                            ? Icons.keyboard_double_arrow_left_rounded
-                            : Icons.keyboard_double_arrow_right_rounded),
-                      ),
-                      const SizedBox(height: 8),
+                      Expanded(child: Padding(padding: const EdgeInsets.all(10), child: _pageView())),
                     ],
+                  )
+                : Padding(
+                    padding: EdgeInsets.fromLTRB(compact ? 4 : 10, 4, compact ? 4 : 10, 4),
+                    child: _pageView(),
                   ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 260),
-                      child: KeyedSubtree(key: ValueKey(selected), child: page()),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
+      bottomNavigationBar: wide
+          ? null
+          : NavigationBar(
+              height: 66,
+              backgroundColor: const Color(0xFF10131E),
+              indicatorColor: AppTheme.accent.withValues(alpha: .16),
+              selectedIndex: selected <= 3 ? selected : 4,
+              onDestinationSelected: (index) {
+                if (index == 4) {
+                  _openMoreMenu();
+                } else {
+                  setState(() => selected = index);
+                }
+              },
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv_rounded), label: 'TV'),
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
+                NavigationDestination(icon: Icon(Icons.movie_outlined), selectedIcon: Icon(Icons.movie_rounded), label: 'Películas'),
+                NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library_rounded), label: 'Series'),
+                NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Más'),
+              ],
+            ),
     );
   }
 }
