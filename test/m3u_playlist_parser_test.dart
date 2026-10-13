@@ -44,4 +44,20 @@ https://example.com/news.m3u8
     expect(channels, hasLength(1));
     expect(channels.single.name, 'News');
   });
+
+  test('skips web-player pages that are not direct streams', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1,YouTube page
+https://www.youtube.com/c/todonoticias/live
+#EXTINF:-1,Twitch page
+https://www.twitch.tv/examplechannel
+#EXTINF:-1,Direct HLS
+https://cdn.example.org/live/playlist.m3u8
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Direct HLS');
+    expect(channels.single.streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
+  });
 }
