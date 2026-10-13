@@ -4,6 +4,8 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$root_dir/android/app/src/main/AndroidManifest.xml"
 banner="$root_dir/android/app/src/main/res/drawable/tv_banner.xml"
+adaptive_icon="$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
+icon_foreground="$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.xml"
 
 if [[ ! -f "$manifest" ]]; then
   echo "::error::AndroidManifest.xml no existe después de preparar Android."
@@ -11,6 +13,10 @@ if [[ ! -f "$manifest" ]]; then
 fi
 if [[ ! -f "$banner" ]]; then
   echo "::error::Falta el recurso android:banner para Android TV."
+  exit 1
+fi
+if [[ ! -f "$adaptive_icon" || ! -f "$icon_foreground" ]]; then
+  echo "::error::Falta el icono adaptativo personalizado de MILTVPLUS."
   exit 1
 fi
 
@@ -60,5 +66,16 @@ metadata = {item.get(android + "name"): item.get(android + "value") for item in 
 if metadata.get("flutterEmbedding") != "2":
     raise SystemExit("Android validation failed: Flutter embedding v2 is required")
 
-print("Android manifest validated: mobile + Android TV launcher, non-touch TV support, banner, internet, cleartext disabled, Flutter embedding v2.")
+icon_path = path.rsplit("AndroidManifest.xml", 1)[0] + "res/mipmap-anydpi-v26/ic_launcher.xml"
+icon_root = ET.parse(icon_path).getroot()
+if icon_root.tag != "adaptive-icon":
+    raise SystemExit("Icon validation failed: ic_launcher must be an adaptive-icon")
+foreground = icon_root.find("foreground")
+background = icon_root.find("background")
+if foreground is None or foreground.get(android + "drawable") != "@drawable/miltvplus_ic_platform_robot":
+    raise SystemExit("Icon validation failed: custom MILTVPLUS foreground is missing")
+if background is None or background.get(android + "drawable") != "@drawable/miltvplus_icon_background":
+    raise SystemExit("Icon validation failed: MILTVPLUS background is missing")
+
+print("Android manifest validated: mobile + Android TV launcher, adaptive MILTVPLUS icon, banner, internet, cleartext disabled, Flutter embedding v2.")
 PY
