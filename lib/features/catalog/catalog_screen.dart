@@ -180,6 +180,7 @@ class _CatalogEntry {
     required this.year,
     required this.synopsis,
     required this.streamUrl,
+    required this.seriesId,
   });
 
   final String title;
@@ -189,6 +190,7 @@ class _CatalogEntry {
   final int? year;
   final String? synopsis;
   final String? streamUrl;
+  final String? seriesId;
 
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
         title: movie.title,
@@ -198,6 +200,7 @@ class _CatalogEntry {
         year: movie.releaseYear,
         synopsis: movie.synopsis,
         streamUrl: movie.urlStream,
+        seriesId: null,
       );
 
   factory _CatalogEntry.fromSeries(SeriesModel series) => _CatalogEntry(
@@ -208,7 +211,79 @@ class _CatalogEntry {
         year: series.releaseYear,
         synopsis: series.synopsis,
         streamUrl: null,
+        seriesId: series.id,
       );
+}
+
+Future<void> _openSeriesEpisodes(
+  BuildContext context,
+  _CatalogEntry entry,
+) async {
+  final service = CatalogService();
+  try {
+    final episodes = await service.getEpisodes(entry.seriesId!);
+    if (!context.mounted) return;
+    if (episodes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Esta serie todavía no tiene episodios publicados.')),
+      );
+      return;
+    }
+    final selectedEpisode = await showModalBottomSheet<EpisodeModel>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.72,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(entry.title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: episodes.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final episode = episodes[index];
+                    return ListTile(
+                      leading: const Icon(Icons.play_circle_outline_rounded),
+                      title: Text(episode.title),
+                      subtitle: Text('Temporada ${episode.seasonNumber} · Episodio ${episode.episodeNumber}'),
+                      onTap: () => Navigator.pop(sheetContext, episode),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selectedEpisode == null || !context.mounted) return;
+    if (selectedEpisode.urlStream.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este episodio no tiene una URL de reproducción configurada.')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CatalogPlayerScreen(
+          title: '${entry.title} · T${selectedEpisode.seasonNumber}E${selectedEpisode.episodeNumber}',
+          streamUrl: selectedEpisode.urlStream,
+        ),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No se pudieron cargar los episodios. Revisá Supabase y las políticas de lectura.')),
+    );
+  }
 }
 
 class _CatalogCard extends StatelessWidget {
@@ -219,16 +294,18 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.streamUrl == null || entry.streamUrl!.trim().isEmpty
-            ? null
-            : () => Navigator.of(context).push(
+        onTap: entry.streamUrl != null && entry.streamUrl!.trim().isNotEmpty
+            ? () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => CatalogPlayerScreen(
                       title: entry.title,
                       streamUrl: entry.streamUrl!,
                     ),
                   ),
-                ),
+                )
+            : entry.seriesId != null
+                ? () => _openSeriesEpisodes(context, entry)
+                : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
