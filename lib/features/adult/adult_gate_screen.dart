@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/supabase_config.dart';
+import '../../features/auth/auth_screen.dart';
 import '../../services/secure_pin_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdultGateScreen extends StatefulWidget {
   const AdultGateScreen({super.key});
@@ -14,6 +17,7 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
   bool hasPin = false;
   bool loading = true;
   bool unlocked = false;
+  bool accountVerified = false;
   String? error;
 
   @override
@@ -77,6 +81,13 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final signedIn = isSupabaseConfigured && Supabase.instance.client.auth.currentUser != null;
+    if (!signedIn && !accountVerified) {
+      return AuthScreen(onAuthenticated: () {
+        if (!mounted) return;
+        setState(() => accountVerified = true);
+      });
+    }
     if (loading) return const Center(child: CircularProgressIndicator());
     if (unlocked) {
       return ListView(
