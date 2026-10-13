@@ -46,22 +46,22 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: \${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: \${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "\${SUPABASE_URL//[[:space:]]/}" ]]; then
+          if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
           fi
-          if [[ -z "\${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
+          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
             echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
             exit 1
           fi
           SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
           while [[ "$SUPABASE_URL" == */ ]]; do
-            SUPABASE_URL="\${SUPABASE_URL%/}"
+            SUPABASE_URL="${SUPABASE_URL%/}"
           done
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+\\.supabase\\.co$ ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
