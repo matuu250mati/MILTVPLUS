@@ -34,6 +34,35 @@ https://example.com/live.m3u8
     expect(channels.single.name, 'Valid');
   });
 
+  test('removes duplicate stream URLs while preserving the first channel label', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1,Canal Uno
+https://example.com/live.m3u8
+#EXTINF:-1,Alias duplicado
+https://example.com/live.m3u8
+#EXTINF:-1,Canal Dos
+https://example.com/other.m3u8
+''');
+
+    expect(channels, hasLength(2));
+    expect(channels[0].name, 'Canal Uno');
+    expect(channels[1].name, 'Canal Dos');
+  });
+
+  test('rejects stream URLs with embedded user information', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1,Unsafe credential URL
+https://user:password@example.com/live.m3u8
+#EXTINF:-1,Valid channel
+https://example.com/valid.m3u8
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Valid channel');
+  });
+
   test('uses a fallback name when EXTINF has no display name', () {
     final channels = parser.parse('''
 #EXTM3U
