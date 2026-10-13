@@ -27,11 +27,14 @@ cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
 # y nunca se almacena en el repositorio. Sin key.properties, Flutter conserva la firma debug
 # para builds de desarrollo; las publicaciones por tag exigen una clave de release real.
 if [[ ! -f "$root_dir/android/app/miltvplus_signing_configured.txt" ]]; then
+  # Kotlin DSL ya define un accessor `java`; importar Properties evita resolver `java.util`
+  # contra ese accessor en lugar del paquete Java.
+  sed -i '1i import java.util.Properties' "$root_dir/android/app/build.gradle.kts"
   cat >> "$root_dir/android/app/build.gradle.kts" <<'SIGNING_CONFIG'
 // MILTVPLUS production signing: enabled only when android/key.properties is present.
 val miltvSigningPropertiesFile = rootProject.file("key.properties")
 if (miltvSigningPropertiesFile.exists()) {
-    val miltvSigningProperties = java.util.Properties()
+    val miltvSigningProperties = Properties()
     miltvSigningPropertiesFile.inputStream().use { miltvSigningProperties.load(it) }
     android {
         signingConfigs {
