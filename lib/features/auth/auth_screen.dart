@@ -114,16 +114,16 @@ class _AuthScreenState extends State<AuthScreen> {
           padding: const EdgeInsets.all(28),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: const Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.lock_outline_rounded, size: 54, color: AppTheme.accent),
-              SizedBox(height: 18),
-              Text('MILTV PLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-              SizedBox(height: 12),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.lock_outline_rounded, size: 54, color: AppTheme.accent),
+              const SizedBox(height: 18),
+              const Text('MILTV PLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
               Text(
                 supabaseConfigurationError ??
                     'La configuración de Supabase no está disponible.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.muted, height: 1.5),
+                style: const TextStyle(color: AppTheme.muted, height: 1.5),
               ),
             ]),
           ),
