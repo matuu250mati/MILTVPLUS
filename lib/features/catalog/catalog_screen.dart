@@ -305,7 +305,11 @@ class _CatalogCard extends StatelessWidget {
                 )
             : entry.seriesId != null
                 ? () => _openSeriesEpisodes(context, entry)
-                : null,
+                : () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Este título todavía no tiene una URL de reproducción configurada.'),
+                      ),
+                    ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
