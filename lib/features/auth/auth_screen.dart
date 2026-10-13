@@ -27,7 +27,9 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _busy) return;
+    if (!_formKey.currentState!.validate() || _busy) {
+      return;
+    }
     setState(() { _busy = true; _message = null; });
     try {
       final auth = Supabase.instance.client.auth;
@@ -52,12 +54,16 @@ class _AuthScreenState extends State<AuthScreen> {
     } on AuthException catch (e) {
       if (mounted) { setState(() { _error = true; _message = e.message; }); }
     } catch (_) {
-      if (mounted) setState(() {
-        _error = true;
-        _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
-      });
+      if (mounted) {
+        setState(() {
+          _error = true;
+          _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
+        });
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -73,17 +79,21 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() { _busy = true; _message = null; });
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(email);
-      if (mounted) setState(() {
-        _error = false;
-        _message = 'Si la cuenta existe, vas a recibir un correo para restablecer la contraseña.';
-      });
+      if (mounted) {
+        setState(() {
+          _error = false;
+          _message = 'Si la cuenta existe, vas a recibir un correo para restablecer la contraseña.';
+        });
+      }
     } on AuthException catch (e) {
       if (mounted) { setState(() { _error = true; _message = e.message; }); }
     } catch (_) {
-      if (mounted) setState(() {
-        _error = true;
-        _message = 'No se pudo enviar el correo. Intentá más tarde.';
-      });
+      if (mounted) {
+        setState(() {
+          _error = true;
+          _message = 'No se pudo enviar el correo. Intentá más tarde.';
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
