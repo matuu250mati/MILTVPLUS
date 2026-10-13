@@ -1,4 +1,4 @@
-# MILTV PLUS
+# MILK TV PLUS
 
 Aplicación de entretenimiento desarrollada con Flutter, con identidad visual original y navegación adaptada a celulares, Android TV y TV Box compatibles.
 
@@ -31,3 +31,17 @@ La primera vez se configura un PIN de 4 a 8 dígitos; en accesos posteriores se 
 
 ## Compilación APK
 El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o manualmente desde **GitHub → Actions**. Al finalizar, el APK aparece como artefacto `MILTVPLUS-release-apk`. La compilación solo se considera verificada cuando el workflow termina correctamente.
+
+
+## Compatibilidad objetivo (plan de producto)
+
+- **Primera plataforma verificable:** Android móvil y tablet, APK.
+- **Pantalla grande:** Android TV, Google TV y Android TV Box, con navegación completa por control remoto (DPAD), foco visible y diseño horizontal.
+- **Amazon Fire TV:** objetivo condicionado a pruebas reales de instalación, foco y reproducción.
+- **iPhone/iPad, Apple TV, Samsung Tizen, LG webOS y Roku:** no quedan cubiertos por el APK Android; requieren aplicaciones nativas o una experiencia web compatible separada.
+- **Formatos de reproducción previstos:** HLS (.m3u8) y MP4 cuando el códec sea compatible con el dispositivo; subtítulos y pistas de audio dependen del formato y del reproductor.
+- **Catálogo:** conectar únicamente fuentes propias o licenciadas. No se incluyen películas, canales ni enlaces de terceros sin autorización.
+
+## Estado real y próximos hitos
+
+Esta rama es una base funcional en desarrollo, no una copia completa de otra plataforma. Las pantallas de catálogo y TV en vivo necesitan validación integral con datos autorizados y dispositivos reales. Antes de distribuir una versión se deben pasar análisis, pruebas automatizadas, build APK, pruebas táctiles y pruebas con mando en Android TV. La compatibilidad no se considera confirmada hasta superar esas pruebas.
