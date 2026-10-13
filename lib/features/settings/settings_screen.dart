@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/supabase_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -214,14 +215,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                Supabase.instance.client.auth.currentUser?.email ?? 'Sesión no disponible',
+                isSupabaseConfigured
+                    ? (Supabase.instance.client.auth.currentUser?.email ?? 'No hay una sesión iniciada.')
+                    : 'Cuenta no disponible: falta configurar Supabase.',
                 style: const TextStyle(color: AppTheme.muted),
               ),
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () async {
+                  onPressed: !isSupabaseConfigured || Supabase.instance.client.auth.currentUser == null ? null : () async {
                     try {
                       await Supabase.instance.client.auth.signOut();
                     } catch (_) {
