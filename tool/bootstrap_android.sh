@@ -218,6 +218,62 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_state_selector
 </selector>
 CHECKED_STATE_SELECTOR
 
+# Selectores compuestos para foco, pulsación, selección y activación.
+# Los atributos ?7F0400B7/?7F0400B9 se sustituyen por colores semánticos del tema MILTV PLUS.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_interactive_control_selector.xml" <<'INTERACTIVE_CONTROL_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item
+        android:state_focused="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_pressed="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_activated="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_selected="true"
+        android:color="@color/miltvplus_accent" />
+    <item
+        android:state_checked="true"
+        android:color="@color/miltvplus_accent" />
+    <item android:color="?android:attr/colorControlNormal" />
+</selector>
+INTERACTIVE_CONTROL_SELECTOR
+
+# Variante atenuada cuando está deshabilitada; acento en estado normal.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_interactive_disabled_accent_selector.xml" <<'INTERACTIVE_DISABLED_ACCENT_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="@color/miltvplus_accent"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+INTERACTIVE_DISABLED_ACCENT_SELECTOR
+
+# Selector para elementos sin foco ni pulsación: color secundario; interacción: acento.
+cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_pressed_selector.xml" <<'FOCUS_PRESSED_SELECTOR'
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_enabled="false"
+        android:color="?android:attr/textColorSecondary"
+        android:alpha="?android:attr/disabledAlpha" />
+    <item
+        android:state_focused="false"
+        android:state_pressed="false"
+        android:color="?android:attr/textColorSecondary" />
+    <item android:color="@color/miltvplus_accent" />
+</selector>
+FOCUS_PRESSED_SELECTOR
+
 # Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
