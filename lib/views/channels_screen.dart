@@ -11,7 +11,7 @@ class ChannelsScreen extends StatefulWidget {
 
 class _ChannelsScreenState extends State<ChannelsScreen> {
   final _supabase = Supabase.instance.client;
-  List<Channel> channels = [];
+  List<ChannelModel> channels = [];
   bool isLoading = true;
 
   @override
@@ -26,7 +26,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       final data = List<Map<String, dynamic>>.from(response);
       if (!mounted) return;
       setState(() {
-        channels = data.map((json) => Channel.fromJson(json)).toList();
+        channels = data.map((json) => ChannelModel.fromJson(json)).toList();
         isLoading = false;
       });
     } catch (e) {
@@ -81,9 +81,9 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            channel.logoUrl != null && channel.logoUrl!.isNotEmpty
+                            channel.logo != null && channel.logo!.isNotEmpty
                                 ? Image.network(
-                                    channel.logoUrl!,
+                                    channel.logo!,
                                     height: 60,
                                     fit: BoxFit.contain,
                                     errorBuilder: (context, error, stackTrace) =>
@@ -102,7 +102,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
                               child: Text(
-                                channel.name,
+                                channel.title,
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
