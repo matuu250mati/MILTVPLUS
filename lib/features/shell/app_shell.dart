@@ -22,6 +22,9 @@ class _AppShellState extends State<AppShell> {
     _NavItem('PELÍCULAS', Icons.movie_creation_outlined),
     _NavItem('SERIES', Icons.video_library_outlined),
     _NavItem('ANIME', Icons.animation_rounded),
+    _NavItem('DEPORTES', Icons.sports_soccer_rounded),
+    _NavItem('INFANTIL', Icons.child_care_rounded),
+    _NavItem('GRATIS', Icons.card_giftcard_rounded),
     _NavItem('EXPLORAR', Icons.explore_outlined),
     _NavItem('+18', Icons.lock_outline_rounded),
     _NavItem('PERFIL', Icons.manage_accounts_outlined),
@@ -42,8 +45,14 @@ class _AppShellState extends State<AppShell> {
       case 4:
         return const CatalogScreen(category: 'ANIME');
       case 5:
-        return const CatalogScreen(category: 'EXPLORAR');
+        return const CatalogScreen(category: 'DEPORTES');
       case 6:
+        return const CatalogScreen(category: 'INFANTIL');
+      case 7:
+        return const CatalogScreen(category: 'GRATIS');
+      case 8:
+        return const CatalogScreen(category: 'EXPLORAR');
+      case 9:
         return const AdultGateScreen();
       default:
         return const SettingsScreen();
@@ -122,10 +131,13 @@ class _AppShellState extends State<AppShell> {
                   _drawerItem(3),
                   _drawerItem(4),
                   _drawerItem(5),
-                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
                   _drawerItem(6),
-                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
                   _drawerItem(7),
+                  _drawerItem(8),
+                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  _drawerItem(9),
+                  const Divider(height: 18, color: Color(0x303FFFFFFF)),
+                  _drawerItem(10),
                 ],
               ),
             ),
@@ -167,6 +179,12 @@ class _AppShellState extends State<AppShell> {
                       ? 'Series'
                       : item.label == 'ANIME'
                           ? 'Anime'
+                          : item.label == 'DEPORTES'
+                  ? 'Deportes'
+                  : item.label == 'INFANTIL'
+                      ? 'Infantil / Kids'
+                      : item.label == 'GRATIS'
+                          ? 'Contenido gratis'
                           : item.label == 'EXPLORAR'
                               ? 'Explorar'
                               : item.label == '+18'
@@ -216,7 +234,7 @@ class _AppShellState extends State<AppShell> {
         actions: [
           IconButton(
             tooltip: 'Mi cuenta',
-            onPressed: () => setState(() => selected = 7),
+            onPressed: () => setState(() => selected = 10),
             icon: const Icon(Icons.account_circle_outlined),
           ),
           const SizedBox(width: 4),
