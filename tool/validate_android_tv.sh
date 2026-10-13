@@ -83,7 +83,7 @@ if background is None or background.get(android + "drawable") != "@drawable/milt
 # Android TV requiere un banner opaco 320x180 con marca visible.
 with open(banner_path, "rb") as banner_file:
     png = banner_file.read()
-if not png.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(png) < 33:
+if not png.startswith(b"\x89PNG\r\n\x1a\n") or len(png) < 33:
     raise SystemExit("Android TV validation failed: banner is not a valid PNG")
 width, height, bit_depth, color_type, compression, filtering, interlace = struct.unpack(">IIBBBBB", png[16:29])
 if (width, height) != (320, 180) or bit_depth != 8 or color_type != 6:
