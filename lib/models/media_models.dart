@@ -104,3 +104,41 @@ class SeriesModel {
     isPublished: json['is_published'] as bool? ?? false,
   );
 }
+
+
+/// A published episode available from the provider's episodes table.
+class EpisodeModel {
+  final String id;
+  final String seriesId;
+  final String title;
+  final String? synopsis;
+  final int seasonNumber;
+  final int episodeNumber;
+  final String urlStream;
+  final int? durationSeconds;
+  final bool isPublished;
+
+  const EpisodeModel({
+    required this.id,
+    required this.seriesId,
+    required this.title,
+    this.synopsis,
+    required this.seasonNumber,
+    required this.episodeNumber,
+    required this.urlStream,
+    this.durationSeconds,
+    required this.isPublished,
+  });
+
+  factory EpisodeModel.fromJson(Map<String, dynamic> json) => EpisodeModel(
+        id: json['id'] as String? ?? '',
+        seriesId: json['series_id'] as String? ?? '',
+        title: json['title'] as String? ?? 'Episodio',
+        synopsis: json['synopsis'] as String?,
+        seasonNumber: (json['season_number'] as num?)?.toInt() ?? 1,
+        episodeNumber: (json['episode_number'] as num?)?.toInt() ?? 1,
+        urlStream: json['url_stream'] as String? ?? '',
+        durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
+        isPublished: json['is_published'] as bool? ?? false,
+      );
+}
