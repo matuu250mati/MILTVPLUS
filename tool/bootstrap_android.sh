@@ -14,7 +14,7 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 rm -rf "$root_dir/android"
 cp -R "$tmp_dir/miltv-scaffold/android" "$root_dir/android"
 
-# Recursos visuales propios de MILTV PLUS.
+# Recursos visuales propios de MILK TV PLUS.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"
 mkdir -p "$root_dir/android/app/src/main/res/color"
 mkdir -p "$root_dir/android/app/src/main/res/values"
@@ -37,8 +37,8 @@ BANNER
 cat > "$root_dir/android/app/src/main/res/values/colors.xml" <<'COLORS'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="miltvplus_surface">#121212</color>
-    <color name="miltvplus_accent">#E50914</color>
+    <color name="miltvplus_surface">#111521</color>
+    <color name="miltvplus_accent">#B8FF35</color>
 </resources>
 COLORS
 
@@ -88,7 +88,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_text_enabled_selector.
 </selector>
 TEXT_ENABLED_SELECTOR
 
-# Selector para estado presionado: usa el acento de MILTV PLUS con distinta opacidad.
+# Selector para estado presionado: usa el acento de MILK TV PLUS con distinta opacidad.
 # Los IDs numéricos del XML decompilado no son portables entre aplicaciones.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector.xml" <<'PRESSED_ALPHA_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
@@ -120,7 +120,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_pressed_alpha_selector
 PRESSED_ALPHA_SELECTOR_SECONDARY
 
 # Selector de color para controles habilitados/deshabilitados, variante de contraste.
-# Los IDs del APK de origen se sustituyen por colores semánticos de MILTV PLUS.
+# Los IDs del APK de origen se sustituyen por colores semánticos de MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_control_state_selector.xml" <<'CONTROL_STATE_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
@@ -167,7 +167,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_brand_state_selector_s
 BRAND_STATE_SELECTOR_SECONDARY
 
 # Selector de tres estados para botones/elementos seleccionables.
-# Los IDs numéricos del APK original se sustituyen por colores semánticos de MILTV PLUS.
+# Los IDs numéricos del APK original se sustituyen por colores semánticos de MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_interaction_state_selector.xml" <<'INTERACTION_STATE_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
@@ -181,7 +181,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_interaction_state_sele
 </selector>
 INTERACTION_STATE_SELECTOR
 
-# Selectores de estado adicionales adaptados a la paleta y al tema de MILTV PLUS.
+# Selectores de estado adicionales adaptados a la paleta y al tema de MILK TV PLUS.
 # Los IDs numéricos del APK de origen no se pueden resolver sin su tabla de recursos.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_state_selector_tertiary.xml" <<'ENABLED_STATE_TERTIARY'
 <?xml version="1.0" encoding="utf-8"?>
@@ -219,7 +219,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_state_selector
 CHECKED_STATE_SELECTOR
 
 # Selectores compuestos para foco, pulsación, selección y activación.
-# Los atributos ?7F0400B7/?7F0400B9 se sustituyen por colores semánticos del tema MILTV PLUS.
+# Los atributos ?7F0400B7/?7F0400B9 se sustituyen por colores semánticos del tema MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_interactive_control_selector.xml" <<'INTERACTIVE_CONTROL_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
@@ -274,7 +274,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_pressed_selector
 </selector>
 FOCUS_PRESSED_SELECTOR
 
-# Selectores de opacidad, estado marcado y foco para la interfaz MILTV PLUS.
+# Selectores de opacidad, estado marcado y foco para la interfaz MILK TV PLUS.
 # Los IDs del APK original se sustituyen por colores semánticos de la marca y del tema.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_checked_overlay_selector.xml" <<'CHECKED_OVERLAY_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
@@ -314,7 +314,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_indicator_select
 FOCUS_INDICATOR_SELECTOR
 
 
-# Selectores para foco y selección, adaptados semánticamente a la paleta MILTV PLUS.
+# Selectores para foco y selección, adaptados semánticamente a la paleta MILK TV PLUS.
 # Los IDs @7F060xxx son propios del APK de origen y no revelan sus valores reales.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_selector.xml" <<'FOCUS_SELECTED_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
@@ -346,7 +346,7 @@ FOCUS_SELECTED_SECONDARY_SELECTOR
 # miltvplus_focus_indicator_selector.xml definido arriba y no necesita duplicarse.
 
 
-# Selectores adicionales de foco/selección adaptados a los colores semánticos de MILTV PLUS.
+# Selectores adicionales de foco/selección adaptados a los colores semánticos de MILK TV PLUS.
 # Los IDs @7F060xxx son locales al APK de origen y no se pueden resolver de forma fiable aquí.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_selected_accent_selector.xml" <<'FOCUS_SELECTED_ACCENT_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
@@ -385,7 +385,7 @@ FOCUS_SELECTED_CONTRAST_SELECTOR
 
 # Selectores adicionales adaptados a los estados de foco, selección e interacción.
 # Los IDs @7F060xxx pertenecen a la tabla de recursos del APK original; se reemplazan
-# por colores semánticos de MILTV PLUS, no por supuestas traducciones de esos IDs.
+# por colores semánticos de MILK TV PLUS, no por supuestas traducciones de esos IDs.
 cat > "$root_dir/android/app/src/main/res/color/miltvplus_focus_accent_surface_selector.xml" <<'FOCUS_ACCENT_SURFACE_SELECTOR'
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
@@ -428,7 +428,7 @@ ENABLED_PRESSED_FOCUSED_SELECTOR
 
 # Animaciones de entrada/salida y curva de interpolación para transiciones Android.
 # Los recursos numéricos del APK de origen se sustituyen por duraciones e interpoladores
-# explícitos para que la animación sea reproducible dentro del proyecto MILTV PLUS.
+# explícitos para que la animación sea reproducible dentro del proyecto MILK TV PLUS.
 mkdir -p "$root_dir/android/app/src/main/res/anim"
 mkdir -p "$root_dir/android/app/src/main/res/interpolator"
 
@@ -495,7 +495,7 @@ cat > "$root_dir/android/app/src/main/res/anim/miltvplus_slide_fade_out_fast.xml
 SLIDE_FADE_OUT_FAST
 
 
-# Iconos vectoriales de navegación y acciones para MILTV PLUS.
+# Iconos vectoriales de navegación y acciones para MILK TV PLUS.
 # Se reemplazan las referencias numéricas del APK original por recursos/atributos nombrados.
 mkdir -p "$root_dir/android/app/src/main/res/drawable"
 
@@ -663,7 +663,7 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_mic.xml" <<'ICON
 </vector>
 ICON_MIC
 
-# Fondos y selectores de foco/hover para controles de MILTV PLUS.
+# Fondos y selectores de foco/hover para controles de MILK TV PLUS.
 # Los recursos numéricos del APK decompilado no se pueden identificar sin su tabla original.
 cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_focus_glow.xml" <<'FOCUS_GLOW'
 <?xml version="1.0" encoding="utf-8"?>
@@ -740,7 +740,7 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_selector_focus_sele
 </selector>
 SELECTOR_FOCUS_SELECTED
 
-# Gradiente de sombra y vector de marca para recursos de MILTV PLUS.
+# Gradiente de sombra y vector de marca para recursos de MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_gradient_shadow.xml" <<'GRADIENT_SHADOW'
 <?xml version="1.0" encoding="utf-8"?>
 <gradient xmlns:android="http://schemas.android.com/apk/res/android"
@@ -767,7 +767,7 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.x
 </vector>
 PLATFORM_ROBOT
 
-# Icono adaptativo propio de MILTV PLUS (Android 8.0+).
+# Icono adaptativo propio de MILK TV PLUS (Android 8.0+).
 # Se reemplazan las referencias numéricas del APK de origen por recursos locales.
 mkdir -p "$root_dir/android/app/src/main/res/mipmap-anydpi-v26"
 cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_icon_background.xml" <<'ICON_BACKGROUND'
@@ -808,7 +808,7 @@ cat > "$root_dir/android/app/src/main/res/color/miltvplus_enabled_accent_selecto
 ENABLED_ACCENT_SELECTOR
 
 # Fondo redondeado con gradiente de marca, adaptado del XML de referencia.
-# Los IDs de color numéricos del APK original no son portables; se usan colores MILTV PLUS.
+# Los IDs de color numéricos del APK original no son portables; se usan colores MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_brand_gradient.xml" <<'BRAND_GRADIENT'
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
@@ -821,7 +821,7 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_shape_brand_gradien
 </shape>
 BRAND_GRADIENT
 
-# Android TV / TV Box y móviles: manifiesto para MILTV PLUS.
+# Android TV / TV Box y móviles: manifiesto para MILK TV PLUS.
 cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature
@@ -847,7 +847,7 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 
     <application
         android:name="${applicationName}"
-        android:label="MILTV PLUS"
+        android:label="MILK TV PLUS"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/tv_banner"
         android:usesCleartextTraffic="false"
@@ -878,5 +878,5 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
 </manifest>
 MANIFEST
 
-echo "Estructura Android generada con selectores de color MILTV PLUS y manifiesto para móviles, Android TV y TV Box."
+echo "Estructura Android generada con selectores de color MILK TV PLUS y manifiesto para móviles, Android TV y TV Box."
 echo "Siguiente paso: ejecutar flutter pub get, flutter analyze y las pruebas del proyecto."
