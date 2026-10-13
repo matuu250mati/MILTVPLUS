@@ -33,7 +33,7 @@ class _AppShellState extends State<AppShell> {
       case 0:
         return const LiveTvScreen();
       case 1:
-        return const HomeScreen();
+        return HomeScreen(onNavigate: (index) => setState(() => selected = index),)
       case 2:
         return const CatalogScreen(category: 'PELÍCULAS');
       case 3:
