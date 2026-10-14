@@ -2,15 +2,17 @@
 
 Esta guía cubre la configuración que el APK no puede aplicar por sí solo. Ejecutá estos pasos en el proyecto de Supabase que corresponde a los secretos `SUPABASE_URL` y `SUPABASE_ANON_KEY` de GitHub Actions.
 
-## 1. Crear las tablas base
+## 1. Crear o compatibilizar las tablas
 
-Si el proyecto de Supabase está vacío, abrí **SQL Editor** y ejecutá el contenido completo de `supabase/schema.sql` desde este repositorio. Si las tablas ya existen y contienen datos, no vuelvas a ejecutar cambios destructivos: revisá primero el esquema existente.
+Si el proyecto de Supabase está vacío, abrí **SQL Editor** y ejecutá el contenido completo de `supabase/schema.sql`.
+
+Si las tablas ya existen y contienen datos, no vuelvas a ejecutar cambios destructivos ni recrees `channels`. Inspeccioná primero sus columnas y hacé una copia de seguridad. La app necesita `channels.title`, `channels.url_stream`, `channels.is_published` y `channels.sort_order`.
+
+Se agregó la migración no destructiva `supabase/migrations/20261014_channels_compatibility.sql`. Esta intenta mapear nombres heredados habituales (`name`/`channel_name` y `url`/`stream_url`, entre otros), conserva las filas y revierte toda la transacción si no puede asociar un nombre o URL válidos. Ejecutala en SQL Editor solo después de revisar las columnas existentes. Si falla, no fuerces la ejecución ni inventes datos: compartí el error SQL y la lista de nombres de columnas (sin valores privados) para preparar un mapeo exacto.
 
 ## Hallazgos detectados por la verificación automática
 
-La comprobación del proyecto Supabase configurado en GitHub detectó que las tablas `movies`, `series` y `episodes` responden, pero `content_submissions` no existe todavía en el esquema visible. También detectó que la tabla `channels` no tiene una columna `title` con el esquema actual esperado por MILTVPLUS. Por eso, no consideres la integración terminada hasta aplicar la migración de propuestas y revisar la estructura real de `channels`.
-
-**Importante:** no ejecutes el esquema base completo a ciegas sobre una base que ya tiene datos. Primero inspeccioná las columnas de `channels` en el Table Editor de Supabase y prepará una migración de compatibilidad que conserve los datos y los mapee a `title`, `url_stream`, `is_published` y `sort_order`. La aplicación necesita esos campos para consultar y reproducir los canales. No borres ni recrees la tabla existente.
+La comprobación del proyecto Supabase configurado en GitHub detectó que las tablas `movies`, `series` y `episodes` responden, pero `content_submissions` no existe todavía en el esquema visible. También detectó que `channels` no tiene una columna `title` con el esquema esperado por MILTVPLUS. Por eso, no consideres la integración terminada hasta aplicar las migraciones y comprobar el esquema real.
 
 ## 2. Habilitar propuestas de la comunidad
 
@@ -45,11 +47,13 @@ Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitad
 
 ## 5. Prueba de aceptación
 
-1. Registrá una cuenta normal e iniciá sesión.
-2. En **PUBLICAR**, enviá una película de prueba cuya URL HTTPS sea tuya o esté autorizada.
-3. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'`.
-4. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**.
-5. Aprobá la propuesta y verificá que aparezca en el catálogo público.
-6. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
+1. Verificá que las tablas `channels`, `movies`, `series` y `episodes` existan y tengan las columnas consultadas por la app.
+2. Confirmá que `content_submissions` exista después de aplicar su migración.
+3. Registrá una cuenta normal e iniciá sesión.
+4. En **PUBLICAR**, enviá una película de prueba cuya URL HTTPS sea tuya o esté autorizada.
+5. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'`.
+6. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**.
+7. Aprobá la propuesta y verificá que aparezca en el catálogo público.
+8. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
 
 La compilación de GitHub Actions solo verifica el código y construye el APK; no confirma que esta configuración ya esté aplicada a la base de datos real.
