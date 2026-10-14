@@ -19,17 +19,10 @@ class AdultBrowserScreen extends StatefulWidget {
 
 class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   static const _providers = <_AdultProvider>[
-    _AdultProvider('Argentina · Pornhub', 'https://www.pornhub.com/video/search?search=argentina'),
-    _AdultProvider('Argentina · XVideos', 'https://www.xvideos.com/?k=argentina'),
     _AdultProvider('Pornhub', 'https://www.pornhub.com/'),
     _AdultProvider('XVideos', 'https://www.xvideos.com/'),
-    _AdultProvider('xHamster', 'https://xhamster.com/'),
-    _AdultProvider('YouPorn', 'https://www.youporn.com/'),
-    _AdultProvider('RedTube', 'https://www.redtube.com/'),
     _AdultProvider('XNXX', 'https://www.xnxx.com/'),
-    _AdultProvider('SpankBang', 'https://spankbang.com/'),
-    _AdultProvider('Tube8', 'https://www.tube8.com/'),
-    _AdultProvider('Eporner', 'https://www.eporner.com/'),
+    _AdultProvider('RedTube', 'https://www.redtube.com/'),
   ];
 
   late final WebViewController _controller;
@@ -307,10 +300,10 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
                           ),
                         ),
                         SizedBox(
-                          height: 48,
+                          height: 196,
                           child: ListView.separated(
                             padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                            scrollDirection: Axis.horizontal,
+                            scrollDirection: Axis.vertical,
                             itemCount: _providers.length,
                             separatorBuilder: (_, __) => const SizedBox(width: 8),
                             itemBuilder: (context, index) {
