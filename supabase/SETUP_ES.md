@@ -8,7 +8,7 @@ Si el proyecto de Supabase está vacío, abrí **SQL Editor** y ejecutá el cont
 
 Si las tablas ya existen y contienen datos, no vuelvas a ejecutar cambios destructivos ni recrees `channels`. Inspeccioná primero sus columnas y hacé una copia de seguridad. La app necesita `channels.title`, `channels.url_stream`, `channels.is_published` y `channels.sort_order`.
 
-Se agregó la migración no destructiva `supabase/migrations/20261014_channels_compatibility.sql`. Esta intenta mapear nombres heredados habituales (`name`/`channel_name` y `url`/`stream_url`, entre otros), conserva las filas y revierte toda la transacción si no puede asociar un nombre o URL válidos. Ejecutala en SQL Editor solo después de revisar las columnas existentes. Si falla, no fuerces la ejecución ni inventes datos: compartí el error SQL y la lista de nombres de columnas (sin valores privados) para preparar un mapeo exacto.
+Se agregó la migración no destructiva `supabase/migrations/20261014090000_channels_compatibility.sql`. Esta intenta mapear nombres heredados habituales (`name`/`channel_name` y `url`/`stream_url`, entre otros), conserva las filas y revierte toda la transacción si no puede asociar un nombre o URL válidos. Ejecutala en SQL Editor solo después de revisar las columnas existentes. Si falla, no fuerces la ejecución ni inventes datos: compartí el error SQL y la lista de nombres de columnas (sin valores privados) para preparar un mapeo exacto.
 
 ## Hallazgos detectados por la verificación automática
 
@@ -36,7 +36,7 @@ No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. 
 
 En SQL Editor, ejecutá una sola vez el contenido actualizado de:
 
-`supabase/migrations/20261013_user_content_submissions.sql`
+`supabase/migrations/20261013090200_user_content_submissions.sql`
 
 Esta migración crea `content_submissions`, habilita RLS, permite a usuarios autenticados enviar propuestas pendientes y permite que el público lea únicamente las aprobadas. Los moderadores solo pueden cambiar el campo `moderation_status`.
 
