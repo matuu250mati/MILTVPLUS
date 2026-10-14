@@ -9,7 +9,12 @@ import '../../services/m3u_playlist_service.dart';
 import 'live_player_screen.dart';
 
 class LiveTvScreen extends StatefulWidget {
-  const LiveTvScreen({super.key});
+  const LiveTvScreen({super.key, this.categoryFilter});
+
+  /// When set, fetches published Supabase channels only from these categories.
+  /// Local M3U channels are retained only when their metadata/name matches.
+  final List<String>? categoryFilter;
+
   @override
   State<LiveTvScreen> createState() => _LiveTvScreenState();
 }
@@ -29,6 +34,34 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   String _selectedGroup = 'Todos';
   String _selectedCountry = 'Todos';
   final TextEditingController _channelSearchController = TextEditingController();
+
+  bool _matchesCategoryFilter(TvChannel channel) {
+    final requested = widget.categoryFilter;
+    if (requested == null || requested.isEmpty) return true;
+
+    final allowed = requested.map((value) => value.trim().toLowerCase()).toSet();
+    final category = channel.category?.trim().toLowerCase();
+    if (category != null && allowed.contains(category)) return true;
+
+    final country = channel.country?.trim().toLowerCase();
+    final searchable = [
+      channel.name,
+      channel.groupTitle ?? '',
+      channel.country ?? '',
+    ].join(' ').toLowerCase();
+
+    if (allowed.contains('tv argentina')) {
+      return country == 'ar' ||
+          country == 'argentina' ||
+          searchable.contains('argentina');
+    }
+    if (allowed.contains('deportes') || allowed.contains('deportivo')) {
+      return RegExp(
+        r'\b(sport|sports|deporte|deportivo|fútbol|futbol|football|espn|tyc|tnt sports|fox sports|dsports|d sports|nba|nfl|formula 1|f1)\b',
+      ).hasMatch(searchable);
+    }
+    return false;
+  }
 
   String _streamIdentity(String value) {
     final uri = Uri.tryParse(value.trim());
@@ -74,18 +107,27 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             groupTitle: existing.groupTitle ?? channel.groupTitle,
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
+            category: existing.category ?? channel.category,
+            category: existing.category ?? channel.category,
           );
         }
       }
 
       for (final channel in saved) {
-        addUnique(channel);
+        if (_matchesCategoryFilter(channel)) addUnique(channel);
       }
 
       try {
-        final remoteChannels = await catalogService.getChannels();
+        final remoteChannels = await catalogService.getChannels(
+          categories: widget.categoryFilter,
+        );
         for (final channel in remoteChannels) {
-          addUnique(TvChannel(name: channel.title, streamUrl: channel.urlStream));
+          addUnique(TvChannel(
+            name: channel.title,
+            streamUrl: channel.urlStream,
+            category: channel.category,
+            country: channel.countryCode,
+          ));
         }
         remoteLoaded = true;
       } catch (_) {
@@ -94,7 +136,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
       // On a fresh install, load a curated free-to-air source so the screen
       // does not start empty when neither local channels nor Supabase are configured.
-      if (merged.isEmpty) {
+      if (merged.isEmpty &&
+          (widget.categoryFilter == null || widget.categoryFilter!.isEmpty)) {
         try {
           final publicChannels =
               await m3uPlaylistService.importFromUrl(_curatedFreePlaylist);
@@ -469,9 +512,23 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TV EN VIVO', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                  SizedBox(height: 5),
-                  Text('Tus señales, en un solo lugar.', style: TextStyle(color: AppTheme.muted)),
+                  Text(
+                    widget.categoryFilter == null
+                        ? 'TV EN VIVO'
+                        : widget.categoryFilter!.contains('Deportivo')
+                            ? 'DEPORTES'
+                            : 'TV EN VIVO · ARGENTINA',
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.categoryFilter == null
+                        ? 'Tus señales, en un solo lugar.'
+                        : widget.categoryFilter!.contains('Deportivo')
+                            ? 'Señales deportivas publicadas en Supabase.'
+                            : 'Canales argentinos publicados en Supabase.',
+                    style: const TextStyle(color: AppTheme.muted),
+                  ),
                 ],
               ),
             ),
@@ -480,18 +537,20 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               onPressed: _loadingChannels ? null : () => loadSavedChannels(showFeedback: true),
               icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
             ),
-            const SizedBox(width: 4),
-            OutlinedButton.icon(
-              onPressed: _loadingChannels ? null : importPlaylist,
-              icon: const Icon(Icons.playlist_add_rounded),
-              label: const Text('FUENTES DE TV'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: addChannel,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('AGREGAR'),
-            ),
+            if (widget.categoryFilter == null) ...[
+              const SizedBox(width: 4),
+              OutlinedButton.icon(
+                onPressed: _loadingChannels ? null : importPlaylist,
+                icon: const Icon(Icons.playlist_add_rounded),
+                label: const Text('FUENTES DE TV'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: addChannel,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('AGREGAR'),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 18),
