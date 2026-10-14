@@ -611,7 +611,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                         selected: selected,
                         query: _channelQuery,
                         searchController: _channelSearchController,
-                        selectedGroup: _selectedGroup,
+                        selectedGroup: activeGroup,
                         groups: groups,
                         selectedCountry: _selectedCountry,
                         countries: countries,
