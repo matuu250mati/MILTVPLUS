@@ -9,7 +9,12 @@ import '../../services/m3u_playlist_service.dart';
 import 'live_player_screen.dart';
 
 class LiveTvScreen extends StatefulWidget {
-  const LiveTvScreen({super.key});
+  const LiveTvScreen({super.key, this.categoryFilter});
+
+  /// When set, fetches published Supabase channels only from these categories.
+  /// Local M3U channels are retained only when their metadata/name matches.
+  final List<String>? categoryFilter;
+
   @override
   State<LiveTvScreen> createState() => _LiveTvScreenState();
 }
@@ -26,7 +31,39 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   bool _loadingChannels = false;
   int selected = -1;
   String _channelQuery = '';
+  String _selectedGroup = 'Todos';
+  String _selectedCountry = 'Todos';
   final TextEditingController _channelSearchController = TextEditingController();
+
+  bool _matchesCategoryFilter(TvChannel channel) {
+    final requested = widget.categoryFilter;
+    if (requested == null || requested.isEmpty) return true;
+
+    final allowed = requested.map((value) => value.trim().toLowerCase()).toSet();
+    final category = channel.category?.trim().toLowerCase();
+    if (category != null && allowed.contains(category)) return true;
+
+    final country = channel.country?.trim().toLowerCase();
+    final searchable = [
+      channel.name,
+      channel.groupTitle ?? '',
+      channel.country ?? '',
+    ].join(' ').toLowerCase();
+
+    if (allowed.contains('tv argentina')) {
+      // Keep the Argentina view precise: uncategorized local imports belong in
+      // the unified TV screen until their country/group metadata identifies them.
+      return country == 'ar' ||
+          country == 'argentina' ||
+          searchable.contains('argentina');
+    }
+    if (allowed.contains('deportes') || allowed.contains('deportivo')) {
+      return RegExp(
+        r'\b(sport|sports|deporte|deportivo|fútbol|futbol|football|espn|tyc|tnt sports|fox sports|dsports|d sports|nba|nfl|formula 1|f1)\b',
+      ).hasMatch(searchable);
+    }
+    return false;
+  }
 
   String _streamIdentity(String value) {
     final uri = Uri.tryParse(value.trim());
@@ -58,17 +95,41 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
       void addUnique(TvChannel channel) {
         final key = _streamIdentity(channel.streamUrl);
-        merged.putIfAbsent(key, () => channel);
+        final existing = merged[key];
+        if (existing == null) {
+          merged[key] = channel;
+          return;
+        }
+        if ((existing.groupTitle == null && channel.groupTitle != null) ||
+            (existing.country == null && channel.country != null) ||
+            (existing.language == null && channel.language != null) ||
+            (existing.category == null && channel.category != null)) {
+          merged[key] = TvChannel(
+            name: existing.name,
+            streamUrl: existing.streamUrl,
+            groupTitle: existing.groupTitle ?? channel.groupTitle,
+            country: existing.country ?? channel.country,
+            language: existing.language ?? channel.language,
+            category: existing.category ?? channel.category,
+          );
+        }
       }
 
       for (final channel in saved) {
-        addUnique(channel);
+        if (_matchesCategoryFilter(channel)) addUnique(channel);
       }
 
       try {
-        final remoteChannels = await catalogService.getChannels();
+        final remoteChannels = await catalogService.getChannels(
+          categories: widget.categoryFilter,
+        );
         for (final channel in remoteChannels) {
-          addUnique(TvChannel(name: channel.title, streamUrl: channel.urlStream));
+          addUnique(TvChannel(
+            name: channel.title,
+            streamUrl: channel.urlStream,
+            category: channel.category,
+            country: channel.countryCode,
+          ));
         }
         remoteLoaded = true;
       } catch (_) {
@@ -77,7 +138,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
       // On a fresh install, load a curated free-to-air source so the screen
       // does not start empty when neither local channels nor Supabase are configured.
-      if (merged.isEmpty) {
+      if (merged.isEmpty &&
+          (widget.categoryFilter == null || widget.categoryFilter!.isEmpty)) {
         try {
           final publicChannels =
               await m3uPlaylistService.importFromUrl(_curatedFreePlaylist);
@@ -251,6 +313,24 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       subtitle: 'IPTV-org · canales musicales en vivo',
       url: 'https://iptv-org.github.io/iptv/categories/music.m3u',
     ),
+    (
+      id: 'culture',
+      title: 'Cultura y educación',
+      subtitle: 'IPTV-org · señales culturales y educativas en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/culture.m3u',
+    ),
+    (
+      id: 'entertainment',
+      title: 'Entretenimiento y general',
+      subtitle: 'IPTV-org · señales generales de televisión en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/entertainment.m3u',
+    ),
+    (
+      id: 'general',
+      title: 'Canales generales',
+      subtitle: 'IPTV-org · señales generalistas en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/general.m3u',
+    ),
   ];
 
   Future<void> importPlaylist() async {
@@ -362,30 +442,44 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     try {
       final imported = await m3uPlaylistService.importFromUrl(playlistUrl);
       final merged = <String, TvChannel>{};
-      for (final channel in channels) {
-        merged.putIfAbsent(
-          _streamIdentity(channel.streamUrl),
-          () => channel,
-        );
+      // Merge against the complete persisted list, not the currently filtered
+      // view, so importing from a category screen never deletes other channels.
+      final savedChannels = await channelStorage.load();
+      for (final channel in savedChannels) {
+        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
       }
       for (final channel in imported) {
-        merged.putIfAbsent(
-          _streamIdentity(channel.streamUrl),
-          () => channel,
-        );
+        final key = _streamIdentity(channel.streamUrl);
+        final existing = merged[key];
+        if (existing == null) {
+          merged[key] = channel;
+        } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
+            (existing.country == null && channel.country != null) ||
+            (existing.language == null && channel.language != null) ||
+            (existing.category == null && channel.category != null)) {
+          merged[key] = TvChannel(
+            name: existing.name,
+            streamUrl: existing.streamUrl,
+            groupTitle: existing.groupTitle ?? channel.groupTitle,
+            country: existing.country ?? channel.country,
+            language: existing.language ?? channel.language,
+            category: existing.category ?? channel.category,
+          );
+        }
       }
       final combined = merged.values.toList(growable: false);
+      final visibleChannels = combined.where(_matchesCategoryFilter).toList(growable: false);
       await channelStorage.save(combined);
       if (!mounted) return;
       setState(() {
         channels
           ..clear()
-          ..addAll(combined);
+          ..addAll(visibleChannels);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados. La reproducción se confirma al abrir cada canal.',
+            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados, ${visibleChannels.length} visibles en esta categoría. La reproducción se confirma al abrir cada canal.',
           ),
         ),
       );
@@ -416,18 +510,46 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 700;
+    final groups = channels
+        .map((channel) => channel.liveSection)
+        .toSet()
+        .toList()
+      ..sort();
+    final countries = channels
+        .map((channel) => channel.country?.trim())
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final activeGroup = groups.contains(_selectedGroup) ? _selectedGroup : 'Todos';
+    final activeCountry = countries.contains(_selectedCountry) ? _selectedCountry : 'Todos';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TV EN VIVO', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                  SizedBox(height: 5),
-                  Text('Tus señales, en un solo lugar.', style: TextStyle(color: AppTheme.muted)),
+                  Text(
+                    widget.categoryFilter == null
+                        ? 'TV EN VIVO'
+                        : widget.categoryFilter!.contains('Deportivo')
+                            ? 'DEPORTES'
+                            : 'TV EN VIVO · ARGENTINA',
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.categoryFilter == null
+                        ? 'Tus señales, en un solo lugar.'
+                        : widget.categoryFilter!.contains('Deportivo')
+                            ? 'Señales deportivas publicadas en Supabase.'
+                            : 'Canales argentinos publicados en Supabase.',
+                    style: const TextStyle(color: AppTheme.muted),
+                  ),
                 ],
               ),
             ),
@@ -442,12 +564,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               icon: const Icon(Icons.playlist_add_rounded),
               label: const Text('FUENTES DE TV'),
             ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: addChannel,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('AGREGAR'),
-            ),
+            if (widget.categoryFilter == null) ...[
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: addChannel,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('AGREGAR'),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 18),
@@ -457,14 +581,46 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 3, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(height: 12),
-                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(
+                      flex: 2,
+                      child: _ChannelList(
+                        channels: channels,
+                        selected: selected,
+                        query: _channelQuery,
+                        searchController: _channelSearchController,
+                        selectedGroup: activeGroup,
+                        groups: groups,
+                        selectedCountry: activeCountry,
+                        countries: countries,
+                        onQueryChanged: (value) => setState(() => _channelQuery = value),
+                        onGroupChanged: (value) => setState(() => _selectedGroup = value),
+                        onCountryChanged: (value) => setState(() => _selectedCountry = value),
+                        onSelect: play,
+                      ),
+                    ),
                   ],
                 )
               : Row(
                   children: [
                     Expanded(flex: 7, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(width: 14),
-                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(
+                      flex: 3,
+                      child: _ChannelList(
+                        channels: channels,
+                        selected: selected,
+                        query: _channelQuery,
+                        searchController: _channelSearchController,
+                        selectedGroup: activeGroup,
+                        groups: groups,
+                        selectedCountry: _selectedCountry,
+                        countries: countries,
+                        onQueryChanged: (value) => setState(() => _channelQuery = value),
+                        onGroupChanged: (value) => setState(() => _selectedGroup = value),
+                        onCountryChanged: (value) => setState(() => _selectedCountry = value),
+                        onSelect: play,
+                      ),
+                    ),
                   ],
                 ),
         ),
@@ -524,14 +680,26 @@ class _ChannelList extends StatelessWidget {
     required this.selected,
     required this.query,
     required this.searchController,
+    required this.selectedGroup,
+    required this.groups,
+    required this.selectedCountry,
+    required this.countries,
     required this.onQueryChanged,
+    required this.onGroupChanged,
+    required this.onCountryChanged,
     required this.onSelect,
   });
   final List<TvChannel> channels;
   final int selected;
   final String query;
   final TextEditingController searchController;
+  final String selectedGroup;
+  final List<String> groups;
+  final String selectedCountry;
+  final List<String> countries;
   final ValueChanged<String> onQueryChanged;
+  final ValueChanged<String> onGroupChanged;
+  final ValueChanged<String> onCountryChanged;
   final ValueChanged<int> onSelect;
 
   @override
@@ -539,9 +707,13 @@ class _ChannelList extends StatelessWidget {
     final normalizedQuery = query.trim().toLowerCase();
     final filteredIndices = <int>[
       for (var i = 0; i < channels.length; i++)
-        if (normalizedQuery.isEmpty ||
-            channels[i].name.toLowerCase().contains(normalizedQuery) ||
-            channels[i].streamUrl.toLowerCase().contains(normalizedQuery))
+        if ((normalizedQuery.isEmpty ||
+                channels[i].name.toLowerCase().contains(normalizedQuery) ||
+                channels[i].streamUrl.toLowerCase().contains(normalizedQuery) ||
+                (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
+                (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
+            (selectedGroup == 'Todos' || channels[i].liveSection == selectedGroup) &&
+            (selectedCountry == 'Todos' || channels[i].country == selectedCountry))
           i,
     ];
     return Container(
@@ -575,6 +747,55 @@ class _ChannelList extends StatelessWidget {
               ),
             ),
           ),
+          if (groups.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Text('CATEGORÍA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
+            ),
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  for (final value in <String>['Todos', ...groups])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(value),
+                        selected: selectedGroup == value,
+                        autofocus: selectedGroup == value,
+                        onSelected: (_) => onGroupChanged(value),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (countries.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+              child: Text('PAÍS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
+            ),
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  for (final value in <String>['Todos', ...countries])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(value),
+                        selected: selectedCountry == value,
+                        onSelected: (_) => onCountryChanged(value),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 1, color: Color(0x223FFFFF)),
           Expanded(
             child: channels.isEmpty
@@ -597,7 +818,16 @@ class _ChannelList extends StatelessWidget {
                             onTap: () => onSelect(channelIndex),
                             leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
                             title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: const Text('TV EN VIVO', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+                            subtitle: Text(
+                              [
+                                if (channel.groupTitle?.isNotEmpty == true) channel.groupTitle!,
+                                if (channel.country?.isNotEmpty == true) channel.country!,
+                                if (channel.groupTitle == null && channel.country == null) 'TV EN VIVO',
+                              ].join(' · '),
+                              style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         },
                       ),

@@ -33,7 +33,47 @@ El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, as�
 
 No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
 
-## 2. Habilitar propuestas de la comunidad
+## 2. Normalizar categorías de TV en vivo
+
+Después de aplicar y verificar `20261014090000_channels_compatibility.sql`, revisá qué señales coinciden con los patrones de la migración `20261014150000_normalize_channel_categories.sql`. Esa migración clasifica nombres reconocibles como `Deportes` o `TV Argentina`, prioriza deportes cuando un canal cumple ambos patrones, conserva las URL y no cambia `is_published`. Las filas que no coinciden quedan intactas.
+
+Vista previa orientativa antes de ejecutar la migración:
+
+```sql
+SELECT
+  COALESCE(
+    NULLIF(to_jsonb(c)->>'title', ''),
+    NULLIF(to_jsonb(c)->>'name', ''),
+    NULLIF(to_jsonb(c)->>'channel_name', ''),
+    NULLIF(to_jsonb(c)->>'channel_title', '')
+  ) AS channel_name,
+  category,
+  is_published
+FROM public.channels AS c
+WHERE lower(COALESCE(
+    to_jsonb(c)->>'title',
+    to_jsonb(c)->>'name',
+    to_jsonb(c)->>'channel_name',
+    to_jsonb(c)->>'channel_title',
+    ''
+  )) ~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|dsports|deportv|telefe|eltrece|c5n|a24|canal[[:space:]]*26)'
+  OR lower(COALESCE(to_jsonb(c)->>'country_code', '')) IN ('ar', 'argentina')
+  OR lower(COALESCE(to_jsonb(c)->>'category', '')) IN ('argentina', 'tv en vivo', 'tv argentina')
+ORDER BY category, channel_name;
+```
+
+Si la vista previa es correcta, ejecutá el archivo de migración completo desde SQL Editor de Supabase y verificá los conteos:
+
+```sql
+SELECT category, COUNT(*) AS cantidad
+FROM public.channels
+GROUP BY category
+ORDER BY category;
+```
+
+No marques canales como publicados ni reemplaces URL durante esta clasificación. La app solo muestra filas con `is_published = true`.
+
+## 3. Habilitar propuestas de la comunidad
 
 En SQL Editor, ejecutá una sola vez el contenido actualizado de:
 
@@ -43,7 +83,7 @@ Esta migración crea `content_submissions`, habilita RLS, permite a usuarios aut
 
 Si el SQL Editor devuelve un error, no continúes como si la migración hubiera quedado aplicada. Copiá el error completo (sin claves ni tokens) y corregilo antes de probar el flujo.
 
-## 3. Asignar el rol de moderación
+## 4. Asignar el rol de moderación
 
 El rol se guarda en `app_metadata`, no en `user_metadata`, para que el usuario no pueda asignárselo desde la app. Después de crear la cuenta del moderador, un administrador del proyecto puede ejecutar lo siguiente en SQL Editor, reemplazando el correo por el de la cuenta autorizada:
 
@@ -60,11 +100,11 @@ where lower(email) = lower('moderador@tu-dominio.com');
 
 Confirmá que la consulta de verificación devuelva exactamente una cuenta con el rol `moderator`. Cerrá sesión y volvé a iniciar sesión en MILTVPLUS para renovar el JWT y cargar el rol. No asignes este rol a cuentas que no deban aprobar publicaciones.
 
-## 4. Verificar las políticas del catálogo
+## 5. Verificar las políticas del catálogo
 
 Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. El esquema base `supabase/schema.sql` incluye esas políticas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
-## 5. Prueba de aceptación
+## 6. Prueba de aceptación
 
 1. Verificá que las tablas `channels`, `movies`, `series` y `episodes` existan y tengan las columnas consultadas por la app.
 2. Confirmá que `content_submissions` exista después de aplicar su migración.

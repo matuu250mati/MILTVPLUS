@@ -11,6 +11,9 @@ class M3uPlaylistParser {
     final channels = <TvChannel>[];
     final seen = <String>{};
     String? pendingName;
+    String? pendingGroupTitle;
+    String? pendingCountry;
+    String? pendingLanguage;
 
     for (final rawLine in lines) {
       final line = rawLine.trim();
@@ -24,6 +27,9 @@ class M3uPlaylistParser {
           name = match?.group(1)?.trim() ?? '';
         }
         pendingName = name.isEmpty ? 'Canal ${channels.length + 1}' : name;
+        pendingGroupTitle = _attribute(line, 'group-title');
+        pendingCountry = _attribute(line, 'tvg-country');
+        pendingLanguage = _attribute(line, 'tvg-language');
         continue;
       }
 
@@ -37,6 +43,9 @@ class M3uPlaylistParser {
         // Web-player pages (for example, YouTube or Twitch channel pages) are
         // not direct media streams and cannot be opened by video_player.
         pendingName = null;
+        pendingGroupTitle = null;
+        pendingCountry = null;
+        pendingLanguage = null;
         continue;
       }
 
@@ -47,13 +56,27 @@ class M3uPlaylistParser {
         channels.add(TvChannel(
           name: pendingName ?? _fallbackName(uri, channels.length + 1),
           streamUrl: streamUrl,
+          groupTitle: _nonEmpty(pendingGroupTitle),
+          country: _nonEmpty(pendingCountry),
+          language: _nonEmpty(pendingLanguage),
         ));
       }
       pendingName = null;
+      pendingGroupTitle = null;
+      pendingCountry = null;
+      pendingLanguage = null;
     }
 
     return List<TvChannel>.unmodifiable(channels);
   }
+
+  String? _attribute(String line, String name) {
+    final match = RegExp('(?:^|\\s)$name="([^"]*)"').firstMatch(line);
+    return match?.group(1)?.trim();
+  }
+
+  String? _nonEmpty(String? value) =>
+      value == null || value.trim().isEmpty ? null : value.trim();
 
   String _streamIdentity(Uri uri) {
     final scheme = uri.scheme.toLowerCase();

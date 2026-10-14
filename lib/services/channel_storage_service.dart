@@ -17,7 +17,14 @@ class ChannelStorageService {
           final name = decoded['name'];
           final url = decoded['streamUrl'];
           if (name is String && url is String && name.trim().isNotEmpty && url.trim().isNotEmpty) {
-            channels.add(TvChannel(name: name, streamUrl: url));
+            channels.add(TvChannel(
+              name: name,
+              streamUrl: url,
+              groupTitle: decoded['groupTitle'] is String ? decoded['groupTitle'] as String : null,
+              country: decoded['country'] is String ? decoded['country'] as String : null,
+              language: decoded['language'] is String ? decoded['language'] as String : null,
+              category: decoded['category'] is String ? decoded['category'] as String : null,
+            ));
           }
         }
       } on FormatException {
@@ -33,6 +40,10 @@ class ChannelStorageService {
         .map((channel) => jsonEncode({
               'name': channel.name,
               'streamUrl': channel.streamUrl,
+              'groupTitle': channel.groupTitle,
+              'country': channel.country,
+              'language': channel.language,
+              'category': channel.category,
             }))
         .toList(growable: false);
     await preferences.setStringList(_storageKey, encoded);
