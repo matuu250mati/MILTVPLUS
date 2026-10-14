@@ -40,34 +40,34 @@ class TvChannel {
 
     // Classification fallback is only for uncategorized playlist entries in
     // the unified TV view. Category-specific screens filter on category alone.
-    if (RegExp(r'\\b(news|noticias|informativo|noticiero|c5n|a24|cnn)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(news|noticias|informativo|noticiero|c5n|a24|cnn)\b').hasMatch(searchable)) {
       return 'Noticias';
     }
-    if (RegExp(r'\\b(documentary|documentaries|documental|documentales|culture|cultural|cultura|education|educación|history|historia|arte|arts|encuentro|pakapaka)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(documentary|documentaries|documental|documentales|culture|cultural|cultura|education|educación|history|historia|arte|arts|encuentro|pakapaka)\b').hasMatch(searchable)) {
       return 'Cultura/Documentales';
     }
-    if (RegExp(r'\\b(hbo|cinemax|showtime|starz|premium|paramount\\+|sky cinema|canal\\+|cine|cinema|film|películas|peliculas)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(hbo|cinemax|showtime|starz|premium|paramount\\+|sky cinema|canal\\+|cine|cinema|film|películas|peliculas)\b').hasMatch(searchable)) {
       return 'HBO/Cine';
     }
-    if (RegExp(r'\\b(sport|sports|deporte|deportivo|espn|tyc|fox sports|tnt sports|dsports|deportv|eurosport|nba|nfl|formula 1|f1)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(sport|sports|deporte|deportivo|espn|tyc|fox sports|tnt sports|dsports|deportv|eurosport|nba|nfl|formula 1|f1)\b').hasMatch(searchable)) {
       return 'Deportes';
     }
-    if (RegExp(r'\\b(kids|children|infantil|cartoon|nickelodeon|disney junior)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(kids|children|infantil|cartoon|nickelodeon|disney junior)\b').hasMatch(searchable)) {
       return 'Infantiles';
     }
-    if (RegExp(r'\\b(music|música|musica|mtv|vevo)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(music|música|musica|mtv|vevo)\b').hasMatch(searchable)) {
       return 'Música';
     }
     if (normalizedCategory == 'argentina' ||
         country?.toLowerCase() == 'ar' ||
         country?.toLowerCase() == 'argentina' ||
-        RegExp(r'\\b(argentina|telefe|eltrece|el trece|tv pública|tv publica|américa tv|america tv|canal 9)\\b').hasMatch(searchable)) {
+        RegExp(r'\b(argentina|telefe|eltrece|el trece|tv pública|tv publica|américa tv|america tv|canal 9)\b').hasMatch(searchable)) {
       return 'TV Argentina';
     }
-    if (RegExp(r'\\b(series|drama|telenovela)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(series|drama|telenovela)\b').hasMatch(searchable)) {
       return 'Series en vivo';
     }
-    if (RegExp(r'\\b(entertainment|entretenimiento|lifestyle|general)\\b').hasMatch(searchable)) {
+    if (RegExp(r'\b(entertainment|entretenimiento|lifestyle|general)\b').hasMatch(searchable)) {
       return 'Entretenimiento y general';
     }
     return 'Otros canales';
