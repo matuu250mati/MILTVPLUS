@@ -56,9 +56,11 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
         NavigationDelegate(
           onPageStarted: (_) {
             if (!mounted) return;
+            _hideControlsTimer?.cancel();
             setState(() {
               _loading = true;
               _errorMessage = null;
+              _controlsVisible = true;
             });
           },
           onPageFinished: (_) async {
