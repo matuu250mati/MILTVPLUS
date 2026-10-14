@@ -36,13 +36,17 @@ and category is distinct from 'Deportes';
 -- Match only recognizable Argentine broadcaster names; unknown rows are untouched.
 update public.channels as c
 set category = 'TV Argentina'
-where lower(coalesce(
-  to_jsonb(c)->>'title',
-  to_jsonb(c)->>'name',
-  to_jsonb(c)->>'channel_name',
-  to_jsonb(c)->>'channel_title',
-  ''
-)) ~ '(telefe|el[[:space:]]*trece|eltrece|america[[:space:]]*tv|américa[[:space:]]*tv|tv[[:space:]]*publica|tv[[:space:]]*pública|canal[[:space:]]*9|c5n|todo[[:space:]]*noticias|\mtn\M|cronica|crónica|a24|canal[[:space:]]*26|net[[:space:]]*tv|ln[[:space:]]*\+|la[[:space:]]*nacion[[:space:]]*\+)'
+where (
+  lower(coalesce(
+    to_jsonb(c)->>'title',
+    to_jsonb(c)->>'name',
+    to_jsonb(c)->>'channel_name',
+    to_jsonb(c)->>'channel_title',
+    ''
+  )) ~ '(telefe|el[[:space:]]*trece|eltrece|america[[:space:]]*tv|américa[[:space:]]*tv|tv[[:space:]]*publica|tv[[:space:]]*pública|canal[[:space:]]*9|c5n|todo[[:space:]]*noticias|\mtn\M|cronica|crónica|a24|canal[[:space:]]*26|net[[:space:]]*tv|ln[[:space:]]*\+|la[[:space:]]*nacion[[:space:]]*\+)'
+  or lower(coalesce(to_jsonb(c)->>'country_code', '')) in ('ar', 'argentina')
+  or lower(coalesce(to_jsonb(c)->>'category', '')) in ('argentina', 'tv en vivo', 'tv argentina')
+)
 and lower(coalesce(
   to_jsonb(c)->>'title',
   to_jsonb(c)->>'name',
@@ -50,6 +54,7 @@ and lower(coalesce(
   to_jsonb(c)->>'channel_title',
   ''
 )) !~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|d[[:space:]]*sports|dsports|directv[[:space:]]*sports|deportv|eurosport|sportv|nba[[:space:]]*tv|nfl[[:space:]]*network|formula[[:space:]]*1|f1[[:space:]]|golf[[:space:]]*channel|bein[[:space:]]*sports)'
+and lower(coalesce(to_jsonb(c)->>'category', '')) not in ('deportes', 'deportivo')
 and category is distinct from 'TV Argentina';
 
 create index if not exists channels_published_category_order_idx
