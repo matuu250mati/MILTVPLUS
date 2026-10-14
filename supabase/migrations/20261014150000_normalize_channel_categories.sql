@@ -1,6 +1,6 @@
 -- MILTVPLUS: normalize known live-channel categories without deleting rows or changing stream URLs.
 -- Apply after 20261014090000_channels_compatibility.sql in Supabase SQL Editor.
--- Review the SELECT preview below before running this migration against production data.
+-- Review the matching channel names with the preview query in supabase/SETUP_ES.md before applying this migration.
 
 begin;
 
