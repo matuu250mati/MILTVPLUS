@@ -36,6 +36,8 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   bool _canGoBack = false;
   String? _errorMessage;
   bool _configured = false;
+  bool _controlsVisible = true;
+  Timer? _hideControlsTimer;
   int _providerLoadRequest = 0;
 
   @override
@@ -66,6 +68,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
               _loading = false;
               _canGoBack = canGoBack;
             });
+            _showControls();
           },
           onWebResourceError: (error) {
             if (!mounted || (error.isForMainFrame == false)) return;
@@ -98,11 +101,13 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   Future<void> _loadProvider(int index) async {
     if (index < 0 || index >= _providers.length) return;
     final request = ++_providerLoadRequest;
+    _hideControlsTimer?.cancel();
     setState(() {
       _selectedProvider = index;
       _loading = true;
       _errorMessage = null;
       _canGoBack = false;
+      _controlsVisible = true;
     });
     // Each provider starts with a clean local WebView session. This avoids
     // carrying cookies or site storage from one provider into another.
@@ -153,6 +158,17 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
     }
   }
 
+  void _showControls() {
+    if (!mounted) return;
+    _hideControlsTimer?.cancel();
+    setState(() => _controlsVisible = true);
+    _hideControlsTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted && !_loading && _errorMessage == null) {
+        setState(() => _controlsVisible = false);
+      }
+    });
+  }
+
   Future<void> _showPrivacyNote() async {
     await showDialog<void>(
       context: context,
@@ -175,6 +191,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
 
   @override
   void dispose() {
+    _hideControlsTimer?.cancel();
     unawaited(_clearWebData());
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
@@ -188,126 +205,150 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF080A10),
-          body: Column(
+          body: Stack(
+            fit: StackFit.expand,
             children: [
-              Material(
-                color: const Color(0xFF10131E),
-                child: SafeArea(
-                  bottom: false,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 48,
-                        child: Row(
+              if (_configured)
+                WebViewWidget(controller: _controller)
+              else
+                const SizedBox.expand(),
+              if (_loading)
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppTheme.accent),
+                    ),
+                  ),
+                ),
+              if (_errorMessage != null)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Color(0xEE080A10),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              tooltip: 'Atrás',
-                              onPressed: () => unawaited(_goBackOrLock()),
-                              icon: Icon(
-                                _canGoBack ? Icons.arrow_back_rounded : Icons.lock_rounded,
-                                color: AppTheme.accent,
-                              ),
+                            const Icon(Icons.public_off_rounded,
+                                size: 44, color: AppTheme.accent),
+                            const SizedBox(height: 14),
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(height: 1.45),
                             ),
-                            const Expanded(
-                              child: Text(
-                                '+18 · NAVEGACIÓN PRIVADA LOCAL',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: .6,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Información de privacidad',
-                              onPressed: _showPrivacyNote,
-                              icon: const Icon(Icons.shield_outlined, color: AppTheme.muted),
-                            ),
-                            IconButton(
-                              tooltip: 'Bloquear sección',
-                              onPressed: () async {
-                                await _clearWebData();
-                                widget.onLock();
-                              },
-                              icon: const Icon(Icons.close_rounded, color: Colors.white),
+                            const SizedBox(height: 18),
+                            FilledButton(
+                              onPressed: () => unawaited(_loadProvider(_selectedProvider)),
+                              child: const Text('REINTENTAR'),
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(
-                        height: 48,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _providers.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final selected = index == _selectedProvider;
-                            return ChoiceChip(
-                              label: Text(_providers[index].label),
-                              selected: selected,
-                              autofocus: selected,
-                              showCheckmark: false,
-                              onSelected: (_) => unawaited(_loadProvider(index)),
-                              selectedColor: AppTheme.accent,
-                              backgroundColor: const Color(0xFF20243C),
-                              labelStyle: TextStyle(
-                                color: selected ? Colors.black : Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              side: BorderSide(
-                                color: selected
-                                    ? AppTheme.accent
-                                    : Colors.white.withValues(alpha: .12),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    if (_configured)
-                      WebViewWidget(controller: _controller)
-                    else
-                      const SizedBox.expand(),
-                    if (_loading)
-                      const Center(
-                        child: CircularProgressIndicator(color: AppTheme.accent),
-                      ),
-                    if (_errorMessage != null)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                top: _controlsVisible ? 0 : -180,
+                left: 0,
+                right: 0,
+                child: Material(
+                  color: const Color(0xF510131E),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 48,
+                          child: Row(
                             children: [
-                              const Icon(Icons.public_off_rounded,
-                                  size: 44, color: AppTheme.accent),
-                              const SizedBox(height: 14),
-                              Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(height: 1.45),
+                              IconButton(
+                                tooltip: 'Atrás',
+                                onPressed: () => unawaited(_goBackOrLock()),
+                                icon: Icon(
+                                  _canGoBack ? Icons.arrow_back_rounded : Icons.lock_rounded,
+                                  color: AppTheme.accent,
+                                ),
                               ),
-                              const SizedBox(height: 18),
-                              FilledButton(
-                                onPressed: () => unawaited(_loadProvider(_selectedProvider)),
-                                child: const Text('REINTENTAR'),
+                              const Expanded(
+                                child: Text(
+                                  '+18 · NAVEGACIÓN PRIVADA LOCAL',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: .6,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Información de privacidad',
+                                onPressed: _showPrivacyNote,
+                                icon: const Icon(Icons.shield_outlined, color: AppTheme.muted),
+                              ),
+                              IconButton(
+                                tooltip: 'Limpiar datos y salir',
+                                onPressed: () async {
+                                  await _clearWebData();
+                                  widget.onLock();
+                                },
+                                icon: const Icon(Icons.close_rounded, color: Colors.white),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                  ],
+                        SizedBox(
+                          height: 48,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _providers.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final selected = index == _selectedProvider;
+                              return ChoiceChip(
+                                label: Text(_providers[index].label),
+                                selected: selected,
+                                autofocus: selected,
+                                showCheckmark: false,
+                                onSelected: (_) => unawaited(_loadProvider(index)),
+                                selectedColor: AppTheme.accent,
+                                backgroundColor: const Color(0xFF20243C),
+                                labelStyle: TextStyle(
+                                  color: selected ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                side: BorderSide(
+                                  color: selected
+                                      ? AppTheme.accent
+                                      : Colors.white.withValues(alpha: .12),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+              if (!_controlsVisible)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: SafeArea(
+                    child: IconButton.filledTonal(
+                      tooltip: 'Mostrar menú +18',
+                      onPressed: _showControls,
+                      icon: const Icon(Icons.menu_rounded),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
