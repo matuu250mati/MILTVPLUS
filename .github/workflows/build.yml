@@ -84,18 +84,17 @@ jobs:
         run: |
           set -uo pipefail
           for table in channels movies series episodes content_submissions; do
-            if [[ "$table" == "content_submissions" ]]; then
-              query="select=title,moderation_status&limit=0"
-            else
-              query="select=title&limit=0"
-            fi
+            # Probe the table without assuming its columns; print column names only,
+            # never stream URLs, tokens, or other row values into the CI log.
+            query="select=*&limit=1"
             status="$(curl --silent --show-error --max-time 12 \
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
-              echo "Supabase REST smoke test passed: $table (HTTP $status)"
+              columns="$(jq -r 'if type == "array" and length > 0 then (.[0] | keys | join(",")) else "no visible rows; table endpoint exists" end' /tmp/supabase-smoke-body.txt 2>/dev/null || echo "column inspection unavailable")"
+              echo "Supabase REST smoke test passed: $table (HTTP $status; $columns)"
             else
               detail="$(head -c 240 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
               echo "::warning::Supabase table check for '$table' returned HTTP ${status:-no-response}. Check schema migrations, grants and RLS. ${detail}"
