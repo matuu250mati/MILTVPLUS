@@ -159,6 +159,23 @@ jobs:
             --dart-define="SUPABASE_URL=$SUPABASE_URL_NORMALIZED" \
             --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
+      - name: Verify release APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$apk"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
+            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
+            "$apksigner" verify --verbose --print-certs "$apk"
+            echo "Production release APK signature verified."
+          else
+            echo "Non-versioned CI build: production signing is enforced and verified on v* release tags."
+          fi
+
       - name: Name APK and generate SHA-256 checksum
         shell: bash
         run: |
