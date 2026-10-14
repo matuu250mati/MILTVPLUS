@@ -217,10 +217,10 @@ jobs:
             # colon formatting, or whitespace used by different build-tools versions.
             actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
               tolower($0) ~ /certificate sha-256 digest:/ {
-                line = $0
+                line = tolower($0)
                 sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
-                gsub(/[^[:xdigit:]]/, "", line)
-                print tolower(line)
+                gsub(/[^0-9a-f]/, "", line)
+                print line
                 exit
               }
             ')"
