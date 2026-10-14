@@ -6,7 +6,7 @@ create table if not exists public.content_submissions (
   description text not null check (char_length(btrim(description)) between 1 and 3000),
   stream_url text not null check (stream_url ~ '^https://[^[:space:]]+
   poster_url text check (poster_url is null or poster_url ~ '^https://[^[:space:]]+
-  duration_seconds integer,
+  duration_seconds integer not null check (duration_seconds between 60 and 6000000),
   series_title text,
   season_number integer,
   episode_number integer,
@@ -14,7 +14,6 @@ create table if not exists public.content_submissions (
   moderation_status text not null default 'pending'
     check (moderation_status in ('pending', 'approved', 'rejected')),
   created_at timestamptz not null default now(),
-  constraint content_submission_duration check (duration_seconds is null or duration_seconds > 0),
   constraint content_submission_rights check (rights_confirmed),
   constraint content_submission_episode_fields check (
     (media_type = 'movie' and series_title is null and season_number is null and episode_number is null)
