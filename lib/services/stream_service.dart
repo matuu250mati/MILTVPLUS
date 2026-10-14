@@ -1,9 +1,9 @@
 class StreamService {
   const StreamService();
 
-  /// Accepts HTTP(S) media endpoints, including signed/tokenized provider URLs
-  /// that do not expose a .m3u8 suffix. Actual playback support is confirmed
-  /// when the native player initializes the stream.
+  /// Accepts HTTPS media endpoints, including signed/tokenized provider URLs
+  /// that do not expose a .m3u8 suffix. Android cleartext traffic is disabled,
+  /// so HTTP streams are rejected before they reach the native player.
   bool isSupportedHlsUrl(String value) {
     final uri = Uri.tryParse(value.trim());
     if (uri == null ||
@@ -12,6 +12,6 @@ class StreamService {
         uri.userInfo.isNotEmpty) {
       return false;
     }
-    return uri.scheme == 'https' || uri.scheme == 'http';
+    return uri.scheme == 'https';
   }
 }
