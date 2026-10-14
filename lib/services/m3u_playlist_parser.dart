@@ -1,7 +1,8 @@
 import '../models/tv_channel.dart';
 
 /// Parses standard M3U/M3U8 playlists into channels for MILTVPLUS.
-/// Accepts only HTTP(S) stream URLs and ignores malformed rows.
+/// Accepts only HTTPS stream URLs and ignores malformed rows because Android
+/// cleartext traffic is disabled in the application manifest.
 class M3uPlaylistParser {
   const M3uPlaylistParser();
 
@@ -31,7 +32,7 @@ class M3uPlaylistParser {
       if (uri == null ||
           uri.host.isEmpty ||
           uri.userInfo.isNotEmpty ||
-          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          uri.scheme != 'https' ||
           _isWebPageOnlyHost(uri.host)) {
         // Web-player pages (for example, YouTube or Twitch channel pages) are
         // not direct media streams and cannot be opened by video_player.
