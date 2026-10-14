@@ -32,7 +32,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     if (uri == null ||
         uri.host.isEmpty ||
         uri.userInfo.isNotEmpty ||
-        (uri.scheme != 'https' && uri.scheme != 'http')) {
+        uri.scheme != 'https') {
       if (mounted) {
         setState(() {
           _loading = false;
