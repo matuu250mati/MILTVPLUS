@@ -154,7 +154,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               final url = urlController.text.trim();
               final parsedUrl = Uri.tryParse(url);
               if (name.isEmpty || !service.isSupportedHlsUrl(url) || parsedUrl == null || parsedUrl.userInfo.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTP(S) directa de una señal autorizada.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTPS directa de una señal autorizada.')));
                 return;
               }
               Navigator.pop(dialogContext, TvChannel(name: name, streamUrl: url));
