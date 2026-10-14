@@ -1,5 +1,7 @@
 -- Make published catalog entries readable before sign-in, matching app browsing UX.
 -- This migration intentionally grants SELECT only; catalog writes remain server-side.
+-- RLS policies below restrict SELECT to published rows.
+grant select on public.channels, public.episodes to anon, authenticated;
 
  drop policy if exists "Authenticated users read published channels" on public.channels;
  create policy "Authenticated users read published channels"
