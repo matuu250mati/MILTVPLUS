@@ -33,7 +33,45 @@ El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, as�
 
 No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
 
-## 2. Habilitar propuestas de la comunidad
+## 2. Normalizar categorías de TV en vivo
+
+Después de aplicar y verificar `20261014090000_channels_compatibility.sql`, revisá qué señales coinciden con los patrones de la migración `20261014150000_normalize_channel_categories.sql`. Esa migración clasifica nombres reconocibles como `Deportes` o `TV Argentina`, prioriza deportes cuando un canal cumple ambos patrones, conserva las URL y no cambia `is_published`. Las filas que no coinciden quedan intactas.
+
+Vista previa orientativa antes de ejecutar la migración:
+
+```sql
+SELECT
+  COALESCE(
+    NULLIF(to_jsonb(c)->>'title', ''),
+    NULLIF(to_jsonb(c)->>'name', ''),
+    NULLIF(to_jsonb(c)->>'channel_name', ''),
+    NULLIF(to_jsonb(c)->>'channel_title', '')
+  ) AS channel_name,
+  category,
+  is_published
+FROM public.channels AS c
+WHERE lower(COALESCE(
+    to_jsonb(c)->>'title',
+    to_jsonb(c)->>'name',
+    to_jsonb(c)->>'channel_name',
+    to_jsonb(c)->>'channel_title',
+    ''
+  )) ~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|dsports|deportv|telefe|eltrece|c5n|a24|canal[[:space:]]*26)'
+ORDER BY category, channel_name;
+```
+
+Si la vista previa es correcta, ejecutá el archivo de migración completo desde SQL Editor de Supabase y verificá los conteos:
+
+```sql
+SELECT category, COUNT(*) AS cantidad
+FROM public.channels
+GROUP BY category
+ORDER BY category;
+```
+
+No marques canales como publicados ni reemplaces URL durante esta clasificación. La app solo muestra filas con `is_published = true`.
+
+## 3. Habilitar propuestas de la comunidad
 
 En SQL Editor, ejecutá una sola vez el contenido actualizado de:
 
