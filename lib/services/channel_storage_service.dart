@@ -23,6 +23,7 @@ class ChannelStorageService {
               groupTitle: decoded['groupTitle'] is String ? decoded['groupTitle'] as String : null,
               country: decoded['country'] is String ? decoded['country'] as String : null,
               language: decoded['language'] is String ? decoded['language'] as String : null,
+              category: decoded['category'] is String ? decoded['category'] as String : null,
             ));
           }
         }
@@ -42,6 +43,7 @@ class ChannelStorageService {
               'groupTitle': channel.groupTitle,
               'country': channel.country,
               'language': channel.language,
+              'category': channel.category,
             }))
         .toList(growable: false);
     await preferences.setStringList(_storageKey, encoded);
