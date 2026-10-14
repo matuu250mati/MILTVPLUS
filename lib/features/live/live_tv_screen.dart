@@ -314,6 +314,24 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       subtitle: 'IPTV-org · canales musicales en vivo',
       url: 'https://iptv-org.github.io/iptv/categories/music.m3u',
     ),
+    (
+      id: 'culture',
+      title: 'Cultura y educación',
+      subtitle: 'IPTV-org · señales culturales y educativas en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/culture.m3u',
+    ),
+    (
+      id: 'entertainment',
+      title: 'Entretenimiento y general',
+      subtitle: 'IPTV-org · señales generales de televisión en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/entertainment.m3u',
+    ),
+    (
+      id: 'general',
+      title: 'Canales generales',
+      subtitle: 'IPTV-org · señales generalistas en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/general.m3u',
+    ),
   ];
 
   Future<void> importPlaylist() async {
@@ -494,9 +512,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 700;
     final groups = channels
-        .map((channel) => channel.groupTitle?.trim())
-        .whereType<String>()
-        .where((value) => value.isNotEmpty)
+        .map((channel) => channel.liveSection)
         .toSet()
         .toList()
       ..sort();
@@ -697,7 +713,7 @@ class _ChannelList extends StatelessWidget {
                 channels[i].streamUrl.toLowerCase().contains(normalizedQuery) ||
                 (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
                 (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
-            (selectedGroup == 'Todos' || channels[i].groupTitle == selectedGroup) &&
+            (selectedGroup == 'Todos' || channels[i].liveSection == selectedGroup) &&
             (selectedCountry == 'Todos' || channels[i].country == selectedCountry))
           i,
     ];
