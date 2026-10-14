@@ -100,14 +100,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         }
         if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
-            (existing.language == null && channel.language != null)) {
+            (existing.language == null && channel.language != null) ||
+            (existing.category == null && channel.category != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
             groupTitle: existing.groupTitle ?? channel.groupTitle,
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
-            category: existing.category ?? channel.category,
             category: existing.category ?? channel.category,
           );
         }
@@ -435,13 +435,15 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           merged[key] = channel;
         } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
-            (existing.language == null && channel.language != null)) {
+            (existing.language == null && channel.language != null) ||
+            (existing.category == null && channel.category != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
             groupTitle: existing.groupTitle ?? channel.groupTitle,
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
+            category: existing.category ?? channel.category,
           );
         }
       }
