@@ -2,6 +2,11 @@ name: Deploy Supabase database migrations
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/deploy-supabase-migrations.yml'
 
 permissions:
   contents: read
