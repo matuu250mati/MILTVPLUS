@@ -18,7 +18,7 @@ class HlsVariantService {
   Future<List<HlsVariant>> loadVariants(String source) async {
     final uri = Uri.tryParse(source.trim());
     if (uri == null || !uri.hasAuthority ||
-        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.scheme != 'https' ||
         uri.userInfo.isNotEmpty) {
       return const [];
     }
@@ -50,7 +50,7 @@ class HlsVariantService {
         if (candidate == null) continue;
         final resolved = Uri.tryParse(candidate);
         if (resolved == null || !resolved.hasAuthority ||
-            (resolved.scheme != 'https' && resolved.scheme != 'http') ||
+            resolved.scheme != 'https' ||
             resolved.userInfo.isNotEmpty) {
           continue;
         }
