@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: miltvplus-apk-${{ github.ref }}
@@ -222,18 +222,5 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish versioned GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
-            "$MILTVPLUS_APK_PATH" \
-            "$MILTVPLUS_CHECKSUM_PATH" \
-            "$MILTVPLUS_LATEST_APK_PATH" \
-            "$MILTVPLUS_LATEST_CHECKSUM_PATH" \
-            --verify-tag \
-            --title "MILTVPLUS $GITHUB_REF_NAME" \
-            --generate-notes
+      # Publicación pública desactivada: no crear Releases automáticamente.
+      # Requerirá una autorización expresa y un procedimiento separado.
