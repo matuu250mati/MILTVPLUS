@@ -227,7 +227,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
               if (_errorMessage != null)
                 Positioned.fill(
                   child: ColoredBox(
-                    color: Color(0xEE080A10),
+                    color: const Color(0xEE080A10),
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
