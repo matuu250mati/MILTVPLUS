@@ -24,13 +24,16 @@ $migration$;
 -- Sports takes priority so Argentine sports broadcasters remain in Deportes.
 update public.channels as c
 set category = 'Deportes'
-where lower(coalesce(
-  to_jsonb(c)->>'title',
-  to_jsonb(c)->>'name',
-  to_jsonb(c)->>'channel_name',
-  to_jsonb(c)->>'channel_title',
-  ''
-)) ~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|d[[:space:]]*sports|dsports|directv[[:space:]]*sports|deportv|eurosport|sportv|nba[[:space:]]*tv|nfl[[:space:]]*network|formula[[:space:]]*1|f1[[:space:]]|golf[[:space:]]*channel|bein[[:space:]]*sports)'
+where (
+  lower(coalesce(
+    to_jsonb(c)->>'title',
+    to_jsonb(c)->>'name',
+    to_jsonb(c)->>'channel_name',
+    to_jsonb(c)->>'channel_title',
+    ''
+  )) ~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|d[[:space:]]*sports|dsports|directv[[:space:]]*sports|deportv|eurosport|sportv|nba[[:space:]]*tv|nfl[[:space:]]*network|formula[[:space:]]*1|f1[[:space:]]|golf[[:space:]]*channel|bein[[:space:]]*sports)'
+  or lower(coalesce(to_jsonb(c)->>'category', '')) in ('sports', 'sport', 'deportes', 'deportivo', 'sports tv', 'sport tv')
+)
 and category is distinct from 'Deportes';
 
 -- Match only recognizable Argentine broadcaster names; unknown rows are untouched.
