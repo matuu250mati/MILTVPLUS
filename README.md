@@ -48,7 +48,7 @@ El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o man
 
 - Las tarjetas de películas abren el reproductor nativo cuando el registro publicado tiene `url_stream`.
 - Las tarjetas de series consultan `episodes`, muestran temporada/episodio y abren el reproductor con la URL del episodio publicado.
-- El reproductor valida URLs HTTP(S), inicializa `video_player`, ofrece reintento y muestra errores de reproducción sin simular que el título se reprodujo.
+- El reproductor valida URLs HTTPS (el tráfico HTTP sin cifrar está bloqueado por seguridad en Android), inicializa `video_player`, ofrece reintento y muestra errores de reproducción sin simular que el título se reprodujo.
 - Para que el catálogo tenga títulos reales, el proveedor autorizado debe publicar metadatos y URLs de reproducción en Supabase: `movies`, `series` y `episodes`. La app no inventa títulos ni extrae catálogos privados sin un endpoint/configuración proporcionados.
 
 ## Estado real y próximos hitos
