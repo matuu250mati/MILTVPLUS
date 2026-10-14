@@ -47,7 +47,7 @@ jobs:
       # Feature-branch APKs use a separate Android package so device testing
       # never asks the owner to uninstall or overwrite the existing installation.
       - name: Prepare side-by-side QA package
-        if: github.ref == 'refs/heads/feature/adult-fullscreen-browser'
+        if: ${{ (github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser') || github.ref == 'refs/heads/feature/adult-fullscreen-browser' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -246,7 +246,7 @@ jobs:
         if: github.event.repository.private == true
         uses: actions/upload-artifact@v4
         with:
-          name: MILTVPLUS-${{ startsWith(github.ref, 'refs/heads/feature/') && 'qa' || 'release' }}-apk
+          name: MILTVPLUS-${{ ((github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser') || startsWith(github.ref, 'refs/heads/feature/')) && 'qa' || 'release' }}-apk
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
