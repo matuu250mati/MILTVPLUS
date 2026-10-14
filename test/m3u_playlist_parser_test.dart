@@ -4,7 +4,7 @@ import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 void main() {
   const parser = M3uPlaylistParser();
 
-  test('parses named channels and skips metadata lines', () {
+  test('parses named HTTPS channels and skips metadata and HTTP rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1 tvg-id="one" tvg-name="Canal Uno" group-title="Argentina",Canal Uno
@@ -14,14 +14,12 @@ https://example.com/live/one.m3u8
 http://example.com/two/index.m3u8?token=abc
 ''');
 
-    expect(channels, hasLength(2));
-    expect(channels[0].name, 'Canal Uno');
-    expect(channels[0].streamUrl, 'https://example.com/live/one.m3u8');
-    expect(channels[1].name, 'Canal Dos');
-    expect(channels[1].streamUrl, 'http://example.com/two/index.m3u8?token=abc');
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Canal Uno');
+    expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
   });
 
-  test('ignores non-http URLs and malformed playlist rows', () {
+  test('ignores non-HTTPS URLs and malformed playlist rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Invalid
