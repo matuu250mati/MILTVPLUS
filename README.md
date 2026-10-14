@@ -44,7 +44,7 @@ El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o man
 - **Formatos de reproducción previstos:** HLS (.m3u8) y MP4 cuando el códec sea compatible con el dispositivo; subtítulos y pistas de audio dependen del formato y del reproductor.
 - **Catálogo:** conectar únicamente fuentes propias o licenciadas. No se incluyen películas, canales ni enlaces de terceros sin autorización.
 
-## Propuestas de contenido\n\nLa opción PUBLICAR permite a usuarios autenticados proponer películas o episodios con título, descripción, duración y URL de reproducción. Cada envío queda pendiente y no se publica automáticamente. Aplicá `supabase/migrations/20261013_user_content_submissions.sql` en el SQL Editor de Supabase. Un moderador debe verificar los derechos y la seguridad del enlace antes de publicar el contenido en el catálogo.\n\n## Catálogo VOD y reproducción
+## Propuestas de contenido\n\nLa opción PUBLICAR permite a usuarios autenticados proponer películas o episodios con título, descripción, duración y URL de reproducción. Cada envío queda pendiente y no se publica automáticamente. Aplicá `supabase/migrations/20261013090200_user_content_submissions.sql` en el SQL Editor de Supabase. Un moderador debe verificar los derechos y la seguridad del enlace antes de publicar el contenido en el catálogo.\n\n## Catálogo VOD y reproducción
 
 - Las tarjetas de películas abren el reproductor nativo cuando el registro publicado tiene `url_stream`.
 - Las tarjetas de series consultan `episodes`, muestran temporada/episodio y abren el reproductor con la URL del episodio publicado.
@@ -61,7 +61,7 @@ Se conectaron las acciones de reproducción de películas y episodios al reprodu
 La guía de configuración de la base de datos, roles de moderación y pruebas de aceptación está en [`supabase/SETUP_ES.md`](supabase/SETUP_ES.md).
 
 Si se ejecuta el SQL inicial en un proyecto que ya tiene tablas creadas, aplicá también
-`supabase/migrations/20261013_public_published_catalog.sql` desde el SQL Editor de Supabase.
+`supabase/migrations/20261013090000_public_published_catalog.sql` desde el SQL Editor de Supabase.
 La migración permite leer solo filas publicadas de `movies` y `series` para usuarios
 anónimos y autenticados, necesario para explorar el catálogo sin iniciar sesión. No agrega
 políticas de escritura desde la app. Las URLs de reproducción solo deben publicarse cuando
