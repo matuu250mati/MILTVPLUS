@@ -57,6 +57,8 @@ WHERE lower(COALESCE(
     to_jsonb(c)->>'channel_title',
     ''
   )) ~ '(espn|tyc[[:space:]]*sports|fox[[:space:]]*sports|tnt[[:space:]]*sports|dsports|deportv|telefe|eltrece|c5n|a24|canal[[:space:]]*26)'
+  OR lower(COALESCE(to_jsonb(c)->>'country_code', '')) IN ('ar', 'argentina')
+  OR lower(COALESCE(to_jsonb(c)->>'category', '')) IN ('argentina', 'tv en vivo', 'tv argentina')
 ORDER BY category, channel_name;
 ```
 
