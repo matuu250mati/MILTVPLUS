@@ -44,6 +44,24 @@ jobs:
       - name: Prepare Android project
         run: bash tool/bootstrap_android.sh
 
+      # Feature-branch APKs use a separate Android package so device testing
+      # never asks the owner to uninstall or overwrite the existing installation.
+      - name: Prepare side-by-side QA package
+        if: github.ref == 'refs/heads/feature/adult-fullscreen-browser'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle_file="android/app/build.gradle.kts"
+          manifest="android/app/src/main/AndroidManifest.xml"
+          grep -Fq 'applicationId = "com.miltvplus.miltv_plus"' "$gradle_file" || {
+            echo "::error::Expected generated MILTVPLUS applicationId was not found; refusing to change package identity blindly."
+            exit 1
+          }
+          sed -i 's/applicationId = "com.miltvplus.miltv_plus"/applicationId = "com.miltvplus.miltv_plus.qa"/' "$gradle_file"
+          sed -i 's/android:label="MILTVPLUS"/android:label="MILTVPLUS QA"/' "$manifest"
+          grep -Fq 'applicationId = "com.miltvplus.miltv_plus.qa"' "$gradle_file"
+          echo "Feature build uses com.miltvplus.miltv_plus.qa and can coexist with the installed MILTVPLUS app."
+
       - name: Validate Android TV manifest and security settings
         run: bash tool/validate_android_tv.sh
 
@@ -224,11 +242,11 @@ jobs:
         run: |
           echo "APK artifact withheld: the repository is public. Make the repository private before storing downloadable build artifacts." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload release APK and checksum as workflow artifacts
+      - name: Upload private APK and checksum as workflow artifacts
         if: github.event.repository.private == true
         uses: actions/upload-artifact@v4
         with:
-          name: MILTVPLUS-release-apk
+          name: MILTVPLUS-${{ startsWith(github.ref, 'refs/heads/feature/') && 'qa' || 'release' }}-apk
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
