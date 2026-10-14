@@ -39,18 +39,38 @@ class _CatalogScreenState extends State<CatalogScreen> {
     super.dispose();
   }
 
+  Future<List<Map<String, dynamic>>> _loadApprovedSubmissions(
+    String mediaType,
+  ) async {
+    // The core catalog must remain available even before the optional
+    // community-submissions migration has been applied to Supabase.
+    try {
+      return await _catalogService.getApprovedSubmissions(mediaType);
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+  }
+
   Future<List<_CatalogEntry>> _loadEntries() async {
     if (widget.category == 'SERIES') {
-      final series = await _catalogService.getSeries();
-      final submittedEpisodes = await _catalogService.getApprovedSubmissions('episode');
+      final results = await Future.wait<dynamic>([
+        _catalogService.getSeries(),
+        _loadApprovedSubmissions('episode'),
+      ]);
+      final series = results[0] as List<SeriesModel>;
+      final submittedEpisodes = results[1] as List<Map<String, dynamic>>;
       return <_CatalogEntry>[
         ...series.map(_CatalogEntry.fromSeries),
         ...submittedEpisodes.map(_CatalogEntry.fromSubmission),
       ];
     }
 
-    final movies = await _catalogService.getMovies();
-    final submittedMovies = await _catalogService.getApprovedSubmissions('movie');
+    final results = await Future.wait<dynamic>([
+      _catalogService.getMovies(),
+      _loadApprovedSubmissions('movie'),
+    ]);
+    final movies = results[0] as List<MovieModel>;
+    final submittedMovies = results[1] as List<Map<String, dynamic>>;
     final entries = <_CatalogEntry>[
       ...movies.map(_CatalogEntry.fromMovie),
       ...submittedMovies.map(_CatalogEntry.fromSubmission),
