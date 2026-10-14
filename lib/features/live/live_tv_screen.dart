@@ -39,30 +39,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final requested = widget.categoryFilter;
     if (requested == null || requested.isEmpty) return true;
 
-    final allowed = requested.map((value) => value.trim().toLowerCase()).toSet();
+    // Genre-filtered screens are strict: do not infer a category from a
+    // channel name, country, or M3U group. The catalog migration owns
+    // normalization; unclassified rows stay out of genre-specific views.
+    final allowed = requested
+        .map((value) => value.trim().toLowerCase())
+        .toSet();
     final category = channel.category?.trim().toLowerCase();
-    if (category != null && allowed.contains(category)) return true;
-
-    final country = channel.country?.trim().toLowerCase();
-    final searchable = [
-      channel.name,
-      channel.groupTitle ?? '',
-      channel.country ?? '',
-    ].join(' ').toLowerCase();
-
-    if (allowed.contains('tv argentina')) {
-      // Keep the Argentina view precise: uncategorized local imports belong in
-      // the unified TV screen until their country/group metadata identifies them.
-      return country == 'ar' ||
-          country == 'argentina' ||
-          searchable.contains('argentina');
-    }
-    if (allowed.contains('deportes') || allowed.contains('deportivo')) {
-      return RegExp(
-        r'\b(sport|sports|deporte|deportivo|fútbol|futbol|football|espn|tyc|tnt sports|fox sports|dsports|d sports|nba|nfl|formula 1|f1)\b',
-      ).hasMatch(searchable);
-    }
-    return false;
+    return category != null && allowed.contains(category);
   }
 
   String _streamIdentity(String value) {
