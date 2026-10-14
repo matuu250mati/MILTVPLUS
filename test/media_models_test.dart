@@ -38,4 +38,20 @@ void main() {
     expect(episode.durationSeconds, isNull);
     expect(episode.isPublished, isFalse);
   });
+  test('parses the published channel category used by live-TV filters', () {
+    final channel = ChannelModel.fromJson({
+      'id': 'channel-1',
+      'title': 'TyC Sports',
+      'category': 'Deportes',
+      'url_stream': 'https://media.example.org/live.m3u8',
+      'is_published': true,
+      'sort_order': 4,
+    });
+
+    expect(channel.title, 'TyC Sports');
+    expect(channel.category, 'Deportes');
+    expect(channel.urlStream, 'https://media.example.org/live.m3u8');
+    expect(channel.isPublished, isTrue);
+  });
+
 }
