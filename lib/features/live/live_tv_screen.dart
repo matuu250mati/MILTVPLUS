@@ -51,9 +51,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     ].join(' ').toLowerCase();
 
     if (allowed.contains('tv argentina')) {
-      // The category filter is for Supabase rows. Preserve uncategorized local
-      // M3U imports so the existing local-source workflow remains usable.
-      if (channel.category == null) return true;
+      // Keep the Argentina view precise: uncategorized local imports belong in
+      // the unified TV screen until their country/group metadata identifies them.
       return country == 'ar' ||
           country == 'argentina' ||
           searchable.contains('argentina');
@@ -530,7 +529,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
