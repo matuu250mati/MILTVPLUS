@@ -212,7 +212,9 @@ class _AppShellState extends State<AppShell> {
                                   ? 'Zona +18'
                                   : item.label == 'CONFIGURACIÓN'
                                       ? 'Perfil y configuración'
-                                      : 'Inicio',
+                                      : item.label == 'MODERACIÓN'
+                                          ? 'Moderación de contenido'
+                                          : 'Inicio',
           style: TextStyle(
             color: active ? Colors.white : AppTheme.muted,
             fontWeight: active ? FontWeight.w800 : FontWeight.w600,
