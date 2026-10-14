@@ -8,6 +8,7 @@ import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../submissions/content_submission_screen.dart';
+import '../submissions/content_moderation_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -30,9 +31,16 @@ class _AppShellState extends State<AppShell> {
     _NavItem('PUBLICAR', Icons.publish_rounded),
     _NavItem('+18', Icons.lock_outline_rounded),
     _NavItem('CONFIGURACIÓN', Icons.settings_rounded),
+    _NavItem('MODERACIÓN', Icons.fact_check_outlined),
   ];
 
   int selected = 1;
+
+  bool get _isModerator {
+    if (!isSupabaseConfigured) return false;
+    final role = Supabase.instance.client.auth.currentUser?.appMetadata['role'];
+    return role == 'admin' || role == 'moderator';
+  }
 
   Widget page() {
     switch (selected) {
@@ -58,6 +66,8 @@ class _AppShellState extends State<AppShell> {
         return const ContentSubmissionScreen();
       case 10:
         return const AdultGateScreen();
+      case 12:
+        return const ContentModerationScreen();
       default:
         return const SettingsScreen();
     }
@@ -143,6 +153,10 @@ class _AppShellState extends State<AppShell> {
                   _drawerItem(10),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(11),
+                  if (_isModerator) ...[
+                    const Divider(height: 18, color: Color(0x30FFFFFF)),
+                    _drawerItem(12),
+                  ],
                 ],
               ),
             ),
