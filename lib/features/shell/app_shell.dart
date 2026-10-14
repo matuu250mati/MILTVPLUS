@@ -232,7 +232,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
+      appBar: selected == 10 ? null : AppBar(
         backgroundColor: const Color(0xFF080A10),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
@@ -270,7 +270,9 @@ class _AppShellState extends State<AppShell> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              padding: selected == 10
+                ? EdgeInsets.zero
+                : const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: _pageView(),
             ),
           ),
