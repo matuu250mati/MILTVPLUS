@@ -77,27 +77,34 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
-      - name: Smoke test Supabase REST tables
+      - name: Verify required Supabase schema
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
+          # Ask PostgREST to resolve required columns with limit=0. This validates
+          # the schema even when a catalog table has no publicly visible rows.
+          declare -A required_columns=(
+            [channels]="title,url_stream,is_published,sort_order,logo"
+            [movies]="title,url_stream,is_published,created_at"
+            [series]="title,is_published"
+            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
+          )
           for table in channels movies series episodes content_submissions; do
-            # Probe the table without assuming its columns; print column names only,
-            # never stream URLs, tokens, or other row values into the CI log.
-            query="select=*&limit=1"
+            query="select=${required_columns[$table]}&limit=0"
             status="$(curl --silent --show-error --max-time 12 \
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
-              columns="$(jq -r 'if type == "array" and length > 0 then (.[0] | keys | join(",")) else "no visible rows; table endpoint exists" end' /tmp/supabase-smoke-body.txt 2>/dev/null || echo "column inspection unavailable")"
-              echo "Supabase REST smoke test passed: $table (HTTP $status; $columns)"
+              echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
-              detail="$(head -c 240 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase table check for '$table' returned HTTP ${status:-no-response}. Check schema migrations, grants and RLS. ${detail}"
+              detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
+              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Apply/review the SQL migrations in supabase/SETUP_ES.md before building an APK. $detail"
+              exit 1
             fi
           done
 
