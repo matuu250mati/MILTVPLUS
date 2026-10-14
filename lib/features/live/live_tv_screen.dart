@@ -26,6 +26,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   bool _loadingChannels = false;
   int selected = -1;
   String _channelQuery = '';
+  String _selectedGroup = 'Todos';
+  String _selectedCountry = 'Todos';
   final TextEditingController _channelSearchController = TextEditingController();
 
   String _streamIdentity(String value) {
@@ -58,7 +60,22 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
       void addUnique(TvChannel channel) {
         final key = _streamIdentity(channel.streamUrl);
-        merged.putIfAbsent(key, () => channel);
+        final existing = merged[key];
+        if (existing == null) {
+          merged[key] = channel;
+          return;
+        }
+        if ((existing.groupTitle == null && channel.groupTitle != null) ||
+            (existing.country == null && channel.country != null) ||
+            (existing.language == null && channel.language != null)) {
+          merged[key] = TvChannel(
+            name: existing.name,
+            streamUrl: existing.streamUrl,
+            groupTitle: existing.groupTitle ?? channel.groupTitle,
+            country: existing.country ?? channel.country,
+            language: existing.language ?? channel.language,
+          );
+        }
       }
 
       for (final channel in saved) {
@@ -369,10 +386,21 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         );
       }
       for (final channel in imported) {
-        merged.putIfAbsent(
-          _streamIdentity(channel.streamUrl),
-          () => channel,
-        );
+        final key = _streamIdentity(channel.streamUrl);
+        final existing = merged[key];
+        if (existing == null) {
+          merged[key] = channel;
+        } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
+            (existing.country == null && channel.country != null) ||
+            (existing.language == null && channel.language != null)) {
+          merged[key] = TvChannel(
+            name: existing.name,
+            streamUrl: existing.streamUrl,
+            groupTitle: existing.groupTitle ?? channel.groupTitle,
+            country: existing.country ?? channel.country,
+            language: existing.language ?? channel.language,
+          );
+        }
       }
       final combined = merged.values.toList(growable: false);
       await channelStorage.save(combined);
@@ -416,6 +444,22 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 700;
+    final groups = channels
+        .map((channel) => channel.groupTitle?.trim())
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final countries = channels
+        .map((channel) => channel.country?.trim())
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    if (!groups.contains(_selectedGroup)) _selectedGroup = 'Todos';
+    if (!countries.contains(_selectedCountry)) _selectedCountry = 'Todos';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -457,14 +501,46 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   children: [
                     Expanded(flex: 3, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(height: 12),
-                    Expanded(flex: 2, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(
+                      flex: 2,
+                      child: _ChannelList(
+                        channels: channels,
+                        selected: selected,
+                        query: _channelQuery,
+                        searchController: _channelSearchController,
+                        selectedGroup: _selectedGroup,
+                        groups: groups,
+                        selectedCountry: _selectedCountry,
+                        countries: countries,
+                        onQueryChanged: (value) => setState(() => _channelQuery = value),
+                        onGroupChanged: (value) => setState(() => _selectedGroup = value),
+                        onCountryChanged: (value) => setState(() => _selectedCountry = value),
+                        onSelect: play,
+                      ),
+                    ),
                   ],
                 )
               : Row(
                   children: [
                     Expanded(flex: 7, child: _PlayerPanel(controller: controller, loading: loading, error: error)),
                     const SizedBox(width: 14),
-                    Expanded(flex: 3, child: _ChannelList(channels: channels, selected: selected, query: _channelQuery, searchController: _channelSearchController, onQueryChanged: (value) => setState(() => _channelQuery = value), onSelect: play)),
+                    Expanded(
+                      flex: 3,
+                      child: _ChannelList(
+                        channels: channels,
+                        selected: selected,
+                        query: _channelQuery,
+                        searchController: _channelSearchController,
+                        selectedGroup: _selectedGroup,
+                        groups: groups,
+                        selectedCountry: _selectedCountry,
+                        countries: countries,
+                        onQueryChanged: (value) => setState(() => _channelQuery = value),
+                        onGroupChanged: (value) => setState(() => _selectedGroup = value),
+                        onCountryChanged: (value) => setState(() => _selectedCountry = value),
+                        onSelect: play,
+                      ),
+                    ),
                   ],
                 ),
         ),
@@ -524,14 +600,26 @@ class _ChannelList extends StatelessWidget {
     required this.selected,
     required this.query,
     required this.searchController,
+    required this.selectedGroup,
+    required this.groups,
+    required this.selectedCountry,
+    required this.countries,
     required this.onQueryChanged,
+    required this.onGroupChanged,
+    required this.onCountryChanged,
     required this.onSelect,
   });
   final List<TvChannel> channels;
   final int selected;
   final String query;
   final TextEditingController searchController;
+  final String selectedGroup;
+  final List<String> groups;
+  final String selectedCountry;
+  final List<String> countries;
   final ValueChanged<String> onQueryChanged;
+  final ValueChanged<String> onGroupChanged;
+  final ValueChanged<String> onCountryChanged;
   final ValueChanged<int> onSelect;
 
   @override
@@ -539,9 +627,13 @@ class _ChannelList extends StatelessWidget {
     final normalizedQuery = query.trim().toLowerCase();
     final filteredIndices = <int>[
       for (var i = 0; i < channels.length; i++)
-        if (normalizedQuery.isEmpty ||
-            channels[i].name.toLowerCase().contains(normalizedQuery) ||
-            channels[i].streamUrl.toLowerCase().contains(normalizedQuery))
+        if ((normalizedQuery.isEmpty ||
+                channels[i].name.toLowerCase().contains(normalizedQuery) ||
+                channels[i].streamUrl.toLowerCase().contains(normalizedQuery) ||
+                (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
+                (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
+            (selectedGroup == 'Todos' || channels[i].groupTitle == selectedGroup) &&
+            (selectedCountry == 'Todos' || channels[i].country == selectedCountry))
           i,
     ];
     return Container(
@@ -575,6 +667,55 @@ class _ChannelList extends StatelessWidget {
               ),
             ),
           ),
+          if (groups.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Text('CATEGORÍA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
+            ),
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  for (final value in <String>['Todos', ...groups])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(value),
+                        selected: selectedGroup == value,
+                        autofocus: selectedGroup == value,
+                        onSelected: (_) => onGroupChanged(value),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (countries.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+              child: Text('PAÍS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
+            ),
+            SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  for (final value in <String>['Todos', ...countries])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(value),
+                        selected: selectedCountry == value,
+                        onSelected: (_) => onCountryChanged(value),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 1, color: Color(0x223FFFFF)),
           Expanded(
             child: channels.isEmpty
@@ -597,7 +738,16 @@ class _ChannelList extends StatelessWidget {
                             onTap: () => onSelect(channelIndex),
                             leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
                             title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: const Text('TV EN VIVO', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+                            subtitle: Text(
+                              [
+                                if (channel.groupTitle?.isNotEmpty == true) channel.groupTitle!,
+                                if (channel.country?.isNotEmpty == true) channel.country!,
+                                if (channel.groupTitle == null && channel.country == null) 'TV EN VIVO',
+                              ].join(' · '),
+                              style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         },
                       ),
