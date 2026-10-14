@@ -1,8 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'core/navigation/legacy_route_registry.dart';
+import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/auth_screen.dart';
 import 'features/shell/app_shell.dart';
 import 'features/splash/splash_screen.dart';
 
@@ -48,8 +52,20 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
   @override
   Widget build(BuildContext context) {
     if (!_introComplete) return const SplashScreen();
-    // Explore the public parts of the app without forcing account creation.
-    // Restricted sections enforce authentication at their own entry point.
-    return const AppShell();
+
+    if (!isSupabaseConfigured) return const AuthScreen();
+
+    final auth = Supabase.instance.client.auth;
+    return StreamBuilder<AuthState>(
+      stream: auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        // The current session is authoritative on initial render and after
+        // sign-in/sign-out events; RLS independently protects database rows.
+        if (auth.currentSession == null) {
+          return const AuthScreen();
+        }
+        return const AppShell();
+      },
+    );
   }
 }
