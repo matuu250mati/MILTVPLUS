@@ -42,8 +42,8 @@ void main() {
       );
     });
   });
+  m3uParserTests();
 }
-
 
 void m3uParserTests() {
   const parser = M3uPlaylistParser();
@@ -78,5 +78,4 @@ https://stream.example/live.m3u8#second
       expect(parser.parse(playlist), hasLength(1));
     });
   });
-  m3uParserTests();
 }
