@@ -58,6 +58,8 @@ Se conectaron las acciones de reproducción de películas y episodios al reprodu
 
 ## Supabase: acceso al catálogo publicado
 
+La guía de configuración de la base de datos, roles de moderación y pruebas de aceptación está en [`supabase/SETUP_ES.md`](supabase/SETUP_ES.md).
+
 Si se ejecuta el SQL inicial en un proyecto que ya tiene tablas creadas, aplicá también
 `supabase/migrations/20261013_public_published_catalog.sql` desde el SQL Editor de Supabase.
 La migración permite leer solo filas publicadas de `movies` y `series` para usuarios
