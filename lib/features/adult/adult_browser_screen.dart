@@ -19,6 +19,8 @@ class AdultBrowserScreen extends StatefulWidget {
 
 class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   static const _providers = <_AdultProvider>[
+    _AdultProvider('Argentina · Pornhub', 'https://www.pornhub.com/video/search?search=argentina'),
+    _AdultProvider('Argentina · XVideos', 'https://www.xvideos.com/?k=argentina'),
     _AdultProvider('Pornhub', 'https://www.pornhub.com/'),
     _AdultProvider('XVideos', 'https://www.xvideos.com/'),
     _AdultProvider('xHamster', 'https://xhamster.com/'),
