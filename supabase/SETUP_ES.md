@@ -12,7 +12,13 @@ Se agregó la migración no destructiva `supabase/migrations/20261014_channels_c
 
 ## Hallazgos detectados por la verificación automática
 
-La comprobación del proyecto Supabase configurado en GitHub detectó que las tablas `movies`, `series` y `episodes` responden, pero `content_submissions` no existe todavía en el esquema visible. También detectó que `channels` no tiene una columna `title` con el esquema esperado por MILTVPLUS. Por eso, no consideres la integración terminada hasta aplicar las migraciones y comprobar el esquema real.
+La última comprobación automática del proyecto Supabase configurado en GitHub (14/10/2026) encontró estos datos concretos:
+
+- `channels` responde, pero su esquema visible usa `name`, `stream_url` y `logo_url` en vez de `title`, `url_stream` y `logo`. También expone `category`, `created_at`, `id`, `is_published` y `sort_order`.
+- `movies`, `series` y `episodes` existen y sus endpoints responden, aunque la consulta anónima no encontró filas visibles en ese momento.
+- `content_submissions` devuelve HTTP 404: todavía no aparece en el esquema visible de PostgREST.
+
+La migración de compatibilidad mapea `name → title`, `stream_url → url_stream` y `logo_url → logo` sin borrar las columnas ni las filas antiguas. No consideres la integración terminada hasta ejecutar la migración en el proyecto correcto y repetir la comprobación.
 
 ## 2. Habilitar propuestas de la comunidad
 
