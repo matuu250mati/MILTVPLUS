@@ -10,23 +10,14 @@ class TvChannel {
 
   final String name;
   final String streamUrl;
-
-  /// Category metadata from M3U EXTINF attributes, when provided by the source.
   final String? groupTitle;
   final String? country;
   final String? language;
-
-  /// Canonical category from the Supabase channels catalog, if available.
   final String? category;
 
-  /// Broad, user-facing section for the unified live-TV screen.
-  /// Genre takes precedence over country metadata so sports/news/culture/HBO
-  /// channels do not get hidden inside the Argentine general-TV section.
   String get liveSection {
     final categoryText = (category ?? '').trim();
     final normalizedCategory = categoryText.toLowerCase();
-
-    // Canonical genre labels are authoritative for genre-specific channels.
     const canonicalGenres = {
       'deportes': 'Deportes',
       'noticias': 'Noticias',
@@ -38,10 +29,8 @@ class TvChannel {
     }
 
     final group = (groupTitle ?? '').toLowerCase();
-    final searchable = '$categoryText $group ' + name.toLowerCase();
+    final searchable = '$categoryText $group ${name.toLowerCase()}';
 
-    // Classification fallback is for the unified TV view. Category-specific
-    // screens must filter by the stored category field, without these guesses.
     if (RegExp(r'\b(news|noticias|informativo|noticiero|c5n|a24|cnn)\b')
         .hasMatch(searchable)) {
       return 'Noticias';
@@ -61,16 +50,14 @@ class TvChannel {
     ).hasMatch(searchable)) {
       return 'Deportes';
     }
-    if (RegExp(
-      r'\b(kids|children|infantil|cartoon|nickelodeon|disney junior)\b',
-    ).hasMatch(searchable)) {
+    if (RegExp(r'\b(kids|children|infantil|cartoon|nickelodeon|disney junior)\b')
+        .hasMatch(searchable)) {
       return 'Infantiles';
     }
     if (RegExp(r'\b(music|música|musica|mtv|vevo)\b').hasMatch(searchable)) {
       return 'Música';
     }
 
-    // TV Argentina is the country/general fallback, after genre recognition.
     if (normalizedCategory == 'tv argentina' ||
         normalizedCategory == 'argentina' ||
         country?.toLowerCase() == 'ar' ||
