@@ -28,6 +28,7 @@ create table if not exists public.content_submissions (
 
 alter table public.content_submissions enable row level security;
 
+grant select on public.content_submissions to anon;
 grant select, insert on public.content_submissions to authenticated;
 
 create policy "Submit own pending content" on public.content_submissions
@@ -46,7 +47,9 @@ create policy "Public users read approved submissions" on public.content_submiss
   for select to anon, authenticated
   using (moderation_status = 'approved');
 
-grant update on public.content_submissions to authenticated;
+-- Moderators can change only the review decision, not submitted metadata or URLs.
+revoke update on public.content_submissions from authenticated;
+grant update (moderation_status) on public.content_submissions to authenticated;
 
 create policy "Moderators read submissions" on public.content_submissions
   for select to authenticated
