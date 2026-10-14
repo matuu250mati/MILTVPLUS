@@ -26,9 +26,10 @@ El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que s
 
 - `SUPABASE_ACCESS_TOKEN`: token personal de acceso de Supabase.
 - `SUPABASE_DB_PASSWORD`: contraseña de la base de datos del proyecto.
-- `SUPABASE_PROJECT_ID`: referencia del proyecto, no una URL.
 - `SUPABASE_URL`: URL raíz `https://<project-ref>.supabase.co`.
 - `SUPABASE_ANON_KEY`: clave pública anon/publishable correspondiente al proyecto.
+
+El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. En este repositorio ya se validó que `SUPABASE_URL` y `SUPABASE_ANON_KEY` están disponibles para compilar; lo que falta para desplegar es configurar `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD`.
 
 No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
 
