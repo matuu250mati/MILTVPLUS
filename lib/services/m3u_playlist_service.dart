@@ -52,7 +52,7 @@ class M3uPlaylistService {
     final channels = _parser.parse(body);
     if (channels.isEmpty) {
       throw const FormatException(
-        'La URL respondió, pero no se encontraron señales HTTP(S) en formato M3U.',
+        'La URL respondió, pero no se encontraron señales HTTPS en formato M3U.',
       );
     }
     return channels;
