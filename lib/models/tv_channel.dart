@@ -5,6 +5,7 @@ class TvChannel {
     this.groupTitle,
     this.country,
     this.language,
+    this.category,
   });
 
   final String name;
@@ -14,4 +15,7 @@ class TvChannel {
   final String? groupTitle;
   final String? country;
   final String? language;
+
+  /// Canonical category from the Supabase channels catalog, if available.
+  final String? category;
 }
