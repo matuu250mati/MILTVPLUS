@@ -7,6 +7,7 @@ import '../catalog/catalog_screen.dart';
 import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
+import '../submissions/content_submission_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -26,6 +27,7 @@ class _AppShellState extends State<AppShell> {
     _NavItem('INFANTIL', Icons.child_care_rounded),
     _NavItem('GRATIS', Icons.card_giftcard_rounded),
     _NavItem('EXPLORAR', Icons.explore_outlined),
+    _NavItem('PUBLICAR', Icons.publish_rounded),
     _NavItem('+18', Icons.lock_outline_rounded),
     _NavItem('CONFIGURACIÓN', Icons.settings_rounded),
   ];
@@ -53,6 +55,8 @@ class _AppShellState extends State<AppShell> {
       case 8:
         return const CatalogScreen(category: 'EXPLORAR');
       case 9:
+        return const ContentSubmissionScreen();
+      case 10:
         return const AdultGateScreen();
       default:
         return const SettingsScreen();
@@ -134,10 +138,11 @@ class _AppShellState extends State<AppShell> {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
-                  const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(9),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(10),
+                  const Divider(height: 18, color: Color(0x30FFFFFF)),
+                  _drawerItem(11),
                 ],
               ),
             ),
@@ -187,6 +192,8 @@ class _AppShellState extends State<AppShell> {
                           ? 'Contenido gratis'
                           : item.label == 'EXPLORAR'
                               ? 'Explorar'
+                              : item.label == 'PUBLICAR'
+                              ? 'Proponer película o serie'
                               : item.label == '+18'
                                   ? 'Zona +18'
                                   : item.label == 'CONFIGURACIÓN'
@@ -234,7 +241,7 @@ class _AppShellState extends State<AppShell> {
         actions: [
           IconButton(
             tooltip: 'Configuración',
-            onPressed: () => setState(() => selected = 10),
+            onPressed: () => setState(() => selected = 11),
             icon: const Icon(Icons.settings_rounded),
           ),
           const SizedBox(width: 4),
