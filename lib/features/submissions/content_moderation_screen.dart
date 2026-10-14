@@ -44,11 +44,17 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
     if (_busyIds.contains(id)) return;
     setState(() => _busyIds.add(id));
     try {
-      await Supabase.instance.client
+      final updatedRows = await Supabase.instance.client
           .from('content_submissions')
           .update({'moderation_status': status})
           .eq('id', id)
-          .eq('moderation_status', 'pending');
+          .eq('moderation_status', 'pending')
+          .select('id');
+      if (updatedRows.isEmpty) {
+        throw StateError(
+          'La propuesta no cambió de estado. Verificá tu rol de moderador y las políticas RLS.',
+        );
+      }
       if (!mounted) return;
       setState(() => _pendingFuture = _loadPending());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,10 +67,13 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo actualizar: ${error.message}')),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final message = error is StateError
+          ? error.message
+          : 'No se pudo actualizar la propuesta. Revisá la conexión y los permisos.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo actualizar la propuesta. Revisá la conexión y los permisos.')),
+        SnackBar(content: Text(message.toString())),
       );
     } finally {
       if (mounted) setState(() => _busyIds.remove(id));
