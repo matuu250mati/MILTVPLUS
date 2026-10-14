@@ -20,6 +20,18 @@ La última comprobación automática del proyecto Supabase configurado en GitHub
 
 La migración de compatibilidad mapea `name → title`, `stream_url → url_stream` y `logo_url → logo` sin borrar las columnas ni las filas antiguas. No consideres la integración terminada hasta ejecutar la migración en el proyecto correcto y repetir la comprobación.
 
+## Despliegue automatizado de migraciones
+
+El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que se ejecuta manualmente desde **GitHub → Actions → Deploy Supabase database migrations → Run workflow**. Antes de ejecutarlo, configurá en **Settings → Secrets and variables → Actions → Repository secrets** estos secretos del mismo proyecto:
+
+- `SUPABASE_ACCESS_TOKEN`: token personal de acceso de Supabase.
+- `SUPABASE_DB_PASSWORD`: contraseña de la base de datos del proyecto.
+- `SUPABASE_PROJECT_ID`: referencia del proyecto, no una URL.
+- `SUPABASE_URL`: URL raíz `https://<project-ref>.supabase.co`.
+- `SUPABASE_ANON_KEY`: clave pública anon/publishable correspondiente al proyecto.
+
+No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
+
 ## 2. Habilitar propuestas de la comunidad
 
 En SQL Editor, ejecutá una sola vez el contenido actualizado de:
