@@ -72,8 +72,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
           },
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
-            if (uri == null ||
-                (uri.scheme != 'https' && uri.scheme != 'http')) {
+            if (uri == null || uri.scheme != 'https') {
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
