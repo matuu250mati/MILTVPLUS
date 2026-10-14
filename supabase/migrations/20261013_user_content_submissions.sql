@@ -41,3 +41,7 @@ create policy "Submit own pending content" on public.content_submissions
 create policy "Read own submissions" on public.content_submissions
   for select to authenticated
   using (auth.uid() = user_id);
+
+create policy "Public users read approved submissions" on public.content_submissions
+  for select to anon, authenticated
+  using (moderation_status = 'approved');
