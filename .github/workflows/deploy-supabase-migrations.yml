@@ -1,0 +1,85 @@
+name: Deploy Supabase database migrations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Missing repository secret: $name. No migration was applied."
+              exit 1
+            fi
+          done
+          if [[ ! "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9-]+$ ]]; then
+            echo "::error::SUPABASE_PROJECT_ID must be the project reference, not a URL."
+            exit 1
+          fi
+          normalized="${SUPABASE_URL%/}"
+          if [[ "$normalized" != "https://$SUPABASE_PROJECT_ID.supabase.co" ]]; then
+            echo "::error::SUPABASE_URL does not match SUPABASE_PROJECT_ID. No migration was applied."
+            exit 1
+          fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link the intended Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Apply tracked migrations
+        run: supabase db push
+
+      - name: Verify migration history
+        run: supabase migration list
+
+      - name: Verify required PostgREST schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A required_columns=(
+            [channels]="title,url_stream,is_published,sort_order,logo"
+            [movies]="title,url_stream,is_published,created_at"
+            [series]="title,is_published"
+            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
+          )
+          for table in channels movies series episodes content_submissions; do
+            query="select=${required_columns[$table]}&limit=0"
+            status="$(curl --silent --show-error --max-time 12 \
+              --output /tmp/supabase-schema-body.txt \
+              --write-out '%{http_code}' \
+              --header "apikey: $SUPABASE_ANON_KEY" \
+              "$SUPABASE_URL/rest/v1/$table?$query" || true)"
+            if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+              detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
+              echo "::error::Post-deploy schema verification failed for $table (HTTP ${status:-no-response}): $detail"
+              exit 1
+            fi
+            echo "Verified $table required columns (HTTP $status)."
+          done
