@@ -92,6 +92,7 @@ jobs:
             [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
             [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
           )
+          failed=0
           for table in channels movies series episodes content_submissions; do
             query="select=${required_columns[$table]}&limit=0"
             status="$(curl --silent --show-error --max-time 12 \
@@ -104,9 +105,13 @@ jobs:
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
               echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Apply/review the SQL migrations in supabase/SETUP_ES.md before building an APK. $detail"
-              exit 1
+              failed=1
             fi
           done
+          if [[ "$failed" -ne 0 ]]; then
+            echo "::error::One or more Supabase tables failed schema validation. No APK was published."
+            exit 1
+          fi
 
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v')
