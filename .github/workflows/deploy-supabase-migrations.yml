@@ -61,7 +61,7 @@ jobs:
               exit 1
             fi
           done
-          printf 'Validated %s timestamped migration files.\\n' "${#migrations[@]}"
+          printf 'Validated %s timestamped migration files.\n' "${#migrations[@]}"
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
