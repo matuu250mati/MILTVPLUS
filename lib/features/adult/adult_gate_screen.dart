@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/supabase_config.dart';
 import '../../features/auth/auth_screen.dart';
+import 'adult_browser_screen.dart';
 import '../../services/secure_pin_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -137,34 +138,11 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
     }
     if (loading) return const Center(child: CircularProgressIndicator());
     if (unlocked) {
-      return ListView(
-        padding: const EdgeInsets.all(22),
-        children: [
-          const Text('SECCIÓN +18', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          const Text('Acceso local validado. Agregá únicamente contenido legal y destinado a adultos.',
-              style: TextStyle(color: AppTheme.muted)),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: AppTheme.panel, borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: .08))),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.verified_user_outlined, color: AppTheme.accent, size: 34),
-                SizedBox(height: 14),
-                Text('Acceso protegido', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                SizedBox(height: 8),
-                Text('La sección está desbloqueada durante esta sesión de pantalla. Al salir y volver, se solicitará el PIN nuevamente.',
-                    style: TextStyle(color: AppTheme.muted, height: 1.5)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          OutlinedButton.icon(onPressed: () => setState(() => unlocked = false),
-              icon: const Icon(Icons.lock_outline), label: const Text('BLOQUEAR AHORA')),
-        ],
+      return AdultBrowserScreen(
+        onLock: () {
+          if (!mounted) return;
+          setState(() => unlocked = false);
+        },
       );
     }
     return Center(
