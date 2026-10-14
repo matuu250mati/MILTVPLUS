@@ -141,7 +141,7 @@ class _ContentSubmissionScreenState extends State<ContentSubmissionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Tipo'),
                 items: const [
                   DropdownMenuItem(value: 'movie', child: Text('Película')),
