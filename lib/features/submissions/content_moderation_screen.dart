@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
+import '../catalog/catalog_player_screen.dart';
 
 class ContentModerationScreen extends StatefulWidget {
   const ContentModerationScreen({super.key});
@@ -31,12 +32,31 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
     if (!_isModerator) return const [];
     final rows = await Supabase.instance.client
         .from('content_submissions')
-        .select('id, media_type, title, description, duration_seconds, series_title, season_number, episode_number, created_at')
+        .select('id, media_type, title, description, stream_url, poster_url, duration_seconds, series_title, season_number, episode_number, created_at')
         .eq('moderation_status', 'pending')
         .order('created_at', ascending: true);
     return (rows as List<dynamic>)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList(growable: false);
+  }
+
+  Future<void> _preview(Map<String, dynamic> item) async {
+    final url = item['stream_url'] as String? ?? '';
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La propuesta no tiene una URL HTTPS válida para probar.')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CatalogPlayerScreen(
+          title: 'Revisión: ${item['title'] as String? ?? 'Contenido'}',
+          streamUrl: url,
+        ),
+      ),
+    );
   }
 
   Future<void> _setStatus(Map<String, dynamic> item, String status) async {
@@ -165,11 +185,21 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(item['description'] as String? ?? ''),
+                            const SizedBox(height: 8),
+                            SelectableText(
+                              'URL: ${item['stream_url'] as String? ?? 'No disponible'}',
+                              style: const TextStyle(color: AppTheme.muted, fontSize: 11),
+                            ),
                             const SizedBox(height: 12),
                             Wrap(
                               spacing: 10,
                               runSpacing: 8,
                               children: [
+                                OutlinedButton.icon(
+                                  onPressed: busy ? null : () => _preview(item),
+                                  icon: const Icon(Icons.play_circle_outline_rounded),
+                                  label: const Text('PROBAR VIDEO'),
+                                ),
                                 OutlinedButton.icon(
                                   onPressed: busy ? null : () => _setStatus(item, 'rejected'),
                                   icon: const Icon(Icons.close_rounded),
