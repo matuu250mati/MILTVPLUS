@@ -69,6 +69,7 @@ jobs:
             [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
             [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
           )
+          failed=0
           for table in channels movies series episodes content_submissions; do
             query="select=${required_columns[$table]}&limit=0"
             status="$(curl --silent --show-error --max-time 12 \
@@ -79,7 +80,12 @@ jobs:
             if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
               detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
               echo "::error::Post-deploy schema verification failed for $table (HTTP ${status:-no-response}): $detail"
-              exit 1
+              failed=1
+            else
+              echo "Verified $table required columns (HTTP $status)."
             fi
-            echo "Verified $table required columns (HTTP $status)."
           done
+          if [[ "$failed" -ne 0 ]]; then
+            echo "::error::One or more Supabase tables failed post-deployment verification."
+            exit 1
+          fi
