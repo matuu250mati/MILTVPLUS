@@ -78,6 +78,10 @@ alter table public.movies enable row level security;
 alter table public.series enable row level security;
 alter table public.episodes enable row level security;
 
+-- SQL privileges are required in addition to RLS policies.
+-- RLS still limits these roles to rows marked as published.
+grant select on public.channels, public.movies, public.series, public.episodes to anon, authenticated;
+
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
   on public.channels for select to anon, authenticated using (is_published);
