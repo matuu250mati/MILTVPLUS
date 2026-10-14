@@ -5,6 +5,12 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      verify_production_signing:
+        description: "Firmar y verificar el APK con la clave de producción, sin publicar una Release"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
