@@ -18,6 +18,21 @@ class CatalogService {
     return _client ?? Supabase.instance.client;
   }
 
+
+  /// User-submitted items become visible to everyone only after moderation approves them.
+  Future<List<Map<String, dynamic>>> getApprovedSubmissions(String mediaType) async {
+    final response = await _supabase
+        .from('content_submissions')
+        .select('title, description, stream_url, poster_url, duration_seconds, series_title, season_number, episode_number, media_type')
+        .eq('moderation_status', 'approved')
+        .eq('media_type', mediaType)
+        .order('created_at', ascending: false);
+
+    return (response as List<dynamic>)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList(growable: false);
+  }
+
   Future<List<ChannelModel>> getChannels() async {
     final response = await _supabase
         .from('channels')
