@@ -139,7 +139,8 @@ jobs:
           [[ -n "${ANDROID_KEYSTORE_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret."; exit 1; }
           [[ -n "${ANDROID_KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_ALIAS secret."; exit 1; }
           [[ -n "${ANDROID_KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          # Normalize whitespace introduced by mobile copy/paste before decoding.
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/upload-keystore.jks
           test -s android/upload-keystore.jks
           printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > android/key.properties
           keytool -list -keystore android/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
