@@ -38,7 +38,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
     super.initState();
     _controller = WebViewController();
     unawaited(_configureWebView());
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
   }
 
   Future<void> _configureWebView() async {
@@ -157,7 +157,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   @override
   void dispose() {
     unawaited(_clearWebData());
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     super.dispose();
   }
 
