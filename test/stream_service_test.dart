@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:miltv_plus/models/tv_channel.dart';
+import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 import 'package:miltv_plus/services/stream_service.dart';
 
 void main() {
@@ -21,6 +23,10 @@ void main() {
       );
     });
 
+    test('rejects cleartext HTTP because Android blocks it', () {
+      expect(service.isSupportedHlsUrl('http://media.example/live.m3u8'), isFalse);
+    });
+
     test('rejects unsupported schemes and missing hosts', () {
       expect(service.isSupportedHlsUrl('ftp://media.example/live.m3u8'), isFalse);
       expect(service.isSupportedHlsUrl('/live/index.m3u8'), isFalse);
@@ -36,4 +42,41 @@ void main() {
       );
     });
   });
+}
+
+
+void m3uParserTests() {
+  const parser = M3uPlaylistParser();
+
+  group('M3uPlaylistParser HTTPS policy', () {
+    test('keeps valid HTTPS channels and filters HTTP or credential URLs', () {
+      const playlist = '''
+#EXTM3U
+#EXTINF:-1,HTTPS News
+https://stream.example/news/index.m3u8
+#EXTINF:-1,HTTP Legacy
+http://legacy.example/live.m3u8
+#EXTINF:-1,Credential URL
+https://user:pass@stream.example/private.m3u8
+''';
+      final channels = parser.parse(playlist);
+
+      expect(channels, hasLength(1));
+      expect(channels.single, isA<TvChannel>());
+      expect(channels.single.name, 'HTTPS News');
+      expect(channels.single.streamUrl, 'https://stream.example/news/index.m3u8');
+    });
+
+    test('deduplicates stream URLs that differ only by fragment', () {
+      const playlist = '''
+#EXTM3U
+#EXTINF:-1,Channel A
+https://stream.example/live.m3u8#first
+#EXTINF:-1,Channel A duplicate
+https://stream.example/live.m3u8#second
+''';
+      expect(parser.parse(playlist), hasLength(1));
+    });
+  });
+  m3uParserTests();
 }
