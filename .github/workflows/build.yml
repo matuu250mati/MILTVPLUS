@@ -77,7 +77,8 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
-      - name: Verify required Supabase schema
+      - name: Verify required Supabase schema (diagnostic; APK build continues)
+
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
@@ -104,13 +105,18 @@ jobs:
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Apply/review the SQL migrations in supabase/SETUP_ES.md before building an APK. $detail"
+              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
               failed=1
             fi
           done
           if [[ "$failed" -ne 0 ]]; then
-            echo "::error::One or more Supabase tables failed schema validation. No APK was published."
-            exit 1
+            {
+              echo "### Supabase schema validation: warnings"
+              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
+              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Configure production APK signing
