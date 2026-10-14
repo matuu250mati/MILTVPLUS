@@ -114,7 +114,8 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
     if (_configured && await _controller.canGoBack()) {
       await _controller.goBack();
       if (mounted) {
-        setState(() => _canGoBack = await _controller.canGoBack());
+        final canGoBack = await _controller.canGoBack();
+        if (mounted) setState(() => _canGoBack = canGoBack);
       }
       return true;
     }
