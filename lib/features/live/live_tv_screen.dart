@@ -458,8 +458,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         .toSet()
         .toList()
       ..sort();
-    if (!groups.contains(_selectedGroup)) _selectedGroup = 'Todos';
-    if (!countries.contains(_selectedCountry)) _selectedCountry = 'Todos';
+    final activeGroup = groups.contains(_selectedGroup) ? _selectedGroup : 'Todos';
+    final activeCountry = countries.contains(_selectedCountry) ? _selectedCountry : 'Todos';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -508,9 +508,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                         selected: selected,
                         query: _channelQuery,
                         searchController: _channelSearchController,
-                        selectedGroup: _selectedGroup,
+                        selectedGroup: activeGroup,
                         groups: groups,
-                        selectedCountry: _selectedCountry,
+                        selectedCountry: activeCountry,
                         countries: countries,
                         onQueryChanged: (value) => setState(() => _channelQuery = value),
                         onGroupChanged: (value) => setState(() => _selectedGroup = value),
