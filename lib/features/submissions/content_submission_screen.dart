@@ -82,7 +82,7 @@ class _ContentSubmissionScreenState extends State<ContentSubmissionScreen> {
         'description': _description.text.trim(),
         'stream_url': _streamUrl.text.trim(),
         'poster_url': _posterUrl.text.trim().isEmpty ? null : _posterUrl.text.trim(),
-        'duration_seconds': mins == null ? null : mins * 60,
+        'duration_seconds': mins! * 60,
         'series_title': _type == 'episode' ? _seriesTitle.text.trim() : null,
         'season_number': _type == 'episode' ? int.parse(_season.text.trim()) : null,
         'episode_number': _type == 'episode' ? int.parse(_episode.text.trim()) : null,
@@ -174,9 +174,9 @@ class _ContentSubmissionScreenState extends State<ContentSubmissionScreen> {
                 ]),
               ],
               TextFormField(controller: _duration, keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Duración en minutos (opcional)'),
+                decoration: const InputDecoration(labelText: 'Duración en minutos'),
                 validator: (v) {
-                  if ((v ?? '').trim().isEmpty) return null;
+                  if ((v ?? '').trim().isEmpty) return 'Ingresá la duración.';
                   final n = int.tryParse(v!.trim());
                   return n == null || n < 1 || n > 100000 ? 'Duración inválida.' : null;
                 }),
