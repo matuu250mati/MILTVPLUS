@@ -17,6 +17,20 @@ http://example.com/two/index.m3u8?token=abc
     expect(channels, hasLength(1));
     expect(channels.single.name, 'Canal Uno');
     expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
+    expect(channels.single.groupTitle, 'Argentina');
+  });
+
+  test('extracts category, country, and language metadata from M3U', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1 group-title="Deportes" tvg-country="AR" tvg-language="spa",Canal deportivo
+https://example.com/sports.m3u8
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.groupTitle, 'Deportes');
+    expect(channels.single.country, 'AR');
+    expect(channels.single.language, 'spa');
   });
 
   test('ignores non-HTTPS URLs and malformed playlist rows', () {
