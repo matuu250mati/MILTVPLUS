@@ -51,6 +51,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     ].join(' ').toLowerCase();
 
     if (allowed.contains('tv argentina')) {
+      // The category filter is for Supabase rows. Preserve uncategorized local
+      // M3U imports so the existing local-source workflow remains usable.
+      if (channel.category == null) return true;
       return country == 'ar' ||
           country == 'argentina' ||
           searchable.contains('argentina');
@@ -422,11 +425,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     try {
       final imported = await m3uPlaylistService.importFromUrl(playlistUrl);
       final merged = <String, TvChannel>{};
-      for (final channel in channels) {
-        merged.putIfAbsent(
-          _streamIdentity(channel.streamUrl),
-          () => channel,
-        );
+      // Merge against the complete persisted list, not the currently filtered
+      // view, so importing from a category screen never deletes other channels.
+      final savedChannels = await channelStorage.load();
+      for (final channel in savedChannels) {
+        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
       }
       for (final channel in imported) {
         final key = _streamIdentity(channel.streamUrl);
@@ -448,17 +451,18 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         }
       }
       final combined = merged.values.toList(growable: false);
+      final visibleChannels = combined.where(_matchesCategoryFilter).toList(growable: false);
       await channelStorage.save(combined);
       if (!mounted) return;
       setState(() {
         channels
           ..clear()
-          ..addAll(combined);
+          ..addAll(visibleChannels);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados. La reproducción se confirma al abrir cada canal.',
+            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados, ${visibleChannels.length} visibles en esta categoría. La reproducción se confirma al abrir cada canal.',
           ),
         ),
       );
@@ -539,13 +543,13 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               onPressed: _loadingChannels ? null : () => loadSavedChannels(showFeedback: true),
               icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
             ),
+            const SizedBox(width: 4),
+            OutlinedButton.icon(
+              onPressed: _loadingChannels ? null : importPlaylist,
+              icon: const Icon(Icons.playlist_add_rounded),
+              label: const Text('FUENTES DE TV'),
+            ),
             if (widget.categoryFilter == null) ...[
-              const SizedBox(width: 4),
-              OutlinedButton.icon(
-                onPressed: _loadingChannels ? null : importPlaylist,
-                icon: const Icon(Icons.playlist_add_rounded),
-                label: const Text('FUENTES DE TV'),
-              ),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: addChannel,
