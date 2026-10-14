@@ -140,12 +140,37 @@ jobs:
           [[ -n "${ANDROID_KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_ALIAS secret."; exit 1; }
           [[ -n "${ANDROID_KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
           # Normalize whitespace introduced by mobile copy/paste before decoding.
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > android/upload-keystore.jks
-          test -s android/upload-keystore.jks
+          normalized_base64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')"
+          if [[ ! "$normalized_base64" =~ ^[A-Za-z0-9+/]+={0,2}$ ]]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 contains characters that are not valid Base64. Re-encode the original .jks file and replace this repository secret."
+            exit 1
+          fi
+          if ! printf '%s' "$normalized_base64" | base64 --decode > android/upload-keystore.jks; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 could not be decoded. The secret is truncated or malformed; replace it with a fresh Base64 encoding of the original .jks file."
+            exit 1
+          fi
+          if [[ ! -s android/upload-keystore.jks ]]; then
+            echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."
+            exit 1
+          fi
           printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > android/key.properties
-          keytool -list -keystore android/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
-          expected_cert_sha256="$(keytool -list -v -keystore android/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-          [[ "$expected_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Could not determine the production signing certificate SHA-256 fingerprint."; exit 1; }
+          # Check store password/type independently so failures identify the actual cause.
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::Keystore decoded, but keytool could not open it as JKS with ANDROID_KEYSTORE_PASSWORD. The file may be corrupt or the store password is incorrect."
+            exit 1
+          fi
+          # Validate alias separately; do not print secrets or key material.
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Keystore and store password are valid, but ANDROID_KEY_ALIAS was not found or could not be accessed."
+            exit 1
+          fi
+          if ! keytool_output="$(keytool -list -v -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" 2>/dev/null)"; then
+            echo "::error::The configured key alias exists, but keytool could not inspect its certificate. Check the keystore and key credentials."
+            exit 1
+          fi
+          expected_cert_sha256="$(printf '%s\n' "$keytool_output" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          [[ "$expected_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Keystore and alias opened, but keytool did not return a valid SHA-256 certificate fingerprint."; exit 1; }
+          echo "Production keystore decoded and store password/alias validated."
           echo "MILTVPLUS_EXPECTED_SIGNER_SHA256=$expected_cert_sha256" >> "$GITHUB_ENV"
 
       - name: Verify release tag matches pubspec version
