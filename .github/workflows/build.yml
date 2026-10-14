@@ -207,7 +207,7 @@ jobs:
               exit 1
             }
             printf '%s\n' "$verification_output"
-            actual_cert_sha256="$(printf '%s\\n' "$verification_output" | awk '
+            actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
               tolower($0) ~ /certificate sha-256 digest:/ {
                 line = tolower($0)
                 sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
