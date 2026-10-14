@@ -45,3 +45,17 @@ create policy "Read own submissions" on public.content_submissions
 create policy "Public users read approved submissions" on public.content_submissions
   for select to anon, authenticated
   using (moderation_status = 'approved');
+
+grant update on public.content_submissions to authenticated;
+
+create policy "Moderators read submissions" on public.content_submissions
+  for select to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'moderator'));
+
+create policy "Moderators review submissions" on public.content_submissions
+  for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'moderator'))
+  with check (
+    (auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'moderator')
+    and moderation_status in ('approved', 'rejected')
+  );
