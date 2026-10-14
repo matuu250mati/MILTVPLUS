@@ -81,7 +81,7 @@ Esta migración crea `content_submissions`, habilita RLS, permite a usuarios aut
 
 Si el SQL Editor devuelve un error, no continúes como si la migración hubiera quedado aplicada. Copiá el error completo (sin claves ni tokens) y corregilo antes de probar el flujo.
 
-## 3. Asignar el rol de moderación
+## 4. Asignar el rol de moderación
 
 El rol se guarda en `app_metadata`, no en `user_metadata`, para que el usuario no pueda asignárselo desde la app. Después de crear la cuenta del moderador, un administrador del proyecto puede ejecutar lo siguiente en SQL Editor, reemplazando el correo por el de la cuenta autorizada:
 
@@ -98,11 +98,11 @@ where lower(email) = lower('moderador@tu-dominio.com');
 
 Confirmá que la consulta de verificación devuelva exactamente una cuenta con el rol `moderator`. Cerrá sesión y volvé a iniciar sesión en MILTVPLUS para renovar el JWT y cargar el rol. No asignes este rol a cuentas que no deban aprobar publicaciones.
 
-## 4. Verificar las políticas del catálogo
+## 5. Verificar las políticas del catálogo
 
 Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. El esquema base `supabase/schema.sql` incluye esas políticas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
-## 5. Prueba de aceptación
+## 6. Prueba de aceptación
 
 1. Verificá que las tablas `channels`, `movies`, `series` y `episodes` existan y tengan las columnas consultadas por la app.
 2. Confirmá que `content_submissions` exista después de aplicar su migración.
