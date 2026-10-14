@@ -80,6 +80,13 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     super.dispose();
   }
 
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
@@ -117,25 +124,57 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                             ],
                           ),
                         )
-                      : Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            VideoPlayer(controller!),
-                            IconButton.filledTonal(
-                              iconSize: 36,
-                              onPressed: () {
-                                if (controller.value.isPlaying) {
-                                  controller.pause();
-                                } else {
-                                  controller.play();
-                                }
-                                setState(() {});
-                              },
-                              icon: Icon(controller.value.isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded),
-                            ),
-                          ],
+                      : ValueListenableBuilder<VideoPlayerValue>(
+                          valueListenable: controller!,
+                          builder: (context, value, _) => Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              VideoPlayer(controller),
+                              IconButton.filledTonal(
+                                tooltip: value.isPlaying ? 'Pausar' : 'Reproducir',
+                                iconSize: 36,
+                                onPressed: () => value.isPlaying
+                                    ? controller.pause()
+                                    : controller.play(),
+                                icon: Icon(value.isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded),
+                              ),
+                              Positioned(
+                                left: 12,
+                                right: 12,
+                                bottom: 10,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    VideoProgressIndicator(
+                                      controller,
+                                      allowScrubbing: true,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      colors: const VideoProgressColors(
+                                        playedColor: Color(0xFFE50914),
+                                        bufferedColor: Colors.white38,
+                                        backgroundColor: Colors.white24,
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _formatDuration(value.position),
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          _formatDuration(value.duration),
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
             ),
           ),
