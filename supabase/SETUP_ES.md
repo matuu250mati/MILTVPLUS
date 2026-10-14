@@ -6,6 +6,12 @@ Esta guía cubre la configuración que el APK no puede aplicar por sí solo. Eje
 
 Si el proyecto de Supabase está vacío, abrí **SQL Editor** y ejecutá el contenido completo de `supabase/schema.sql` desde este repositorio. Si las tablas ya existen y contienen datos, no vuelvas a ejecutar cambios destructivos: revisá primero el esquema existente.
 
+## Hallazgos detectados por la verificación automática
+
+La comprobación del proyecto Supabase configurado en GitHub detectó que las tablas `movies`, `series` y `episodes` responden, pero `content_submissions` no existe todavía en el esquema visible. También detectó que la tabla `channels` no tiene una columna `title` con el esquema actual esperado por MILTVPLUS. Por eso, no consideres la integración terminada hasta aplicar la migración de propuestas y revisar la estructura real de `channels`.
+
+**Importante:** no ejecutes el esquema base completo a ciegas sobre una base que ya tiene datos. Primero inspeccioná las columnas de `channels` en el Table Editor de Supabase y prepará una migración de compatibilidad que conserve los datos y los mapee a `title`, `url_stream`, `is_published` y `sort_order`. La aplicación necesita esos campos para consultar y reproducir los canales. No borres ni recrees la tabla existente.
+
 ## 2. Habilitar propuestas de la comunidad
 
 En SQL Editor, ejecutá una sola vez el contenido actualizado de:
