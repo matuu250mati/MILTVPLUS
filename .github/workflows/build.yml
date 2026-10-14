@@ -213,8 +213,22 @@ jobs:
               exit 1
             }
             printf '%s\n' "$verification_output"
-            actual_cert_sha256="$(printf '%s\n' "$verification_output" | sed -n 's/.*Signer #1 certificate SHA-256 digest: *//p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-            [[ -n "$actual_cert_sha256" ]] || { echo "::error::Could not read the APK signer certificate fingerprint."; exit 1; }
+            # Parse SHA-256 without relying on exact signer numbering, capitalization,
+            # colon formatting, or whitespace used by different build-tools versions.
+            actual_cert_sha256="$(printf '%s\\n' "$verification_output" | awk '
+              tolower($0) ~ /certificate sha-256 digest:/ {
+                line = $0
+                sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
+                gsub(/[^[:xdigit:]]/, "", line)
+                print tolower(line)
+                exit
+              }
+            ')"
+            if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
+              echo "::error::Refusing to skip the production-certificate match check."
+              exit 1
+            fi
             [[ "$actual_cert_sha256" == "$MILTVPLUS_EXPECTED_SIGNER_SHA256" ]] || {
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
