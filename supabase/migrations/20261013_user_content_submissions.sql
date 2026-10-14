@@ -28,7 +28,13 @@ create table if not exists public.content_submissions (
 
 alter table public.content_submissions enable row level security;
 
-grant select on public.content_submissions to anon;
+-- Public clients need only fields rendered in the public catalog; do not expose
+-- submitter IDs or rights-confirmation metadata to anonymous users.
+grant select (
+  title, description, stream_url, poster_url, duration_seconds,
+  series_title, season_number, episode_number, media_type,
+  moderation_status, created_at
+) on public.content_submissions to anon;
 grant select, insert on public.content_submissions to authenticated;
 
 create policy "Submit own pending content" on public.content_submissions
