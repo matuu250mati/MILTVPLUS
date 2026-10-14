@@ -48,6 +48,23 @@ begin
     execute format('update public.channels set url_stream = %I::text where url_stream is null', source_col);
   end if;
 
+  -- Preserve existing channel artwork when legacy schema uses logo_url.
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='channels' and column_name='logo'
+  ) then
+    alter table public.channels add column logo text;
+    select column_name into source_col
+    from information_schema.columns
+    where table_schema='public' and table_name='channels'
+      and column_name in ('logo_url', 'image_url', 'icon_url', 'thumbnail_url')
+    order by case column_name when 'logo_url' then 1 when 'image_url' then 2 when 'icon_url' then 3 else 4 end
+    limit 1;
+    if source_col is not null then
+      execute format('update public.channels set logo = %I::text where logo is null', source_col);
+    end if;
+  end if;
+
   if not has_is_published then
     alter table public.channels add column is_published boolean not null default false;
     select column_name into source_col
