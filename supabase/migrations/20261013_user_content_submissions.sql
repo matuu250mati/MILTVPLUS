@@ -37,6 +37,7 @@ grant select (
 ) on public.content_submissions to anon;
 grant select, insert on public.content_submissions to authenticated;
 
+drop policy if exists "Submit own pending content" on public.content_submissions;
 create policy "Submit own pending content" on public.content_submissions
   for insert to authenticated
   with check (
@@ -45,10 +46,12 @@ create policy "Submit own pending content" on public.content_submissions
     and moderation_status = 'pending'
   );
 
+drop policy if exists "Read own submissions" on public.content_submissions;
 create policy "Read own submissions" on public.content_submissions
   for select to authenticated
   using (auth.uid() = user_id);
 
+drop policy if exists "Public users read approved submissions" on public.content_submissions;
 create policy "Public users read approved submissions" on public.content_submissions
   for select to anon, authenticated
   using (moderation_status = 'approved');
@@ -57,10 +60,12 @@ create policy "Public users read approved submissions" on public.content_submiss
 revoke update on public.content_submissions from authenticated;
 grant update (moderation_status) on public.content_submissions to authenticated;
 
+drop policy if exists "Moderators read submissions" on public.content_submissions;
 create policy "Moderators read submissions" on public.content_submissions
   for select to authenticated
   using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'moderator'));
 
+drop policy if exists "Moderators review submissions" on public.content_submissions;
 create policy "Moderators review submissions" on public.content_submissions
   for update to authenticated
   using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'moderator'))
