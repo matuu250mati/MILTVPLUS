@@ -56,10 +56,12 @@ begin
       and column_name in ('is_active','enabled','published','status')
     order by case column_name when 'is_active' then 1 when 'enabled' then 2 when 'published' then 3 else 4 end
     limit 1;
-    if source_col = 'status' then
-      execute 'update public.channels set is_published = lower(status::text) in (''published'', ''active'', ''approved'', ''live'')';
-    elsif source_col is not null then
-      execute format('update public.channels set is_published = coalesce(%I::boolean, false)', source_col);
+    if source_col is not null then
+      -- Text statuses (active/published) and boolean-like legacy columns both map safely.
+      execute format(
+        'update public.channels set is_published = lower(coalesce(%I::text, '''')) in (''true'', ''t'', ''1'', ''yes'', ''published'', ''active'', ''approved'', ''live'')',
+        source_col
+      );
     end if;
   end if;
 
