@@ -15,18 +15,21 @@ void main() {
     expect(isValidSupabaseUrl('https://project-ref.supabase.co?apikey=test'), isFalse);
   });
 
-  testWidgets('MILTVPLUS intro opens browseable home without requiring an account', (tester) async {
+  testWidgets('MILTVPLUS requires Supabase configuration and authentication before opening the catalog', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(const MiltvPlusApp());
     expect(find.text('MILTVPLUS'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
-    expect(find.text('TV EN VIVO'), findsOneWidget);
-    expect(find.text('EXPLORÁ POR CATEGORÍA'), findsOneWidget);
-    expect(find.text('INICIAR SESIÓN'), findsNothing);
-    expect(find.text('PELÍCULAS'), findsOneWidget);
+
+    // Tests run without production --dart-define values, so the auth gate must
+    // show a clear configuration error rather than exposing the catalog shell.
+    expect(find.textContaining('Falta SUPABASE_URL'), findsOneWidget);
+    expect(find.text('TV EN VIVO'), findsNothing);
+    expect(find.text('PELÍCULAS'), findsNothing);
   });
 }
