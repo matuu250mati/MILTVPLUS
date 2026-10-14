@@ -1,6 +1,7 @@
 -- MILTVPLUS: compatibility migration for an existing channels table.
 -- Non-destructive: preserves rows and maps common legacy column names.
 -- Review the resulting columns and row counts after running in Supabase SQL Editor.
+-- Production deployment is guarded by a dry-run and post-deployment REST schema checks.
 begin;
 
 do $migration$
