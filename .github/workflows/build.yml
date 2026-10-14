@@ -44,10 +44,9 @@ jobs:
       - name: Prepare Android project
         run: bash tool/bootstrap_android.sh
 
-      # Feature-branch APKs use a separate Android package so device testing
-      # never asks the owner to uninstall or overwrite the existing installation.
+      # PR builds use a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
-        if: ${{ (github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser') || github.ref == 'refs/heads/feature/adult-fullscreen-browser' }}
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -159,12 +158,38 @@ jobs:
           [[ -n "${ANDROID_KEYSTORE_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret."; exit 1; }
           [[ -n "${ANDROID_KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_ALIAS secret."; exit 1; }
           [[ -n "${ANDROID_KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          test -s android/upload-keystore.jks
+          # Normalize whitespace introduced by mobile copy/paste before decoding.
+          normalized_base64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')"
+          if [[ ! "$normalized_base64" =~ ^[A-Za-z0-9+/]+={0,2}$ ]]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 contains characters that are not valid Base64. Re-encode the original .jks file and replace this repository secret."
+            exit 1
+          fi
+          if ! printf '%s' "$normalized_base64" | base64 --decode > android/upload-keystore.jks; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 could not be decoded. The secret is truncated or malformed; replace it with a fresh Base64 encoding of the original .jks file."
+            exit 1
+          fi
+          if [[ ! -s android/upload-keystore.jks ]]; then
+            echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."
+            exit 1
+          fi
           printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > android/key.properties
-          keytool -list -keystore android/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
-          expected_cert_sha256="$(keytool -list -v -keystore android/upload-keystore.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-          [[ "$expected_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Could not determine the production signing certificate SHA-256 fingerprint."; exit 1; }
+          # Check store password/type independently so failures identify the actual cause.
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::Keystore decoded, but keytool could not open it as JKS with ANDROID_KEYSTORE_PASSWORD. The file may be corrupt or the store password is incorrect."
+            exit 1
+          fi
+          # Validate alias separately; do not print secrets or key material.
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Keystore and store password are valid, but ANDROID_KEY_ALIAS was not found or could not be accessed."
+            exit 1
+          fi
+          if ! keytool_output="$(keytool -list -v -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" 2>/dev/null)"; then
+            echo "::error::The configured key alias exists, but keytool could not inspect its certificate. Check the keystore and key credentials."
+            exit 1
+          fi
+          expected_cert_sha256="$(printf '%s\n' "$keytool_output" | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          [[ "$expected_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Keystore and alias opened, but keytool did not return a valid SHA-256 certificate fingerprint."; exit 1; }
+          echo "Production keystore decoded and store password/alias validated."
           echo "MILTVPLUS_EXPECTED_SIGNER_SHA256=$expected_cert_sha256" >> "$GITHUB_ENV"
 
       - name: Verify release tag matches pubspec version
@@ -207,6 +232,8 @@ jobs:
               exit 1
             }
             printf '%s\n' "$verification_output"
+            # Parse SHA-256 without relying on exact signer numbering, capitalization,
+            # colon formatting, or whitespace used by different build-tools versions.
             actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
               tolower($0) ~ /certificate sha-256 digest:/ {
                 line = tolower($0)
@@ -216,10 +243,11 @@ jobs:
                 exit
               }
             ')"
-            [[ "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || {
-              echo "::error::Could not read a valid 64-character APK signer certificate SHA-256 fingerprint."
+            if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
+              echo "::error::Refusing to skip the production-certificate match check."
               exit 1
-            }
+            fi
             [[ "$actual_cert_sha256" == "$MILTVPLUS_EXPECTED_SIGNER_SHA256" ]] || {
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
@@ -249,17 +277,17 @@ jobs:
           echo "MILTVPLUS_LATEST_APK_PATH=$latest_apk" >> "$GITHUB_ENV"
           echo "MILTVPLUS_LATEST_CHECKSUM_PATH=$latest_apk.sha256" >> "$GITHUB_ENV"
 
-      - name: Explain why the APK artifact is withheld
-        if: github.event.repository.private != true
+      - name: Explain why no production APK artifact is uploaded
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing)) }}
         shell: bash
         run: |
-          echo "APK artifact withheld: the repository is public. Make the repository private before storing downloadable build artifacts." >> "$GITHUB_STEP_SUMMARY"
+          echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload private APK and checksum as workflow artifacts
-        if: github.event.repository.private == true
+      - name: Upload QA APK and checksum
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser' }}
         uses: actions/upload-artifact@v4
         with:
-          name: MILTVPLUS-${{ ((github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser') || startsWith(github.ref, 'refs/heads/feature/')) && 'qa' || 'release' }}-apk
+          name: MILTVPLUS-qa-apk
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
@@ -268,5 +296,18 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Publicación pública desactivada intencionalmente. La distribución requerirá
-      # autorización expresa del propietario y un procedimiento separado.
+      - name: Upload verified production APK and checksum as workflow artifacts
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MILTVPLUS-release-apk
+          path: |
+            build/MILTVPLUS-*-android.apk
+            build/MILTVPLUS-*-android.apk.sha256
+            build/MILTVPLUS-android.apk
+            build/MILTVPLUS-android.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      # Publicación pública desactivada: no crear Releases automáticamente.
+      # Requerirá una autorización expresa y un procedimiento separado.
