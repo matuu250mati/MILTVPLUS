@@ -53,15 +53,15 @@ class TvChannel {
     if (RegExp(r'\b(culture|cultural|cultura|education|educational|educación|educacion|history|historia|arte|arts)\b').hasMatch(searchable)) {
       return 'Cultura y educación';
     }
-    if (RegExp(r'\b(entertainment|entretenimiento|lifestyle|estilo de vida|general)\b').hasMatch(searchable)) {
-      return 'Entretenimiento y general';
-    }
     if (categoryText.contains('tv argentina') ||
         categoryText == 'argentina' ||
         country?.toLowerCase() == 'ar' ||
         country?.toLowerCase() == 'argentina' ||
         RegExp(r'\b(argentina|telefe|eltrece|el trece|tv pública|tv publica|américa tv|america tv|canal 9|c5n|a24)\b').hasMatch(searchable)) {
       return 'TV Argentina';
+    }
+    if (RegExp(r'\b(entertainment|entretenimiento|lifestyle|estilo de vida|general)\b').hasMatch(searchable)) {
+      return 'Entretenimiento y general';
     }
     if (RegExp(r'\b(religious|religion|religión|religiosa|travel|viajes|weather|clima|shopping|legislative|government)\b').hasMatch(searchable)) {
       return 'Otros temáticos';
