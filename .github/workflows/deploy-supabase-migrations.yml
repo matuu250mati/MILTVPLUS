@@ -44,6 +44,25 @@ jobs:
             exit 1
           fi
 
+      - name: Validate migration filenames
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          migrations=(supabase/migrations/*.sql)
+          if [[ ${#migrations[@]} -eq 0 ]]; then
+            echo "::error::No SQL migrations found."
+            exit 1
+          fi
+          for migration in "${migrations[@]}"; do
+            filename="${migration##*/}"
+            if [[ ! "$filename" =~ ^[0-9]{14}_[a-z0-9_]+[.]sql$ ]]; then
+              echo "::error::Invalid Supabase migration filename: $filename. Expected YYYYMMDDHHMMSS_name.sql."
+              exit 1
+            fi
+          done
+          printf 'Validated %s timestamped migration files.\\n' "${#migrations[@]}"
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -51,6 +70,9 @@ jobs:
 
       - name: Link the intended Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Preview pending migrations without applying them
+        run: supabase db push --dry-run
 
       - name: Apply tracked migrations
         run: supabase db push
