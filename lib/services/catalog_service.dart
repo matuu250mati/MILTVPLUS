@@ -33,13 +33,21 @@ class CatalogService {
         .toList(growable: false);
   }
 
-  Future<List<ChannelModel>> getChannels() async {
-    final response = await _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true)
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+  Future<List<ChannelModel>> getChannels({List<String>? categories}) async {
+    final response = categories == null || categories.isEmpty
+        ? await _supabase
+            .from('channels')
+            .select()
+            .eq('is_published', true)
+            .order('sort_order', ascending: true)
+            .order('title', ascending: true)
+        : await _supabase
+            .from('channels')
+            .select()
+            .eq('is_published', true)
+            .inFilter('category', categories)
+            .order('sort_order', ascending: true)
+            .order('title', ascending: true);
 
     return (response as List<dynamic>)
         .map((item) => ChannelModel.fromJson(
