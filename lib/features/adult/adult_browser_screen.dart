@@ -134,12 +134,22 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   }
 
   Future<void> _clearWebData() async {
+    // Run each cleanup independently so one unsupported WebView operation
+    // does not prevent the remaining privacy cleanup steps.
     try {
       await _controller.clearCache();
+    } catch (_) {
+      // Best effort; WebView implementations differ by platform.
+    }
+    try {
       await _controller.clearLocalStorage();
+    } catch (_) {
+      // Best effort; WebView implementations differ by platform.
+    }
+    try {
       await WebViewCookieManager().clearCookies();
     } catch (_) {
-      // Best-effort cleanup; WebView implementations differ by platform.
+      // Best effort; WebView implementations differ by platform.
     }
   }
 
