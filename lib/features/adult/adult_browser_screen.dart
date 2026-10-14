@@ -24,6 +24,10 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
     _AdultProvider('xHamster', 'https://xhamster.com/'),
     _AdultProvider('YouPorn', 'https://www.youporn.com/'),
     _AdultProvider('RedTube', 'https://www.redtube.com/'),
+    _AdultProvider('XNXX', 'https://www.xnxx.com/'),
+    _AdultProvider('SpankBang', 'https://spankbang.com/'),
+    _AdultProvider('Tube8', 'https://www.tube8.com/'),
+    _AdultProvider('Eporner', 'https://www.eporner.com/'),
   ];
 
   late final WebViewController _controller;
@@ -32,6 +36,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   bool _canGoBack = false;
   String? _errorMessage;
   bool _configured = false;
+  int _providerLoadRequest = 0;
 
   @override
   void initState() {
@@ -92,12 +97,17 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
 
   Future<void> _loadProvider(int index) async {
     if (index < 0 || index >= _providers.length) return;
+    final request = ++_providerLoadRequest;
     setState(() {
       _selectedProvider = index;
       _loading = true;
       _errorMessage = null;
       _canGoBack = false;
     });
+    // Each provider starts with a clean local WebView session. This avoids
+    // carrying cookies or site storage from one provider into another.
+    await _clearWebData();
+    if (!mounted || request != _providerLoadRequest) return;
     try {
       await _controller.loadRequest(Uri.parse(_providers[index].url));
     } catch (_) {
@@ -228,6 +238,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
                             return ChoiceChip(
                               label: Text(_providers[index].label),
                               selected: selected,
+                              autofocus: selected,
                               showCheckmark: false,
                               onSelected: (_) => unawaited(_loadProvider(index)),
                               selectedColor: AppTheme.accent,
