@@ -43,6 +43,9 @@ class M3uPlaylistParser {
         // Web-player pages (for example, YouTube or Twitch channel pages) are
         // not direct media streams and cannot be opened by video_player.
         pendingName = null;
+        pendingGroupTitle = null;
+        pendingCountry = null;
+        pendingLanguage = null;
         continue;
       }
 
