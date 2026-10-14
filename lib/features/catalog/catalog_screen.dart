@@ -42,11 +42,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Future<List<_CatalogEntry>> _loadEntries() async {
     if (widget.category == 'SERIES') {
       final series = await _catalogService.getSeries();
-      return series.map(_CatalogEntry.fromSeries).toList(growable: false);
+      final submittedEpisodes = await _catalogService.getApprovedSubmissions('episode');
+      return <_CatalogEntry>[
+        ...series.map(_CatalogEntry.fromSeries),
+        ...submittedEpisodes.map(_CatalogEntry.fromSubmission),
+      ];
     }
 
     final movies = await _catalogService.getMovies();
-    final entries = movies.map(_CatalogEntry.fromMovie).toList(growable: false);
+    final submittedMovies = await _catalogService.getApprovedSubmissions('movie');
+    final entries = <_CatalogEntry>[
+      ...movies.map(_CatalogEntry.fromMovie),
+      ...submittedMovies.map(_CatalogEntry.fromSubmission),
+    ];
     final category = widget.category.toLowerCase();
 
     if (widget.category == 'EXPLORAR' || category == 'películas' || category == 'peliculas') return entries;
@@ -213,6 +221,31 @@ class _CatalogEntry {
         streamUrl: null,
         seriesId: series.id,
       );
+
+  factory _CatalogEntry.fromSubmission(Map<String, dynamic> item) {
+    final isEpisode = item['media_type'] == 'episode';
+    final season = (item['season_number'] as num?)?.toInt();
+    final episode = (item['episode_number'] as num?)?.toInt();
+    final duration = (item['duration_seconds'] as num?)?.toInt();
+    final rawTitle = item['title'] as String? ?? 'Sin título';
+    final seriesTitle = item['series_title'] as String?;
+    return _CatalogEntry(
+      title: isEpisode && seriesTitle != null && seriesTitle.trim().isNotEmpty
+          ? '$seriesTitle · $rawTitle'
+          : rawTitle,
+      category: [
+        isEpisode ? 'Episodio' : 'Película de la comunidad',
+        if (isEpisode && season != null && episode != null) 'T$season E$episode',
+        if (duration != null && duration > 0) '${(duration / 60).ceil()} min',
+      ].join(' · '),
+      genres: const [],
+      posterUrl: item['poster_url'] as String?,
+      year: null,
+      synopsis: item['description'] as String?,
+      streamUrl: item['stream_url'] as String?,
+      seriesId: null,
+    );
+  }
 }
 
 Future<void> _openSeriesEpisodes(
@@ -343,10 +376,19 @@ class _CatalogCard extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             [if (entry.year != null) entry.year.toString(), entry.category].join(' · '),
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
           ),
+          if (entry.synopsis != null && entry.synopsis!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              entry.synopsis!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppTheme.muted, fontSize: 10, height: 1.25),
+            ),
+          ],
           ],
         ),
       );
