@@ -218,14 +218,14 @@ jobs:
           echo "MILTVPLUS_LATEST_APK_PATH=$latest_apk" >> "$GITHUB_ENV"
           echo "MILTVPLUS_LATEST_CHECKSUM_PATH=$latest_apk.sha256" >> "$GITHUB_ENV"
 
-      - name: Explain why the APK artifact is withheld
-        if: github.event.repository.private != true
+      - name: Explain why no production APK artifact is uploaded
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing)) }}
         shell: bash
         run: |
-          echo "APK artifact withheld: the repository is public. Make the repository private before storing downloadable build artifacts." >> "$GITHUB_STEP_SUMMARY"
+          echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload release APK and checksum as workflow artifacts
-        if: github.event.repository.private == true
+      - name: Upload verified production APK and checksum as workflow artifacts
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) }}
         uses: actions/upload-artifact@v4
         with:
           name: MILTVPLUS-release-apk
