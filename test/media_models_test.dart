@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:miltv_plus/models/media_models.dart';
+import 'package:miltv_plus/models/tv_channel.dart';
 
 void main() {
   test('parses a published episode with provider playback URL', () {
@@ -52,6 +53,40 @@ void main() {
     expect(channel.category, 'Deportes');
     expect(channel.urlStream, 'https://media.example.org/live.m3u8');
     expect(channel.isPublished, isTrue);
+  });
+
+  test('groups sports before Argentine country classification', () {
+    const channel = TvChannel(
+      name: 'TyC Sports',
+      streamUrl: 'https://media.example.org/live.m3u8',
+      country: 'AR',
+      category: 'TV Argentina',
+    );
+    expect(channel.liveSection, 'Deportes');
+  });
+
+  test('classifies news and culture as distinct live-TV sections', () {
+    const news = TvChannel(
+      name: 'Canal de Noticias',
+      streamUrl: 'https://media.example.org/news.m3u8',
+      groupTitle: 'News',
+    );
+    const culture = TvChannel(
+      name: 'Cultura TV',
+      streamUrl: 'https://media.example.org/culture.m3u8',
+      groupTitle: 'Culture',
+    );
+    expect(news.liveSection, 'Noticias');
+    expect(culture.liveSection, 'Cultura y educación');
+  });
+
+  test('classifies authorized HBO streams as premium, not VOD movies', () {
+    const channel = TvChannel(
+      name: 'HBO',
+      streamUrl: 'https://media.example.org/hbo.m3u8',
+      groupTitle: 'Movies',
+    );
+    expect(channel.liveSection, 'Premium / HBO');
   });
 
 }
