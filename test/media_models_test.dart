@@ -89,4 +89,14 @@ void main() {
     expect(channel.liveSection, 'Premium / HBO');
   });
 
+  test('keeps Argentine general channels in the Argentina section', () {
+    const channel = TvChannel(
+      name: 'Telefe',
+      streamUrl: 'https://media.example.org/telefe.m3u8',
+      country: 'AR',
+      groupTitle: 'General',
+    );
+    expect(channel.liveSection, 'TV Argentina');
+  });
+
 }
