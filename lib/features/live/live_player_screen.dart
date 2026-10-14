@@ -91,7 +91,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     final channel = widget.channels[index];
     final uri = Uri.tryParse((streamOverride ?? channel.streamUrl).trim());
     if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
-        (uri.scheme != 'https' && uri.scheme != 'http')) {
+        uri.scheme != 'https') {
       setState(() {
         _index = index;
         _loading = false;
