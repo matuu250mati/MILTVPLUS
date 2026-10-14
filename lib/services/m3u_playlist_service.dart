@@ -26,8 +26,8 @@ class M3uPlaylistService {
     if (uri == null ||
         uri.host.isEmpty ||
         uri.userInfo.isNotEmpty ||
-        (uri.scheme != 'http' && uri.scheme != 'https')) {
-      throw const FormatException('Ingresá una URL HTTP(S) válida para la lista M3U.');
+        uri.scheme != 'https') {
+      throw const FormatException('Ingresá una URL HTTPS válida para la lista M3U.');
     }
 
     final response = await _dio.get<ResponseBody>(uri.toString());
