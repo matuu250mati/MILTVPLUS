@@ -189,12 +189,14 @@ jobs:
             --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
       - name: Verify release APK signature
+        env:
+          VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
         run: |
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
-          if [[ "$GITHUB_REF" == refs/tags/v* || "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.verify_production_signing }}" == "true" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/v* || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
             sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
             [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
             apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
@@ -213,7 +215,7 @@ jobs:
             }
             echo "Production APK signature is valid and matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing is enforced and verified on v* release tags."
+            echo "Non-versioned CI build: production signing verification was not requested."
           fi
 
       - name: Name APK and generate SHA-256 checksum
