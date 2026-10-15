@@ -1,5 +1,6 @@
 // MILTVPLUS catalog metadata sync. Deploy with TMDB_API_KEY and SYNC_SECRET secrets.
 // Only metadata is imported. No stream URLs are inferred or invented.
+// Re-running this function updates the same rows by tmdb_id; it does not create stream access.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
