@@ -118,12 +118,15 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           categories: widget.categoryFilter,
         );
         for (final channel in remoteChannels) {
-          addUnique(TvChannel(
+          final mappedChannel = TvChannel(
             name: channel.title,
             streamUrl: channel.urlStream,
             category: channel.category,
             country: channel.countryCode,
-          ));
+          );
+          if (_matchesCategoryFilter(mappedChannel)) {
+            addUnique(mappedChannel);
+          }
         }
         remoteLoaded = true;
       } catch (_) {
