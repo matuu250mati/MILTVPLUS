@@ -52,10 +52,6 @@ class OtaUpdateService {
   static const _repo = 'MILTVPLUS';
   static const _releaseApi =
       'https://api.github.com/repos/$_owner/$_repo/releases/latest';
-  static const _apkUrl =
-      'https://github.com/$_owner/$_repo/releases/latest/download/app-release.apk';
-  static const _checksumUrl =
-      'https://github.com/$_owner/$_repo/releases/latest/download/app-release.apk.sha256';
   static const _apkMime = 'application/vnd.android.package-archive';
 
   static final BaseOptions _options = BaseOptions(
@@ -166,9 +162,14 @@ class OtaUpdateService {
         );
       }
 
-      final apkSize = _releaseAssetSize(data['assets'], 'app-release.apk');
+      final apkAsset = _releaseAsset(data['assets'], 'app-release.apk');
+      final checksumAsset = _releaseAsset(data['assets'], 'app-release.apk.sha256');
+      final apkSize = apkAsset?['size'] is num ? (apkAsset!['size'] as num).toInt() : 0;
+      final apkUrl = apkAsset?['browser_download_url'];
+      final checksumUrl = checksumAsset?['browser_download_url'];
       if (apkSize <= 0 ||
-          !_hasReleaseAsset(data['assets'], 'app-release.apk.sha256')) {
+          apkUrl is! String || !apkUrl.startsWith('https://github.com/') ||
+          checksumUrl is! String || !checksumUrl.startsWith('https://github.com/')) {
         return const OtaUpdateResult(
           message: 'La Release nueva no incluye app-release.apk y app-release.apk.sha256. No se descargará un paquete incompleto.',
         );
@@ -179,7 +180,7 @@ class OtaUpdateService {
       if (await apkFile.exists()) await apkFile.delete();
 
       final checksumResponse = await _dio.get<String>(
-        _checksumUrl,
+        checksumUrl,
         options: Options(responseType: ResponseType.plain),
       );
       final expectedHash = _readChecksum(checksumResponse.data ?? '');
@@ -190,7 +191,7 @@ class OtaUpdateService {
       }
 
       final downloadResponse = await _dio.download(
-        _apkUrl,
+        apkUrl,
         apkFile.path,
         deleteOnError: true,
         options: Options(
@@ -201,11 +202,10 @@ class OtaUpdateService {
 
       if (downloadResponse.statusCode != HttpStatus.ok ||
           !await apkFile.exists() ||
-          await apkFile.length() < 1024 * 1024 ||
-          await apkFile.length() != apkSize) {
+          await apkFile.length() < 1024 * 1024) {
         if (await apkFile.exists()) await apkFile.delete();
         return const OtaUpdateResult(
-          message: 'La descarga del APK quedó incompleta o la Release no está publicada.',
+          message: 'La descarga del APK no terminó correctamente. Se eliminó el archivo incompleto; revisá la conexión e intentá nuevamente.',
         );
       }
 
@@ -287,6 +287,14 @@ class OtaUpdateService {
     return assets.any(
       (asset) => asset is Map<String, dynamic> && asset['name'] == name,
     );
+  }
+
+  Map<String, dynamic>? _releaseAsset(dynamic assets, String name) {
+    if (assets is! List) return null;
+    for (final asset in assets) {
+      if (asset is Map<String, dynamic> && asset['name'] == name) return asset;
+    }
+    return null;
   }
 
   int _releaseAssetSize(dynamic assets, String name) {
