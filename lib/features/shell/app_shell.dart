@@ -80,7 +80,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _lastUpdateCheck = DateTime.now();
     final service = OtaUpdateService();
     final info = await service.checkForUpdate();
-    if (!mounted || !info.updateAvailable) return;
+    if (!mounted) return;
+    if (!info.updateAvailable) {
+      // Surface OTA failures instead of silently treating them as "up to date".
+      if (info.message != 'MILTVPLUS está actualizado.') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(info.message),
+            duration: const Duration(seconds: 7),
+          ),
+        );
+      }
+      return;
+    }
 
     final preferences = await SharedPreferences.getInstance();
     final snoozedUntil = preferences.getInt('miltvplus_update_snooze_until_ms_v1') ?? 0;
