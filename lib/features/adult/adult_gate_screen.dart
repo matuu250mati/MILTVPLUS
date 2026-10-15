@@ -54,6 +54,83 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
     });
   }
 
+  Future<void> _recoverPin() async {
+    if (!isSupabaseConfigured) {
+      setState(() => error = 'La recuperación requiere una cuenta MILTVPLUS verificada.');
+      return;
+    }
+    final user = Supabase.instance.client.auth.currentUser;
+    final email = user?.email?.trim();
+    final phone = user?.phone?.trim();
+    final useEmail = email != null && email.isNotEmpty;
+    if (!useEmail && (phone == null || phone.isEmpty)) {
+      setState(() => error = 'Tu cuenta no tiene un correo ni un teléfono verificado para recuperar el PIN.');
+      return;
+    }
+    final codeController = TextEditingController();
+    setState(() { loading = true; error = null; });
+    try {
+      final auth = Supabase.instance.client.auth;
+      if (useEmail) {
+        await auth.signInWithOtp(email: email, shouldCreateUser: false);
+      } else {
+        await auth.signInWithOtp(phone: phone, shouldCreateUser: false);
+      }
+      if (!mounted) return;
+      setState(() => loading = false);
+      final code = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Recuperar PIN +18'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(useEmail
+                ? 'Ingresá el código de verificación enviado a $email.'
+                : 'Ingresá el código SMS enviado a $phone.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: const InputDecoration(labelText: 'Código de verificación', counterText: ''),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CANCELAR')),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, codeController.text.trim()),
+              child: const Text('VERIFICAR'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || code == null || code.isEmpty) return;
+      setState(() => loading = true);
+      if (useEmail) {
+        await auth.verifyOTP(type: OtpType.email, email: email, token: code);
+      } else {
+        await auth.verifyOTP(type: OtpType.sms, phone: phone, token: code);
+      }
+      await service.clearPin();
+      if (!mounted) return;
+      setState(() {
+        hasPin = false;
+        loading = false;
+        error = null;
+        pinController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cuenta verificada. Ahora podés crear un PIN nuevo.')),
+      );
+    } on AuthException catch (exception) {
+      if (mounted) setState(() { loading = false; error = 'No se pudo verificar el código: ${exception.message}'; });
+    } catch (_) {
+      if (mounted) setState(() { loading = false; error = 'No se pudo completar la recuperación. Revisá la configuración de correo/SMS de la cuenta.'; });
+    } finally {
+      codeController.dispose();
+      if (mounted && loading) setState(() => loading = false);
+    }
+  }
+
   Future<void> submit() async {
     final pin = pinController.text.trim();
     if (!RegExp(r'^\d{4,8}$').hasMatch(pin)) {
@@ -236,6 +313,12 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
                 const SizedBox(height: 18),
                 SizedBox(width: double.infinity,
                     child: FilledButton(onPressed: loading ? null : submit, child: Text(hasPin ? 'DESBLOQUEAR' : 'CONFIGURAR PIN'))),
+                if (hasPin)
+                  TextButton.icon(
+                    onPressed: loading ? null : _recoverPin,
+                    icon: const Icon(Icons.mark_email_read_outlined),
+                    label: const Text('OLVIDÉ MI PIN · RECUPERAR POR CÓDIGO'),
+                  ),
                 const SizedBox(height: 12),
                 const Text('La protección se aplica dentro de la app; no reemplaza los controles parentales de Android.',
                     textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: AppTheme.muted)),
