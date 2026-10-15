@@ -122,8 +122,23 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Keep local channels usable when Supabase is offline or the user is signed out.
       }
 
-      // On a fresh install, load a curated free-to-air source so the screen
-      // does not start empty when neither local channels nor Supabase are configured.
+      // Load the repository-owned playlist as the primary M3U source on
+      // both the unified TV screen and genre-specific screens.
+      try {
+        final repositoryChannels =
+            await m3uPlaylistService.importFromUrl(_repositoryPlaylist);
+        for (final channel in repositoryChannels) {
+          if (_matchesCategoryFilter(channel)) addUnique(channel);
+        }
+        publicFallbackLoaded = repositoryChannels.isNotEmpty;
+        if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
+          await channelStorage.save(merged.values.toList(growable: false));
+        }
+      } catch (_) {
+        // Continue with Supabase and cached channels when GitHub Raw is offline.
+      }
+
+      // Use the curated public source only if no channels were found at all.
       if (merged.isEmpty &&
           (widget.categoryFilter == null || widget.categoryFilter!.isEmpty)) {
         try {
