@@ -341,9 +341,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    // Avoid squeezing channel labels into a narrow side column on phones/tablets.
-    final compact = size.width < 900;
     final groups = channels.map((channel) => channel.liveSection).toSet().toList()..sort();
     final countries = channels
         .map((channel) => _countryLabel(channel.country))
