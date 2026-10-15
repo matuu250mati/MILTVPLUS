@@ -3,6 +3,10 @@
 -- from the Supabase dashboard. Never use user_metadata for authorization.
 begin;
 
+-- SQL grants are separate from RLS. These privileges are safe because each write
+-- is still constrained by the owner-only policies below.
+grant select, insert, update, delete on public.movies, public.series, public.episodes to authenticated;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'owner-media',
