@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/accessibility_settings.dart';
 import '../../core/supabase_config.dart';
 import '../auth/auth_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _checkingUpdates = false;
+  double _textScale = 1.0;
   String? _providerStatus;
   bool _importingPlaylist = false;
   final _playlistUrlController = TextEditingController();
@@ -43,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final preferences = await SharedPreferences.getInstance();
       _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILTVPLUS';
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
+      _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -86,6 +89,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       _showMessage('No se pudo guardar la configuración.');
+    }
+  }
+
+  Future<void> _setTextScale(double value) async {
+    setState(() => _textScale = value);
+    try {
+      await AppAccessibilitySettings.setTextScale(value);
+      if (mounted) _showMessage('Tamaño de texto actualizado.');
+    } catch (_) {
+      if (mounted) _showMessage('No se pudo guardar el tamaño de texto.');
     }
   }
 
@@ -474,6 +487,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _InfoRow(icon: Icons.system_update_alt_rounded, color: Color(0xFFFF7CA8), title: 'Actualizaciones', description: 'La actualización automática requiere que exista una versión publicada en GitHub Releases.'),
             _InfoRow(icon: Icons.satellite_alt_rounded, color: Color(0xFF65B7FF), title: 'Equipos externos', description: 'Solo se integran sintonizadores compatibles o dispositivos que publiquen una señal autorizada por red; no se captura HDMI genérico.'),
           ]),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.accessibility_new_rounded, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Accesibilidad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Elegí un tamaño de texto más cómodo. El cambio se aplica a toda la aplicación y se conserva al volver a abrirla.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 8),
+              RadioListTile<double>(
+                value: 1.0,
+                groupValue: _textScale,
+                activeColor: AppTheme.accent,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Normal'),
+                subtitle: const Text('Tamaño actual del diseño'),
+                onChanged: (value) {
+                  if (value != null) _setTextScale(value);
+                },
+              ),
+              RadioListTile<double>(
+                value: 1.15,
+                groupValue: _textScale,
+                activeColor: AppTheme.accent,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Grande'),
+                subtitle: const Text('Texto un poco más grande'),
+                onChanged: (value) {
+                  if (value != null) _setTextScale(value);
+                },
+              ),
+              RadioListTile<double>(
+                value: 1.3,
+                groupValue: _textScale,
+                activeColor: AppTheme.accent,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Muy grande'),
+                subtitle: const Text('Para una lectura más cómoda'),
+                onChanged: (value) {
+                  if (value != null) _setTextScale(value);
+                },
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         Container(
