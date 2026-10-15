@@ -100,12 +100,23 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Widget build(BuildContext context) {
     final query = _searchController.text.trim().toLowerCase();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.category,
-              style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: -.5)),
+          Row(
+            children: [
+              Text(_catalogCategoryIcon(widget.category),
+                  style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(widget.category,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.5),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
           const SizedBox(height: 7),
           const Text(
             'Contenido publicado desde el catálogo de MILTVPLUS.',
@@ -197,6 +208,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
     );
   }
+}
+
+
+String _catalogCategoryIcon(String value) {
+  final category = value.trim().toLowerCase();
+  if (category.contains('deport') || category.contains('sport')) return '⚽';
+  if (category.contains('cultur') || category.contains('document')) return '🎭';
+  if (category.contains('noticia') || category.contains('news')) return '📰';
+  if (category.contains('película') || category.contains('pelicula') ||
+      category.contains('cine') || category.contains('movie') ||
+      category.contains('explorar')) return '🎬';
+  if (category.contains('serie') || category.contains('entreten')) return '🍿';
+  if (category.contains('infantil') || category.contains('kids')) return '🧸';
+  return '📺';
 }
 
 class _CatalogEntry {
