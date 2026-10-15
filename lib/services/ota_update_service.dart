@@ -129,17 +129,21 @@ class OtaUpdateService {
         );
       }
 
-      final bytes = await apkFile.readAsBytes();
-      if (bytes.length < 4 ||
-          bytes[0] != 0x50 ||
-          bytes[1] != 0x4b) {
+      final header = await apkFile.openRead(0, 4).fold<List<int>>(
+        <int>[],
+        (bytes, chunk) => bytes..addAll(chunk),
+      );
+      if (header.length < 4 ||
+          header[0] != 0x50 ||
+          header[1] != 0x4b) {
         await apkFile.delete();
         return const OtaUpdateResult(
           message: 'El archivo recibido no parece ser un APK válido.',
         );
       }
 
-      final actualHash = sha256.convert(bytes).toString();
+      // Stream the checksum instead of loading a 50+ MB APK into memory.
+      final actualHash = await sha256.bind(apkFile.openRead()).first;
       if (actualHash.toLowerCase() != expectedHash) {
         await apkFile.delete();
         return const OtaUpdateResult(
