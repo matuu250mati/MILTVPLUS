@@ -1,4 +1,18 @@
 /// Modelos tipados para el esquema actual de Supabase de MILTV PLUS.
+
+List<String> _streamUrlList(Map<String, dynamic> json, String fallback) {
+  final raw = json['stream_urls'];
+  final urls = <String>[];
+  if (raw is List) {
+    for (final value in raw) {
+      final url = value?.toString().trim() ?? '';
+      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+    }
+  }
+  final single = fallback.trim();
+  if (single.isNotEmpty && !urls.contains(single)) urls.add(single);
+  return List<String>.unmodifiable(urls);
+}
 class ChannelModel {
   final String id;
   final String title;
@@ -41,6 +55,7 @@ class MovieModel {
   final String? logo;
   final String? backdropUrl;
   final String urlStream;
+  final List<String> streamUrls;
   final int? releaseYear;
   final int? durationSeconds;
   final String countryCode;
@@ -49,7 +64,7 @@ class MovieModel {
   const MovieModel({
     required this.id, required this.title, this.synopsis,
     required this.category, required this.genres, this.logo,
-    this.backdropUrl, required this.urlStream, this.releaseYear,
+    this.backdropUrl, required this.urlStream, this.streamUrls = const [], this.releaseYear,
     this.durationSeconds, required this.countryCode,
     required this.isPublished,
   });
@@ -64,6 +79,7 @@ class MovieModel {
     logo: json['logo'] as String?,
     backdropUrl: json['backdrop_url'] as String?,
     urlStream: json['url_stream'] as String? ?? '',
+    streamUrls: _streamUrlList(json, json['url_stream'] as String? ?? ''),
     releaseYear: (json['release_year'] as num?)?.toInt(),
     durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
     countryCode: json['country_code'] as String? ?? 'AR',
@@ -115,6 +131,7 @@ class EpisodeModel {
   final int seasonNumber;
   final int episodeNumber;
   final String urlStream;
+  final List<String> streamUrls;
   final int? durationSeconds;
   final bool isPublished;
 
@@ -126,6 +143,7 @@ class EpisodeModel {
     required this.seasonNumber,
     required this.episodeNumber,
     required this.urlStream,
+    this.streamUrls = const [],
     this.durationSeconds,
     required this.isPublished,
   });
@@ -138,6 +156,7 @@ class EpisodeModel {
         seasonNumber: (json['season_number'] as num?)?.toInt() ?? 1,
         episodeNumber: (json['episode_number'] as num?)?.toInt() ?? 1,
         urlStream: json['url_stream'] as String? ?? '',
+        streamUrls: _streamUrlList(json, json['url_stream'] as String? ?? ''),
         durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
         isPublished: json['is_published'] as bool? ?? false,
       );
