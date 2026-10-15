@@ -17,6 +17,7 @@ Como el repositorio genera los archivos nativos con la versión de Flutter dispo
 
 ```bash
 bash tool/bootstrap_android.sh
+bash tool/patch_ota_manifest.sh
 flutter pub get
 flutter run
 ```
@@ -75,9 +76,20 @@ anónimos y autenticados, necesario para explorar el catálogo sin iniciar sesi�
 políticas de escritura desde la app. Las URLs de reproducción solo deben publicarse cuando
 se tenga autorización para distribuir ese contenido.
 
+## Actualización OTA de Android / TV Box
+
+En Ajustes, **Buscar actualizaciones** consulta la última GitHub Release. Si existe una versión más nueva, descarga `app-release.apk` por HTTPS, valida el SHA-256 publicado junto al APK y abre el instalador nativo de Android. La instalación requiere la confirmación del usuario y, según la versión de Android, habilitar la instalación desde esta fuente. No se realizan instalaciones silenciosas ni búsquedas periódicas en segundo plano.
+
+La Release debe incluir ambos archivos con estos nombres exactos:
+
+- `app-release.apk`
+- `app-release.apk.sha256`
+
+El script `tool/patch_ota_manifest.sh` añade de forma idempotente los permisos `INTERNET` y `REQUEST_INSTALL_PACKAGES` al manifiesto generado.
+
 ## Publicación de APK y descarga estable
 
-El workflow de Android genera el APK de release, un archivo SHA-256 y artefactos de compilación. Para publicar una versión permanente:
+El workflow de Android genera el APK de release, un archivo SHA-256 y artefactos de compilación. Al subir un tag de versión válido, publica el APK firmado y su SHA-256 en GitHub Releases para que la OTA pueda encontrarlos. Para publicar una versión permanente:
 
 1. Actualizá `version:` en `pubspec.yaml` (por ejemplo, `1.0.0+1`).
 2. Confirmá que las comprobaciones de Flutter y la compilación Android estén verdes.
