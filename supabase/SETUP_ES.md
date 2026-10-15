@@ -10,15 +10,13 @@ Si las tablas ya existen y contienen datos, no vuelvas a ejecutar cambios destru
 
 Se agregó la migración no destructiva `supabase/migrations/20261014090000_channels_compatibility.sql`. Esta intenta mapear nombres heredados habituales (`name`/`channel_name` y `url`/`stream_url`, entre otros), conserva las filas y revierte toda la transacción si no puede asociar un nombre o URL válidos. Ejecutala en SQL Editor solo después de revisar las columnas existentes. Si falla, no fuerces la ejecución ni inventes datos: compartí el error SQL y la lista de nombres de columnas (sin valores privados) para preparar un mapeo exacto.
 
-## Hallazgos detectados por la verificación automática
+## Estado de la última comprobación automática
 
-La última comprobación automática del proyecto Supabase configurado en GitHub (14/10/2026) encontró estos datos concretos:
+**Actualizado el 15/10/2026:** la ejecución de GitHub Actions más reciente consultó las columnas requeridas de `channels`, `movies`, `series`, `episodes` y `content_submissions`; las cinco devolvieron HTTP 200 y resolvieron las columnas solicitadas.
 
-- `channels` responde, pero su esquema visible usa `name`, `stream_url` y `logo_url` en vez de `title`, `url_stream` y `logo`. También expone `category`, `created_at`, `id`, `is_published` y `sort_order`.
-- `movies`, `series` y `episodes` existen y sus endpoints responden, aunque la consulta anónima no encontró filas visibles en ese momento.
-- `content_submissions` devuelve HTTP 404: todavía no aparece en el esquema visible de PostgREST.
+El registro del 14/10/2026 había detectado nombres heredados en `channels` y un HTTP 404 para `content_submissions`. Esos hallazgos son históricos y no deben tomarse como el estado actual sin repetir la comprobación. Conservamos la migración de compatibilidad por si se configura otro proyecto o reaparece una diferencia de esquema.
 
-La migración de compatibilidad mapea `name → title`, `stream_url → url_stream` y `logo_url → logo` sin borrar las columnas ni las filas antiguas. No consideres la integración terminada hasta ejecutar la migración en el proyecto correcto y repetir la comprobación.
+La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de columna usados en la consulta de diagnóstico. **No garantiza** que existan filas visibles para el rol anónimo, que las políticas RLS permitan cada operación de lectura/escritura ni que todos los flujos de cuenta y moderación funcionen. Verificá esas operaciones con pruebas funcionales y políticas del proyecto correcto antes de dar Supabase por cerrado.
 
 ## Despliegue automatizado de migraciones
 
