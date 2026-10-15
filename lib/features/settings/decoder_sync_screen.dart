@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -22,8 +21,6 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
 
   String _brand = _brands.first;
   String _model = _models.first;
-  bool _scanning = false;
-  String? _error;
   String? _scanMessage;
 
   @override
@@ -33,8 +30,6 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
 
   void _startScan() {
     setState(() {
-      _scanning = false;
-      _error = null;
       _scanMessage =
           'La detección automática aún no puede ejecutarse: falta implementar el protocolo de descubrimiento y la API de lectura de canales para un modelo de decodificador compatible. No se simula una conexión ni se inventan niveles de señal.';
     });
@@ -76,14 +71,14 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
                 initialValue: _brand,
                 decoration: const InputDecoration(labelText: 'Marca del equipo'),
                 items: _brands.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: _scanning ? null : (v) => setState(() => _brand = v ?? _brands.first),
+                onChanged: (v) => setState(() => _brand = v ?? _brands.first),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _model,
                 decoration: const InputDecoration(labelText: 'Modelo / estándar'),
                 items: _models.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: _scanning ? null : (v) => setState(() => _model = v ?? _models.first),
+                onChanged: (v) => setState(() => _model = v ?? _models.first),
               ),
               const SizedBox(height: 12),
               Container(
@@ -106,20 +101,14 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
                   ],
                 ),
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: Colors.orangeAccent)),
-              ],
               if (_scanMessage != null) ...[
                 const SizedBox(height: 12),
                 Text(_scanMessage!, style: const TextStyle(color: Colors.orangeAccent, height: 1.4)),
               ],
               const SizedBox(height: 16),
               SizedBox(width: double.infinity, child: FilledButton.icon(
-                onPressed: _scanning ? null : _startScan,
-                icon: _scanning
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.radar_rounded),
+                onPressed: _startScan,
+                icon: const Icon(Icons.radar_rounded),
                 label: const Text('BUSCAR DECODIFICADOR'),
               )),
             ]),
