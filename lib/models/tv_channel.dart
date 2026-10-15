@@ -35,22 +35,23 @@ class TvChannel {
     final group = (groupTitle ?? '').toLowerCase();
     final searchable = '$categoryText $group ${name.toLowerCase()}';
 
-    if (RegExp(r'\b(news|noticias|informativo|noticiero|c5n|a24|cnn)\b')
-        .hasMatch(searchable)) {
+    if (RegExp(
+      r'\b(news|noticias|informativo|noticiero|c5n|a24|cnn|al jazeera|euronews|bbc news|dw news|france 24|sky news|newsmax|fox news|bloomberg|reuters|teleSUR|todo noticias|canal 26|crónica|cronica)\b',
+    ).hasMatch(searchable)) {
       return 'Noticias';
     }
     if (RegExp(
-      r'\b(documentary|documentaries|documental|documentales|culture|cultural|cultura|education|educación|history|historia|arte|arts|encuentro|pakapaka)\b',
+      r'\b(documentary|documentaries|documental|documentales|culture|cultural|cultura|education|educación|history|historia|arte|arts|encuentro|pakapaka|discovery|national geographic|nat geo|animal planet|smithsonian|science|wildlife|nature|travel channel)\b',
     ).hasMatch(searchable)) {
       return 'Cultura/Documentales';
     }
     if (RegExp(
-      r'\b(hbo|cinemax|showtime|starz|premium|paramount\+|sky cinema|canal\+|cine|cinema|film|películas|peliculas)\b',
+      r'\b(hbo|cinemax|showtime|starz|premium|paramount\+|sky cinema|canal\+|cine|cinema|film|movie|movies|películas|peliculas|cinecanal|warner|tcm|amc|golden|space|studio universal|universal cinema|star channel)\b',
     ).hasMatch(searchable)) {
       return 'HBO/Cine';
     }
     if (RegExp(
-      r'\b(sport|sports|deporte|deportivo|espn|tyc|fox sports|tnt sports|dsports|deportv|eurosport|nba|nfl|formula 1|f1)\b',
+      r'\b(sport|sports|deporte|deportivo|espn|tyc|fox sports|tnt sports|dsports|d sports|directv sports|deportv|eurosport|sportv|bein sports|nba|nfl|mlb|nhl|ufc|wwe|dazn|formula 1|formula one|f1|motorsport|racing|golf|tennis|boxing|cricket|rugby|volleyball|basketball|baseball|football|soccer|fútbol|futbol|olympics|olympic|atp|wta|uefa|fifa|premier league|laliga|fight network)\b',
     ).hasMatch(searchable)) {
       return 'Deportes';
     }
