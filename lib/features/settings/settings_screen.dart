@@ -251,7 +251,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: _saving ? null : _saveSettings,
                   child: Text(_saving ? 'GUARDANDO…' : 'GUARDAR PERFIL'),
                 ),
-              ),
             ],
           ),
         ),
@@ -517,7 +516,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) {
                   if (value != null) _setTextScale(value);
                 },
-                child: Column(
+                child: const Column(
                   children: [
                     RadioListTile<double>(
                       value: 1.0,
