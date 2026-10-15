@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/accessibility_settings.dart';
 import 'core/navigation/legacy_route_registry.dart';
 import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
@@ -18,6 +19,15 @@ class MiltvPlusApp extends StatelessWidget {
         title: 'MILTVPLUS',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
+        builder: (context, child) => ValueListenableBuilder<double>(
+          valueListenable: AppAccessibilitySettings.textScale,
+          builder: (context, scale, _) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
         routes: LegacyRouteRegistry.routes,
         home: const _IntroCoordinator(),
       );
