@@ -1,4 +1,4 @@
-/// Modelos tipados para el esquema actual de Supabase de MILTV PLUS.
+// Modelos tipados para el esquema actual de Supabase de MILTV PLUS.
 
 List<String> _streamUrlList(Map<String, dynamic> json, String fallback) {
   final raw = json['stream_urls'];
