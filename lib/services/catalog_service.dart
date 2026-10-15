@@ -34,20 +34,60 @@ class CatalogService {
   }
 
   Future<List<ChannelModel>> getChannels({List<String>? categories}) async {
-    final response = categories == null || categories.isEmpty
-        ? await _supabase
-            .from('channels')
-            .select()
-            .eq('is_published', true)
-            .order('sort_order', ascending: true)
-            .order('title', ascending: true)
-        : await _supabase
-            .from('channels')
-            .select()
-            .eq('is_published', true)
-            .inFilter('category', categories)
-            .order('sort_order', ascending: true)
-            .order('title', ascending: true);
+    // Database category values are not always canonical: existing providers
+    // use English labels, lowercase values, or broad categories such as
+    // "General". Expand known aliases so the UI's canonical genre filter
+    // does not discard valid published channels before name-based detection.
+    final expandedCategories = <String>{};
+    for (final category in categories ?? const <String>[]) {
+      final normalized = category.trim().toLowerCase();
+      switch (normalized) {
+        case 'deportes':
+        case 'sports':
+        case 'sport':
+          expandedCategories.addAll([
+            category, 'Deportes', 'deportes', 'Sports', 'sports', 'Sport', 'sport',
+          ]);
+        case 'noticias':
+        case 'news':
+          expandedCategories.addAll([
+            category, 'Noticias', 'noticias', 'News', 'news',
+          ]);
+        case 'cultura/documentales':
+        case 'culture':
+        case 'documentary':
+          expandedCategories.addAll([
+            category, 'Cultura/Documentales', 'culture', 'Culture',
+            'documentary', 'Documentary', 'documentaries', 'Documentaries',
+            'education', 'Education',
+          ]);
+        case 'hbo/cine':
+        case 'movies':
+        case 'cinema':
+          expandedCategories.addAll([
+            category, 'HBO/Cine', 'movies', 'Movies', 'cinema', 'Cinema',
+            'film', 'Film', 'films', 'Films',
+          ]);
+        case 'tv argentina':
+        case 'argentina':
+          expandedCategories.addAll([
+            category, 'TV Argentina', 'Argentina', 'argentina',
+          ]);
+        default:
+          if (category.trim().isNotEmpty) expandedCategories.add(category.trim());
+      }
+    }
+
+    final query = _supabase
+        .from('channels')
+        .select()
+        .eq('is_published', true);
+    final filteredQuery = expandedCategories.isEmpty
+        ? query
+        : query.inFilter('category', expandedCategories.toList(growable: false));
+    final response = await filteredQuery
+        .order('sort_order', ascending: true)
+        .order('title', ascending: true);
 
     return (response as List<dynamic>)
         .map((item) => ChannelModel.fromJson(
