@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -36,15 +37,19 @@ class M3uPlaylistService {
       throw const FormatException('La respuesta no contiene una lista M3U.');
     }
 
-    const maxPlaylistBytes = 20 * 1024 * 1024;
-    final bytes = <int>[];
+    // Global IPTV playlists can exceed 20 MB. A strict 20 MB ceiling made
+    // the repository playlist fail before the UI could show any channels.
+    const maxPlaylistBytes = 50 * 1024 * 1024;
+    final bytes = BytesBuilder(copy: false);
+    var receivedBytes = 0;
     await for (final chunk in responseBody.stream) {
-      if (bytes.length + chunk.length > maxPlaylistBytes) {
-        throw const FormatException('La lista supera el límite de 20 MB.');
+      receivedBytes += chunk.length;
+      if (receivedBytes > maxPlaylistBytes) {
+        throw const FormatException('La lista supera el límite seguro de 50 MB.');
       }
-      bytes.addAll(chunk);
+      bytes.add(chunk);
     }
-    final body = utf8.decode(bytes, allowMalformed: true);
+    final body = utf8.decode(bytes.takeBytes(), allowMalformed: true);
     if (body.trim().isEmpty) {
       throw const FormatException('La lista recibida está vacía.');
     }

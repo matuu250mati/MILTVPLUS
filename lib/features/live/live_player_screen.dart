@@ -337,33 +337,40 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 10),
                           child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                         ),
-                      if (_variants.isNotEmpty)
-                        PopupMenuButton<HlsVariant>(
-                          tooltip: 'Calidad de imagen',
-                          onSelected: _chooseQuality,
-                          color: const Color(0xFF17191F),
-                          itemBuilder: (context) => [
+                      PopupMenuButton<HlsVariant>(
+                        tooltip: 'Configurar calidad de imagen',
+                        onSelected: _chooseQuality,
+                        color: const Color(0xFF17191F),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem<HlsVariant>(
+                            value: HlsVariant(url: '', label: 'Auto'),
+                            child: Text('Automática (adaptativa)', style: TextStyle(color: Colors.white)),
+                          ),
+                          if (_variants.isEmpty)
                             const PopupMenuItem<HlsVariant>(
-                              value: HlsVariant(url: '', label: 'Auto'),
-                              child: Text('Automática (adaptativa)', style: TextStyle(color: Colors.white)),
+                              enabled: false,
+                              child: Text(
+                                'El proveedor no publica calidades manuales',
+                                style: TextStyle(color: Colors.white54),
+                              ),
                             ),
-                            ..._variants.map((variant) => PopupMenuItem<HlsVariant>(
-                              value: variant,
-                              child: Text(variant.label, style: const TextStyle(color: Colors.white)),
-                            )),
-                          ],
-                          child: const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.high_quality, color: Colors.white),
-                                SizedBox(width: 6),
-                                Text('CALIDAD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
+                          ..._variants.map((variant) => PopupMenuItem<HlsVariant>(
+                            value: variant,
+                            child: Text(variant.label, style: const TextStyle(color: Colors.white)),
+                          )),
+                        ],
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.settings_rounded, color: Colors.white),
+                              SizedBox(width: 6),
+                              Text('CALIDAD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                            ],
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),

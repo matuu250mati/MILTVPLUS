@@ -19,14 +19,14 @@ class AdultBrowserScreen extends StatefulWidget {
 
 class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   static const _providers = <_AdultProvider>[
-    _AdultProvider('Pornhub', 'https://www.pornhub.com/', Icons.play_circle_filled_rounded),
-    _AdultProvider('XVideos', 'https://www.xvideos.com/', Icons.movie_rounded),
-    _AdultProvider('XNXX', 'https://www.xnxx.com/', Icons.video_library_rounded),
-    _AdultProvider('RedTube', 'https://www.redtube.com/', Icons.smart_display_rounded),
-    _AdultProvider('xHamster', 'https://xhamster.com/', Icons.ondemand_video_rounded),
-    _AdultProvider('YouPorn', 'https://www.youporn.com/', Icons.play_circle_outline_rounded),
-    _AdultProvider('SpankBang', 'https://spankbang.com/', Icons.video_collection_rounded),
-    _AdultProvider('Eporner', 'https://www.eporner.com/', Icons.theaters_rounded),
+    _AdultProvider('Pornhub', 'https://www.pornhub.com/', 'https://www.pornhub.com/favicon.ico', Icons.play_circle_filled_rounded),
+    _AdultProvider('XVideos', 'https://www.xvideos.com/', 'https://www.xvideos.com/favicon.ico', Icons.movie_rounded),
+    _AdultProvider('XNXX', 'https://www.xnxx.com/', 'https://www.xnxx.com/favicon.ico', Icons.video_library_rounded),
+    _AdultProvider('RedTube', 'https://www.redtube.com/', 'https://www.redtube.com/favicon.ico', Icons.smart_display_rounded),
+    _AdultProvider('xHamster', 'https://xhamster.com/', 'https://xhamster.com/favicon.ico', Icons.ondemand_video_rounded),
+    _AdultProvider('YouPorn', 'https://www.youporn.com/', 'https://www.youporn.com/favicon.ico', Icons.play_circle_outline_rounded),
+    _AdultProvider('SpankBang', 'https://spankbang.com/', 'https://spankbang.com/favicon.ico', Icons.video_collection_rounded),
+    _AdultProvider('Eporner', 'https://www.eporner.com/', 'https://www.eporner.com/favicon.ico', Icons.theaters_rounded),
   ];
 
   late final WebViewController _controller;
@@ -305,7 +305,16 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
                                             ? AppTheme.accent
                                             : Colors.white,
                                       ),
-                                      icon: Icon(_providers[index].icon, size: 25),
+                                      icon: SizedBox(
+                                        width: 28,
+                                        height: 28,
+                                        child: Image.network(
+                                          _providers[index].logoUrl,
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.medium,
+                                          errorBuilder: (_, __, ___) => Icon(_providers[index].icon, size: 25),
+                                        ),
+                                      ),
                                     ),
                                   ),
                               ],
@@ -350,9 +359,10 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
 }
 
 class _AdultProvider {
-  const _AdultProvider(this.label, this.url, this.icon);
+  const _AdultProvider(this.label, this.url, this.logoUrl, this.icon);
 
   final String label;
   final String url;
+  final String logoUrl;
   final IconData icon;
 }

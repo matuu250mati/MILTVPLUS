@@ -45,7 +45,7 @@ class _AppShellState extends State<AppShell> {
   Widget page() {
     switch (selected) {
       case 0:
-        return const LiveTvScreen();
+        return LiveTvScreen(onBack: () => setState(() => selected = 1));
       case 1:
         return HomeScreen(onNavigate: (index) => setState(() => selected = index));
       case 2:
@@ -55,7 +55,7 @@ class _AppShellState extends State<AppShell> {
       case 4:
         return const CatalogScreen(category: 'ANIME');
       case 5:
-        return const LiveTvScreen(categoryFilter: ['Deportes']);
+        return LiveTvScreen(categoryFilter: const ['Deportes'], onBack: () => setState(() => selected = 1));
       case 6:
         return const CatalogScreen(category: 'INFANTIL');
       case 7:
@@ -230,7 +230,16 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope<Object?>(
+      // Back from any section returns to the dashboard instead of closing the
+      // application. Back on the dashboard retains Android's normal exit behavior.
+      canPop: selected == 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && selected != 1 && mounted) {
+          setState(() => selected = 1);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.background,
       appBar: selected == 10 ? null : AppBar(
         backgroundColor: const Color(0xFF080A10),
@@ -277,6 +286,7 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
