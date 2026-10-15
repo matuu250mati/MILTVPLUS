@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/supabase_config.dart';
 import '../auth/auth_screen.dart';
+import '../onboarding/miltvplus_guide.dart';
 import '../../services/ota_update_service.dart';
 import '../../services/m3u_playlist_service.dart';
 import '../../services/channel_storage_service.dart';
@@ -469,6 +470,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _InfoRow(icon: Icons.system_update_alt_rounded, color: Color(0xFFFF7CA8), title: 'Actualizaciones', description: 'La actualización automática requiere que exista una versión publicada en GitHub Releases.'),
             _InfoRow(icon: Icons.satellite_alt_rounded, color: Color(0xFF65B7FF), title: 'Equipos externos', description: 'Solo se integran sintonizadores compatibles o dispositivos que publiquen una señal autorizada por red; no se captura HDMI genérico.'),
           ]),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.menu_book_rounded, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Guía de uso', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Volvé a consultar las instrucciones de TV en Vivo, Deportes, configuración, actualizaciones y seguridad.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await showMiltvPlusGuide(
+                      context,
+                      profileName: _nameController.text.trim(),
+                    );
+                  },
+                  icon: const Icon(Icons.play_circle_outline_rounded),
+                  label: const Text('ABRIR GUÍA PASO A PASO'),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         Container(
