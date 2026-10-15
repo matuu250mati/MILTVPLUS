@@ -374,6 +374,92 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildWideSidebar() {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF06101F), Color(0xFF050914)],
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 12, 20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(13),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
+                      ),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 30),
+                  ),
+                  const SizedBox(width: 9),
+                  const Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
+                          children: [
+                            TextSpan(text: 'MILTV'),
+                            TextSpan(text: 'PLUS', style: TextStyle(color: AppTheme.accent)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                children: [
+                  _drawerItem(1),
+                  _drawerItem(0),
+                  _drawerItem(5),
+                  const Divider(height: 20, color: Color(0x303A91C5)),
+                  _drawerItem(2),
+                  _drawerItem(3),
+                  _drawerItem(4),
+                  _drawerItem(6),
+                  _drawerItem(7),
+                  _drawerItem(8),
+                  if (_isModerator) _drawerItem(9),
+                  const Divider(height: 20, color: Color(0x303A91C5)),
+                  _drawerItem(10),
+                  _drawerItem(11),
+                  if (_isModerator) _drawerItem(12),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.circle, size: 9, color: AppTheme.accent),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('MILTVPLUS · Streaming', style: TextStyle(color: AppTheme.muted, fontSize: 10)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope<Object?>(
@@ -417,19 +503,48 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ),
       ),
       drawer: _buildDrawer(),
-      body: Stack(
-        children: [
-          const _AmbientBackground(),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: selected == 10
-                ? EdgeInsets.zero
-                : const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: _pageView(),
-            ),
-          ),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wideLayout = constraints.maxWidth >= 1000;
+          if (wideLayout) {
+            return Row(
+              children: [
+                SizedBox(width: 218, child: _buildWideSidebar()),
+                const VerticalDivider(width: 1, color: Color(0xFF17304A)),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      const _AmbientBackground(),
+                      SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: selected == 10
+                              ? EdgeInsets.zero
+                              : const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                          child: _pageView(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+          return Stack(
+            children: [
+              const _AmbientBackground(),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: selected == 10
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  child: _pageView(),
+                ),
+              ),
+            ],
+          );
+        },
       ),
       ),
     );
