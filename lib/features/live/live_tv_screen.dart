@@ -444,7 +444,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
             (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null)) {
+            (existing.category == null && channel.category != null) ||
+            (existing.logoUrl == null && channel.logoUrl != null) ||
+            (existing.tvgId == null && channel.tvgId != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
