@@ -108,7 +108,7 @@ class OtaUpdateService {
       }
       final body = data['body'] is String ? data['body'] as String : '';
       final mandatory = RegExp(
-        r'MILTVPLUS-REQUIRED-UPDATE:\\s*true',
+        r'MILTVPLUS-REQUIRED-UPDATE:\s*true',
         caseSensitive: false,
       ).hasMatch(body);
       final available = _compareVersions(latest, installed) > 0;
