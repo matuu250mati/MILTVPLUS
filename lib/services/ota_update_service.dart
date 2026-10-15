@@ -14,6 +14,7 @@ class OtaUpdateInfo {
     this.currentVersion = '',
     this.latestVersion = '',
     this.sizeBytes = 0,
+    this.releaseNotes = '',
   });
 
   final String message;
@@ -22,6 +23,7 @@ class OtaUpdateInfo {
   final String currentVersion;
   final String latestVersion;
   final int sizeBytes;
+  final String releaseNotes;
 
   String get formattedSize {
     if (sizeBytes <= 0) return 'Tamaño no publicado';
