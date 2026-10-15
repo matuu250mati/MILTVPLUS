@@ -163,7 +163,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool get _isModerator {
     if (!isSupabaseConfigured) return false;
     final role = Supabase.instance.client.auth.currentUser?.appMetadata['role'];
-    return role == 'admin' || role == 'moderator';
+    return role == 'admin';
   }
 
   Widget page() {
@@ -227,16 +227,38 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
-                      color: AppTheme.accent,
-                      borderRadius: BorderRadius.circular(15),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF5BE58B), Color(0xFFB5FF35)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.accent.withValues(alpha: .20),
+                          blurRadius: 18,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.black,
-                      size: 39,
+                    child: Center(
+                      child: Container(
+                        width: 43,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF07111F),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: AppTheme.accent, width: 2.2),
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 27,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -331,7 +353,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                           : item.label == 'EXPLORAR'
                               ? 'Explorar'
                               : item.label == 'PUBLICAR'
-                              ? 'Proponer película o serie'
+                              ? 'Publicación de contenido'
                               : item.label == '+18'
                                   ? 'Zona +18'
                                   : item.label == 'CONFIGURACIÓN'
