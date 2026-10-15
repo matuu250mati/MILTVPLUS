@@ -238,6 +238,7 @@ class _CatalogEntry {
     required this.year,
     required this.synopsis,
     required this.streamUrl,
+    this.streamUrls = const [],
     required this.seriesId,
   });
 
@@ -248,6 +249,7 @@ class _CatalogEntry {
   final int? year;
   final String? synopsis;
   final String? streamUrl;
+  final List<String> streamUrls;
   final String? seriesId;
 
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
@@ -257,7 +259,8 @@ class _CatalogEntry {
         posterUrl: movie.logo,
         year: movie.releaseYear,
         synopsis: movie.synopsis,
-        streamUrl: movie.urlStream,
+        streamUrl: movie.streamUrls.isNotEmpty ? movie.streamUrls.first : movie.urlStream,
+        streamUrls: movie.streamUrls,
         seriesId: null,
       );
 
@@ -269,6 +272,7 @@ class _CatalogEntry {
         year: series.releaseYear,
         synopsis: series.synopsis,
         streamUrl: null,
+        streamUrls: const [],
         seriesId: series.id,
       );
 
@@ -293,6 +297,9 @@ class _CatalogEntry {
       year: null,
       synopsis: item['description'] as String?,
       streamUrl: item['stream_url'] as String?,
+      streamUrls: (item['stream_url'] as String?)?.trim().isNotEmpty == true
+          ? <String>[(item['stream_url'] as String).trim()]
+          : const <String>[],
       seriesId: null,
     );
   }
@@ -347,7 +354,7 @@ Future<void> _openSeriesEpisodes(
       ),
     );
     if (selectedEpisode == null || !context.mounted) return;
-    if (selectedEpisode.urlStream.trim().isEmpty) {
+    if (selectedEpisode.streamUrls.isEmpty && selectedEpisode.urlStream.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Este episodio todavía no está disponible para reproducir.')),
       );
@@ -357,7 +364,12 @@ Future<void> _openSeriesEpisodes(
       MaterialPageRoute<void>(
         builder: (_) => CatalogPlayerScreen(
           title: '${entry.title} · T${selectedEpisode.seasonNumber}E${selectedEpisode.episodeNumber}',
-          streamUrl: selectedEpisode.urlStream,
+          streamUrl: selectedEpisode.streamUrls.isNotEmpty
+              ? selectedEpisode.streamUrls.first
+              : selectedEpisode.urlStream,
+          backupStreamUrls: selectedEpisode.streamUrls.length > 1
+              ? selectedEpisode.streamUrls.skip(1).toList(growable: false)
+              : const <String>[],
         ),
       ),
     );
@@ -382,7 +394,12 @@ class _CatalogCard extends StatelessWidget {
                   MaterialPageRoute<void>(
                     builder: (_) => CatalogPlayerScreen(
                       title: entry.title,
-                      streamUrl: entry.streamUrl!,
+                      streamUrl: entry.streamUrls.isNotEmpty
+                          ? entry.streamUrls.first
+                          : entry.streamUrl!,
+                      backupStreamUrls: entry.streamUrls.length > 1
+                          ? entry.streamUrls.skip(1).toList(growable: false)
+                          : const <String>[],
                     ),
                   ),
                 )
