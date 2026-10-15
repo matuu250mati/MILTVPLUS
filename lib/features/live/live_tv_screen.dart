@@ -141,21 +141,48 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Continue with Supabase and cached channels when GitHub Raw is offline.
       }
 
-      // Use the curated public source only if no channels were found at all.
-      if (merged.isEmpty &&
-          (widget.categoryFilter == null || widget.categoryFilter!.isEmpty)) {
-        try {
-          final publicChannels =
-              await m3uPlaylistService.importFromUrl(_curatedFreePlaylist);
-          for (final channel in publicChannels) {
-            addUnique(channel);
+      // If the primary playlist is unavailable or contains no channels for the
+      // selected genre, try a smaller, genre-specific public playlist. Previously
+      // this fallback ran only on the all-TV screen, leaving Deportes empty.
+      if (merged.isEmpty) {
+        final requested = (widget.categoryFilter ?? const <String>[])
+            .map((value) => value.trim().toLowerCase())
+            .toSet();
+        final sourceId = requested.contains('deportes')
+            ? 'sports'
+            : requested.contains('noticias')
+                ? 'news'
+                : requested.contains('tv argentina')
+                    ? 'argentina'
+                    : requested.contains('cultura/documentales')
+                        ? 'culture'
+                        : requested.contains('hbo/cine')
+                            ? 'movies'
+                            : null;
+        final sourceUrls = <String>[
+          if (sourceId != null)
+            ..._publicPlaylistSources
+                .where((source) => source.id == sourceId)
+                .map((source) => source.url),
+          if (sourceId == null && (widget.categoryFilter == null || widget.categoryFilter!.isEmpty))
+            _curatedFreePlaylist,
+        ];
+        for (final sourceUrl in sourceUrls) {
+          try {
+            final publicChannels = await m3uPlaylistService.importFromUrl(sourceUrl);
+            for (final channel in publicChannels) {
+              if (_matchesCategoryFilter(channel)) addUnique(channel);
+            }
+            if (merged.isNotEmpty) {
+              publicFallbackLoaded = true;
+              if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
+                await channelStorage.save(merged.values.toList(growable: false));
+              }
+              break;
+            }
+          } catch (_) {
+            // Continue to the next safe public source.
           }
-          publicFallbackLoaded = publicChannels.isNotEmpty;
-          if (publicFallbackLoaded) {
-            await channelStorage.save(merged.values.toList(growable: false));
-          }
-        } catch (_) {
-          // Keep the screen usable even when the public playlist is unavailable.
         }
       }
 
@@ -520,7 +547,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final compact = size.width < 700;
+    // Avoid squeezing channel labels into a narrow side column on phones/tablets.
+    final compact = size.width < 900;
     final groups = channels.map((channel) => channel.liveSection).toSet().toList()..sort();
     final countries = channels
         .map((channel) => channel.country?.trim())
@@ -631,12 +659,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                 : Row(
                     children: [
                       Expanded(
-                        flex: 7,
+                        flex: 6,
                         child: _PlayerPanel(controller: controller, loading: loading, error: error),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 10),
                       Expanded(
-                        flex: 3,
+                        flex: 4,
                         child: _ChannelList(
                           channels: channels,
                           selected: selected,
