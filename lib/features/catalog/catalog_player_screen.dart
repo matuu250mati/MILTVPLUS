@@ -225,7 +225,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                             ),
                             Center(
                               child: ValueListenableBuilder<VideoPlayerValue>(
-                                valueListenable: controller!,
+                                valueListenable: controller,
                                 builder: (context, value, _) => IconButton.filledTonal(
                                   tooltip: value.isPlaying ? 'Pausar' : 'Reproducir',
                                   iconSize: 42,
