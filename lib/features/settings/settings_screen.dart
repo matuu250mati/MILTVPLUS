@@ -512,38 +512,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(color: AppTheme.muted, height: 1.5),
               ),
               const SizedBox(height: 8),
-              RadioListTile<double>(
-                value: 1.0,
+              RadioGroup<double>(
                 groupValue: _textScale,
-                activeColor: AppTheme.accent,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Normal'),
-                subtitle: const Text('Tamaño actual del diseño'),
                 onChanged: (value) {
                   if (value != null) _setTextScale(value);
                 },
+                child: Column(
+                  children: [
+                    RadioListTile<double>(
+                      value: 1.0,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Normal'),
+                      subtitle: const Text('Tamaño actual del diseño'),
+                    ),
+                    RadioListTile<double>(
+                      value: 1.15,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Grande'),
+                      subtitle: const Text('Texto un poco más grande'),
+                    ),
+                    RadioListTile<double>(
+                      value: 1.3,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Muy grande'),
+                      subtitle: const Text('Para una lectura más cómoda'),
+                    ),
+                  ],
+                ),
               ),
-              RadioListTile<double>(
-                value: 1.15,
-                groupValue: _textScale,
-                activeColor: AppTheme.accent,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Grande'),
-                subtitle: const Text('Texto un poco más grande'),
-                onChanged: (value) {
-                  if (value != null) _setTextScale(value);
-                },
-              ),
-              RadioListTile<double>(
-                value: 1.3,
-                groupValue: _textScale,
-                activeColor: AppTheme.accent,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Muy grande'),
-                subtitle: const Text('Para una lectura más cómoda'),
-                onChanged: (value) {
-                  if (value != null) _setTextScale(value);
-                },
               ),
             ],
           ),
