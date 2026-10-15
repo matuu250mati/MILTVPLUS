@@ -39,17 +39,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final requested = widget.categoryFilter;
     if (requested == null || requested.isEmpty) return true;
 
-    // Genre-filtered screens are strict: do not infer a category from a
-    // channel name, country, or M3U group. The catalog migration owns
-    // normalization; unclassified rows stay out of genre-specific views.
+    // Use the canonical classifier for both Supabase and M3U entries, so
+    // imported sports/news channels are not lost just because category is absent.
     final allowed = requested
         .map((value) => value.trim().toLowerCase())
         .toSet();
-    final category = (channel.category?.trim().isNotEmpty == true
-            ? channel.category!.trim()
-            : channel.liveSection)
-        .toLowerCase();
-    return allowed.contains(category);
+    return allowed.contains(channel.liveSection.trim().toLowerCase());
   }
 
   String _streamIdentity(String value) {
@@ -90,7 +85,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
             (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null)) {
+            (existing.category == null && channel.category != null) ||
+            (existing.logoUrl == null && channel.logoUrl != null) ||
+            (existing.tvgId == null && channel.tvgId != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
