@@ -11,10 +11,12 @@ class CatalogPlayerScreen extends StatefulWidget {
     super.key,
     required this.title,
     required this.streamUrl,
+    this.backupStreamUrls = const [],
   });
 
   final String title;
   final String streamUrl;
+  final List<String> backupStreamUrls;
 
   @override
   State<CatalogPlayerScreen> createState() => _CatalogPlayerScreenState();
@@ -52,42 +54,55 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   }
 
   Future<void> _initialize() async {
-    final uri = Uri.tryParse(widget.streamUrl.trim());
-    if (uri == null ||
-        uri.host.isEmpty ||
-        uri.userInfo.isNotEmpty ||
-        uri.scheme != 'https') {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = 'La fuente de reproducción no es válida.';
-        });
-      }
-      return;
+    final urls = <String>[];
+    for (final raw in [widget.streamUrl, ...widget.backupStreamUrls]) {
+      final value = raw.trim();
+      if (value.isNotEmpty && !urls.contains(value)) urls.add(value);
     }
 
-    VideoPlayerController? candidate;
-    try {
-      candidate = VideoPlayerController.networkUrl(uri);
-      await candidate.initialize().timeout(const Duration(seconds: 25));
-      await candidate.play();
-      if (!mounted) {
-        await candidate.dispose();
-        return;
+    String? lastError;
+    for (final value in urls) {
+      final uri = Uri.tryParse(value);
+      if (uri == null ||
+          uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty ||
+          uri.scheme != 'https') {
+        lastError = 'Se omitió una fuente no válida.';
+        continue;
       }
-      setState(() {
-        _controller = candidate;
-        _loading = false;
-        _error = null;
-      });
-    } catch (_) {
-      await candidate?.dispose();
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'No se pudo reproducir este título. La fuente puede estar caída o no admitir reproducción directa.';
-      });
+
+      VideoPlayerController? candidate;
+      try {
+        candidate = VideoPlayerController.networkUrl(uri);
+        await candidate.initialize().timeout(const Duration(seconds: 9));
+        if (!mounted) {
+          await candidate.dispose();
+          return;
+        }
+        await candidate.play();
+        if (!mounted) {
+          await candidate.dispose();
+          return;
+        }
+        setState(() {
+          _controller = candidate;
+          _loading = false;
+          _error = null;
+        });
+        return;
+      } catch (_) {
+        await candidate?.dispose();
+        lastError = 'Una fuente no respondió o no admite este formato.';
+      }
     }
+
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _error = urls.isEmpty
+          ? 'Este título todavía no tiene fuentes de reproducción publicadas.'
+          : 'No se pudo iniciar la reproducción. Se probaron las fuentes disponibles. ${lastError ?? ''}';
+    });
   }
 
   void _retry() {
