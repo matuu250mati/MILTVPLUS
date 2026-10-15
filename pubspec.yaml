@@ -1,7 +1,7 @@
 name: miltv_plus
 description: MILTVPLUS - experiencia multimedia para Android.
 publish_to: "none"
-version: 3.9.9+399
+version: 3.10.0+400
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
