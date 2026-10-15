@@ -835,9 +835,11 @@ class _ChannelList extends StatelessWidget {
           const Divider(height: 1, color: Color(0x223FFFFF)),
           Expanded(
             child: channels.isEmpty
-                ? const Center(child: Padding(padding: EdgeInsets.all(18),
-                    child: Text('Todavía no hay canales. Elegí una fuente pública o importá tu lista M3U.',
-                        textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5))))
+                ? loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const Center(child: Padding(padding: EdgeInsets.all(18),
+                        child: Text('Todavía no hay canales. Elegí una fuente pública o importá tu lista M3U.',
+                            textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5))))
                 : filteredIndices.isEmpty
                     ? const Center(child: Padding(padding: EdgeInsets.all(18),
                         child: Text('No se encontraron canales con esa búsqueda.',
