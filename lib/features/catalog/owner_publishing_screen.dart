@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../services/catalog_service.dart';
 
 /// Owner-only publisher. RLS and Storage policies enforce authorization server-side.
 class OwnerPublishingScreen extends StatefulWidget {
@@ -26,7 +25,6 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
   final _year = TextEditingController(text: DateTime.now().year.toString());
   final _season = TextEditingController(text: '1');
   final _episode = TextEditingController(text: '1');
-  final _catalog = CatalogService();
 
   String _type = 'movie';
   String? _seriesId;
@@ -226,9 +224,11 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
             'Supabase rechazó la publicación (${error.code ?? 'sin código'}): ${error.message}. Confirmá que tu usuario tenga app_metadata.role = owner y que la migración esté aplicada.');
       }
     } catch (error) {
-      if (mounted) setState(() => _status = error is FormatException
-          ? error.message
-          : 'No se pudo publicar el contenido. Revisá la conexión, la URL/archivo y la configuración de Supabase.');
+      if (mounted) {
+        setState(() => _status = error is FormatException
+            ? error.message
+            : 'No se pudo publicar el contenido. Revisá la conexión, la URL/archivo y la configuración de Supabase.');
+      }
     } finally {
       if (mounted) setState(() => _publishing = false);
     }
@@ -280,7 +280,8 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _type,
+                    key: ValueKey(_type),
+                    initialValue: _type,
                     decoration: const InputDecoration(labelText: 'Qué vas a publicar'),
                     items: const [
                       DropdownMenuItem(value: 'movie', child: Text('Película')),
@@ -299,7 +300,8 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
                   const SizedBox(height: 14),
                   if (_type == 'episode') ...[
                     DropdownButtonFormField<String>(
-                      value: _seriesId,
+                      key: ValueKey(_seriesId),
+                      initialValue: _seriesId,
                       decoration: const InputDecoration(labelText: 'Serie de destino'),
                       items: _seriesOptions.map((row) => DropdownMenuItem<String>(
                         value: row['id'] as String,
