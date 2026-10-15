@@ -5,6 +5,7 @@ import '../../features/auth/auth_screen.dart';
 import 'adult_browser_screen.dart';
 import '../../services/secure_pin_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdultGateScreen extends StatefulWidget {
   const AdultGateScreen({super.key});
@@ -21,6 +22,8 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
   bool accountVerified = false;
   bool ageConfirmed = false;
   bool ageCheckboxChecked = false;
+  bool _policyAccepted = false;
+  bool _policyCheckboxChecked = false;
   String? error;
 
   @override
@@ -31,10 +34,23 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
 
   Future<void> loadPin() async {
     final saved = await service.hasPin();
+    final preferences = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       hasPin = saved;
+      _policyAccepted = preferences.getBool('miltvplus_adult_policy_accepted_v1') ?? false;
       loading = false;
+    });
+  }
+
+  Future<void> _acceptPolicy() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool('miltvplus_adult_policy_accepted_v1', true);
+    if (!mounted) return;
+    setState(() {
+      _policyAccepted = true;
+      ageConfirmed = false;
+      ageCheckboxChecked = false;
     });
   }
 
@@ -90,6 +106,46 @@ class _AdultGateScreenState extends State<AdultGateScreen> {
         if (!mounted) return;
         setState(() => accountVerified = true);
       });
+    }
+    if (!_policyAccepted) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.panel,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white.withValues(alpha: .08)),
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Center(child: Icon(Icons.gpp_good_rounded, size: 48, color: Color(0xFF5BE58B))),
+                const SizedBox(height: 12),
+                const Center(child: Text('SEGURIDAD Y CONVIVENCIA MILTVPLUS', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
+                const SizedBox(height: 16),
+                const Text('Antes de entrar a la Zona +18, leé estas condiciones. Esta confirmación se solicita una sola vez por dispositivo.', style: TextStyle(color: AppTheme.muted, height: 1.5)),
+                const SizedBox(height: 12),
+                const Text('• La sección es exclusiva para personas mayores de 18 años.\n\n• Respetá las leyes aplicables, los derechos de autor y las condiciones de cada sitio externo.\n\n• MILTVPLUS no controla ni garantiza la privacidad, disponibilidad o contenido de páginas de terceros.\n\n• No compartas tu PIN, contraseñas, códigos de recuperación ni datos de acceso.\n\n• El PIN local protege el acceso dentro de la app, pero no sustituye los controles parentales del sistema.', style: TextStyle(height: 1.45)),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _policyCheckboxChecked,
+                  onChanged: (value) => setState(() => _policyCheckboxChecked = value ?? false),
+                  title: const Text('Leí y acepto las políticas de seguridad y convivencia.'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 8),
+                SizedBox(width: double.infinity, child: FilledButton(
+                  onPressed: _policyCheckboxChecked ? _acceptPolicy : null,
+                  child: const Text('CONFIRMAR Y CONTINUAR'),
+                )),
+              ]),
+            ),
+          ),
+        ),
+      );
     }
     if (!ageConfirmed) {
       return Center(
