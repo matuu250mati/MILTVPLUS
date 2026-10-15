@@ -376,7 +376,7 @@ class _HeroBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const _LivePill(label: 'DESTACADO EN MILTVPLUS'),
+                  const _LivePill(label: 'RECOMENDADO'),
                   const SizedBox(height: 10),
                   Text(
                     title,
