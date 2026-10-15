@@ -121,7 +121,7 @@ class OtaUpdateService {
 
       // Refuse insecure redirects, even if the original URL used HTTPS.
       if (downloadResponse.redirects.any(
-        (redirect) => Uri.tryParse(redirect.location)?.scheme != 'https',
+        (redirect) => redirect.location.scheme != 'https',
       )) {
         await apkFile.delete();
         return const OtaUpdateResult(
@@ -143,7 +143,7 @@ class OtaUpdateService {
       }
 
       // Stream the checksum instead of loading a 50+ MB APK into memory.
-      final actualHash = (await sha256.bind(apkFile.openRead())).toString();
+      final actualHash = (await sha256.bind(apkFile.openRead()).first).toString();
       if (actualHash.toLowerCase() != expectedHash) {
         await apkFile.delete();
         return const OtaUpdateResult(
@@ -171,7 +171,7 @@ class OtaUpdateService {
           message: 'Todavía no hay una Release OTA publicada con app-release.apk y su SHA-256.',
         );
       }
-      return OtaUpdateResult(
+      return const OtaUpdateResult(
         message: 'No se pudo consultar o descargar la actualización. Revisá Internet e intentá otra vez.',
       );
     } on FileSystemException {
