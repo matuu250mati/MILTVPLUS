@@ -45,7 +45,7 @@ class _AppShellState extends State<AppShell> {
   Widget page() {
     switch (selected) {
       case 0:
-        return const LiveTvScreen(categoryFilter: ['TV Argentina']);
+        return const LiveTvScreen();
       case 1:
         return HomeScreen(onNavigate: (index) => setState(() => selected = index));
       case 2:
@@ -55,7 +55,7 @@ class _AppShellState extends State<AppShell> {
       case 4:
         return const CatalogScreen(category: 'ANIME');
       case 5:
-        return const LiveTvScreen(categoryFilter: ['Deportes', 'Deportivo']);
+        return const LiveTvScreen(categoryFilter: ['Deportes']);
       case 6:
         return const CatalogScreen(category: 'INFANTIL');
       case 7:

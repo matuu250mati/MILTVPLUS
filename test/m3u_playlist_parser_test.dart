@@ -114,4 +114,33 @@ https://cdn.example.org/live/playlist.m3u8
     expect(channels.single.name, 'Direct HLS');
     expect(channels.single.streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
   });
+
+  test('parses tvg-name, logo, id and quoted commas without breaking metadata', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1 tvg-name="Canal, Noticias" tvg-logo="https://example.com/logo.png" tvg-id="news.ar" tvg-country="AR" group-title="News",Canal, Noticias HD
+https://example.com/news.m3u8
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Canal, Noticias');
+    expect(channels.single.logoUrl, 'https://example.com/logo.png');
+    expect(channels.single.tvgId, 'news.ar');
+    expect(channels.single.country, 'AR');
+    expect(channels.single.groupTitle, 'News');
+    expect(channels.single.liveSection, 'Noticias');
+  });
+
+  test('skips web-player URLs instead of treating them as direct streams', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1,Player page
+https://www.twitch.tv/example
+#EXTINF:-1,Direct stream
+https://example.com/live.m3u8
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.name, 'Direct stream');
+  });
 }

@@ -39,30 +39,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final requested = widget.categoryFilter;
     if (requested == null || requested.isEmpty) return true;
 
-    final allowed = requested.map((value) => value.trim().toLowerCase()).toSet();
-    final category = channel.category?.trim().toLowerCase();
-    if (category != null && allowed.contains(category)) return true;
-
-    final country = channel.country?.trim().toLowerCase();
-    final searchable = [
-      channel.name,
-      channel.groupTitle ?? '',
-      channel.country ?? '',
-    ].join(' ').toLowerCase();
-
-    if (allowed.contains('tv argentina')) {
-      // Keep the Argentina view precise: uncategorized local imports belong in
-      // the unified TV screen until their country/group metadata identifies them.
-      return country == 'ar' ||
-          country == 'argentina' ||
-          searchable.contains('argentina');
-    }
-    if (allowed.contains('deportes') || allowed.contains('deportivo')) {
-      return RegExp(
-        r'\b(sport|sports|deporte|deportivo|fútbol|futbol|football|espn|tyc|tnt sports|fox sports|dsports|d sports|nba|nfl|formula 1|f1)\b',
-      ).hasMatch(searchable);
-    }
-    return false;
+    // Use the canonical classifier for both Supabase and M3U entries, so
+    // imported sports/news channels are not lost just because category is absent.
+    final allowed = requested
+        .map((value) => value.trim().toLowerCase())
+        .toSet();
+    return allowed.contains(channel.liveSection.trim().toLowerCase());
   }
 
   String _streamIdentity(String value) {
@@ -103,7 +85,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
             (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null)) {
+            (existing.category == null && channel.category != null) ||
+            (existing.logoUrl == null && channel.logoUrl != null) ||
+            (existing.tvgId == null && channel.tvgId != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
@@ -111,6 +95,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
             category: existing.category ?? channel.category,
+            logoUrl: existing.logoUrl ?? channel.logoUrl,
+            tvgId: existing.tvgId ?? channel.tvgId,
           );
         }
       }
@@ -136,8 +122,23 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Keep local channels usable when Supabase is offline or the user is signed out.
       }
 
-      // On a fresh install, load a curated free-to-air source so the screen
-      // does not start empty when neither local channels nor Supabase are configured.
+      // Load the repository-owned playlist as the primary M3U source on
+      // both the unified TV screen and genre-specific screens.
+      try {
+        final repositoryChannels =
+            await m3uPlaylistService.importFromUrl(_repositoryPlaylist);
+        for (final channel in repositoryChannels) {
+          if (_matchesCategoryFilter(channel)) addUnique(channel);
+        }
+        publicFallbackLoaded = repositoryChannels.isNotEmpty;
+        if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
+          await channelStorage.save(merged.values.toList(growable: false));
+        }
+      } catch (_) {
+        // Continue with Supabase and cached channels when GitHub Raw is offline.
+      }
+
+      // Use the curated public source only if no channels were found at all.
       if (merged.isEmpty &&
           (widget.categoryFilter == null || widget.categoryFilter!.isEmpty)) {
         try {
@@ -253,6 +254,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     }
   }
 
+  static const _repositoryPlaylist =
+      'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT';
   static const _curatedFreePlaylist =
       'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
   static const _globalPublicPlaylist =
@@ -456,7 +459,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
             (existing.country == null && channel.country != null) ||
             (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null)) {
+            (existing.category == null && channel.category != null) ||
+            (existing.logoUrl == null && channel.logoUrl != null) ||
+            (existing.tvgId == null && channel.tvgId != null)) {
           merged[key] = TvChannel(
             name: existing.name,
             streamUrl: existing.streamUrl,
@@ -464,6 +469,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
             category: existing.category ?? channel.category,
+            logoUrl: existing.logoUrl ?? channel.logoUrl,
+            tvgId: existing.tvgId ?? channel.tvgId,
           );
         }
       }
@@ -536,7 +543,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   Text(
                     widget.categoryFilter == null
                         ? 'TV EN VIVO'
-                        : widget.categoryFilter!.contains('Deportivo')
+                        : widget.categoryFilter!.contains('Deportes')
                             ? 'DEPORTES'
                             : 'TV EN VIVO · ARGENTINA',
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
@@ -816,7 +823,21 @@ class _ChannelList extends StatelessWidget {
                             selected: selected == channelIndex,
                             selectedTileColor: AppTheme.accent.withValues(alpha: .08),
                             onTap: () => onSelect(channelIndex),
-                            leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
+                            leading: channel.logoUrl?.isNotEmpty == true
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.network(
+                                  channel.logoUrl!,
+                                  width: 42,
+                                  height: 32,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    Icons.live_tv_rounded,
+                                    color: selected == channelIndex ? AppTheme.accent : AppTheme.muted,
+                                  ),
+                                ),
+                              )
+                            : Icon(Icons.live_tv_rounded, size: 22, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
                             title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               [

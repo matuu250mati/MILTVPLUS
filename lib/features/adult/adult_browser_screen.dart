@@ -19,17 +19,14 @@ class AdultBrowserScreen extends StatefulWidget {
 
 class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
   static const _providers = <_AdultProvider>[
-    _AdultProvider('Argentina · Pornhub', 'https://www.pornhub.com/video/search?search=argentina'),
-    _AdultProvider('Argentina · XVideos', 'https://www.xvideos.com/?k=argentina'),
-    _AdultProvider('Pornhub', 'https://www.pornhub.com/'),
-    _AdultProvider('XVideos', 'https://www.xvideos.com/'),
-    _AdultProvider('xHamster', 'https://xhamster.com/'),
-    _AdultProvider('YouPorn', 'https://www.youporn.com/'),
-    _AdultProvider('RedTube', 'https://www.redtube.com/'),
-    _AdultProvider('XNXX', 'https://www.xnxx.com/'),
-    _AdultProvider('SpankBang', 'https://spankbang.com/'),
-    _AdultProvider('Tube8', 'https://www.tube8.com/'),
-    _AdultProvider('Eporner', 'https://www.eporner.com/'),
+    _AdultProvider('Pornhub', 'https://www.pornhub.com/', Icons.play_circle_filled_rounded),
+    _AdultProvider('XVideos', 'https://www.xvideos.com/', Icons.movie_rounded),
+    _AdultProvider('XNXX', 'https://www.xnxx.com/', Icons.video_library_rounded),
+    _AdultProvider('RedTube', 'https://www.redtube.com/', Icons.smart_display_rounded),
+    _AdultProvider('xHamster', 'https://xhamster.com/', Icons.ondemand_video_rounded),
+    _AdultProvider('YouPorn', 'https://www.youporn.com/', Icons.play_circle_outline_rounded),
+    _AdultProvider('SpankBang', 'https://spankbang.com/', Icons.video_collection_rounded),
+    _AdultProvider('Eporner', 'https://www.eporner.com/', Icons.theaters_rounded),
   ];
 
   late final WebViewController _controller;
@@ -173,6 +170,15 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
     });
   }
 
+  void _toggleControls() {
+    if (_controlsVisible) {
+      _hideControlsTimer?.cancel();
+      setState(() => _controlsVisible = false);
+    } else {
+      _showControls();
+    }
+  }
+
   Future<void> _showPrivacyNote() async {
     await showDialog<void>(
       context: context,
@@ -256,87 +262,71 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeInOut,
-                top: _controlsVisible ? 0 : -180,
-                left: 0,
-                right: 0,
-                child: Material(
-                  color: const Color(0xF510131E),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          height: 48,
-                          child: Row(
-                            children: [
-                              IconButton(
-                                tooltip: 'Atrás',
-                                onPressed: () => unawaited(_goBackOrLock()),
-                                icon: Icon(
-                                  _canGoBack ? Icons.arrow_back_rounded : Icons.lock_rounded,
-                                  color: AppTheme.accent,
-                                ),
-                              ),
-                              const Expanded(
-                                child: Text(
-                                  '+18 · NAVEGACIÓN PRIVADA LOCAL',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: .6,
+                top: 12,
+                right: _controlsVisible ? 8 : -92,
+                bottom: 12,
+                child: SafeArea(
+                  child: Material(
+                    color: const Color(0xD910131E),
+                    borderRadius: BorderRadius.circular(24),
+                    child: SizedBox(
+                      width: 64,
+                      child: Column(
+                        children: [
+                          IconButton(
+                            tooltip: 'Volver o bloquear sección +18',
+                            onPressed: () => unawaited(_goBackOrLock()),
+                            icon: Icon(
+                              _canGoBack ? Icons.arrow_back_rounded : Icons.lock_rounded,
+                              color: AppTheme.accent,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Privacidad',
+                            onPressed: _showPrivacyNote,
+                            icon: const Icon(Icons.shield_outlined, color: AppTheme.muted),
+                          ),
+                          const Divider(height: 8, color: Color(0x30FFFFFF)),
+                          Expanded(
+                            child: ListView(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              children: [
+                                for (var index = 0; index < _providers.length; index++)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2),
+                                    child: IconButton(
+                                      tooltip: _providers[index].label,
+                                      onPressed: () => unawaited(_loadProvider(index)),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: index == _selectedProvider
+                                            ? AppTheme.accent.withValues(alpha: .20)
+                                            : Colors.transparent,
+                                        foregroundColor: index == _selectedProvider
+                                            ? AppTheme.accent
+                                            : Colors.white,
+                                      ),
+                                      icon: Icon(_providers[index].icon, size: 25),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: 'Información de privacidad',
-                                onPressed: _showPrivacyNote,
-                                icon: const Icon(Icons.shield_outlined, color: AppTheme.muted),
-                              ),
-                              IconButton(
-                                tooltip: 'Limpiar datos y salir',
-                                onPressed: () async {
-                                  await _clearWebData();
-                                  widget.onLock();
-                                },
-                                icon: const Icon(Icons.close_rounded, color: Colors.white),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        SizedBox(
-                          height: 48,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _providers.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 8),
-                            itemBuilder: (context, index) {
-                              final selected = index == _selectedProvider;
-                              return ChoiceChip(
-                                label: Text(_providers[index].label),
-                                selected: selected,
-                                autofocus: selected,
-                                showCheckmark: false,
-                                onSelected: (_) => unawaited(_loadProvider(index)),
-                                selectedColor: AppTheme.accent,
-                                backgroundColor: const Color(0xFF20243C),
-                                labelStyle: TextStyle(
-                                  color: selected ? Colors.black : Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                side: BorderSide(
-                                  color: selected
-                                      ? AppTheme.accent
-                                      : Colors.white.withValues(alpha: .12),
-                                ),
-                              );
+                          const Divider(height: 8, color: Color(0x30FFFFFF)),
+                          IconButton(
+                            tooltip: 'Limpiar datos y salir',
+                            onPressed: () async {
+                              await _clearWebData();
+                              widget.onLock();
                             },
+                            icon: const Icon(Icons.close_rounded, color: Colors.white),
                           ),
-                        ),
-                      ],
+                          IconButton(
+                            tooltip: 'Contraer menú',
+                            onPressed: _toggleControls,
+                            icon: const Icon(Icons.chevron_right_rounded, color: AppTheme.accent),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -348,7 +338,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
                   child: SafeArea(
                     child: IconButton.filledTonal(
                       tooltip: 'Mostrar menú +18',
-                      onPressed: _showControls,
+                      onPressed: _toggleControls,
                       icon: const Icon(Icons.menu_rounded),
                     ),
                   ),
@@ -360,8 +350,9 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
 }
 
 class _AdultProvider {
-  const _AdultProvider(this.label, this.url);
+  const _AdultProvider(this.label, this.url, this.icon);
 
   final String label;
   final String url;
+  final IconData icon;
 }

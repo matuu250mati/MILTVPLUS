@@ -39,6 +39,7 @@ void main() {
     expect(episode.durationSeconds, isNull);
     expect(episode.isPublished, isFalse);
   });
+
   test('parses the published channel category used by live-TV filters', () {
     final channel = ChannelModel.fromJson({
       'id': 'channel-1',
@@ -65,7 +66,7 @@ void main() {
     expect(channel.liveSection, 'Deportes');
   });
 
-  test('classifies news and culture as distinct live-TV sections', () {
+  test('classifies news and culture as distinct canonical live-TV sections', () {
     const news = TvChannel(
       name: 'Canal de Noticias',
       streamUrl: 'https://media.example.org/news.m3u8',
@@ -77,16 +78,16 @@ void main() {
       groupTitle: 'Culture',
     );
     expect(news.liveSection, 'Noticias');
-    expect(culture.liveSection, 'Cultura y educación');
+    expect(culture.liveSection, 'Cultura/Documentales');
   });
 
-  test('classifies authorized HBO streams as premium, not VOD movies', () {
+  test('classifies authorized HBO streams as HBO/Cine, not VOD movies', () {
     const channel = TvChannel(
       name: 'HBO',
       streamUrl: 'https://media.example.org/hbo.m3u8',
       groupTitle: 'Movies',
     );
-    expect(channel.liveSection, 'Premium / HBO');
+    expect(channel.liveSection, 'HBO/Cine');
   });
 
   test('keeps Argentine general channels in the Argentina section', () {
@@ -99,4 +100,60 @@ void main() {
     expect(channel.liveSection, 'TV Argentina');
   });
 
+  test('honors canonical genre categories even when the country is Argentina', () {
+    const sports = TvChannel(
+      name: 'Canal deportivo',
+      streamUrl: 'https://media.example.org/sports.m3u8',
+      country: 'AR',
+      category: 'Deportes',
+    );
+    const news = TvChannel(
+      name: 'Canal informativo',
+      streamUrl: 'https://media.example.org/news.m3u8',
+      country: 'Argentina',
+      category: 'Noticias',
+    );
+    const culture = TvChannel(
+      name: 'Canal cultural',
+      streamUrl: 'https://media.example.org/culture.m3u8',
+      country: 'AR',
+      category: 'Cultura/Documentales',
+    );
+    const hbo = TvChannel(
+      name: 'HBO',
+      streamUrl: 'https://media.example.org/hbo.m3u8',
+      country: 'AR',
+      category: 'HBO/Cine',
+    );
+
+    expect(sports.liveSection, 'Deportes');
+    expect(news.liveSection, 'Noticias');
+    expect(culture.liveSection, 'Cultura/Documentales');
+    expect(hbo.liveSection, 'HBO/Cine');
+  });
+
+  test('classifies common international sports, news, documentary and movie feeds', () {
+    const sports = TvChannel(
+      name: 'beIN Sports 1',
+      streamUrl: 'https://media.example.org/sports.m3u8',
+      country: 'FR',
+    );
+    const news = TvChannel(
+      name: 'Al Jazeera English',
+      streamUrl: 'https://media.example.org/news.m3u8',
+    );
+    const documentary = TvChannel(
+      name: 'Discovery Channel',
+      streamUrl: 'https://media.example.org/discovery.m3u8',
+    );
+    const movies = TvChannel(
+      name: 'Movies HD',
+      streamUrl: 'https://media.example.org/movies.m3u8',
+    );
+
+    expect(sports.liveSection, 'Deportes');
+    expect(news.liveSection, 'Noticias');
+    expect(documentary.liveSection, 'Cultura/Documentales');
+    expect(movies.liveSection, 'HBO/Cine');
+  });
 }
