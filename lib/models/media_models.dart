@@ -1,11 +1,60 @@
 // Modelos tipados para el esquema actual de Supabase de MILTV PLUS.
 
+String _stringValue(Map<String, dynamic> json, String key, [String fallback = '']) {
+  final value = json[key];
+  return value is String ? value : fallback;
+}
+
+String? _nullableString(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  return value is String && value.trim().isNotEmpty ? value : null;
+}
+
+int? _nullableInt(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
+}
+
+int _intValue(Map<String, dynamic> json, String key, [int fallback = 0]) =>
+    _nullableInt(json, key) ?? fallback;
+
+bool _boolValue(Map<String, dynamic> json, String key, [bool fallback = false]) {
+  final value = json[key];
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    switch (value.trim().toLowerCase()) {
+      case 'true':
+      case 't':
+      case '1':
+        return true;
+      case 'false':
+      case 'f':
+      case '0':
+        return false;
+    }
+  }
+  return fallback;
+}
+
+List<String> _stringList(Map<String, dynamic> json, String key) {
+  final raw = json[key];
+  if (raw is! List) return const [];
+  return List<String>.unmodifiable(raw
+      .whereType<String>()
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty));
+}
+
 List<String> _streamUrlList(Map<String, dynamic> json, String fallback) {
-  final raw = json['stream_urls'];
   final urls = <String>[];
+  final raw = json['stream_urls'];
   if (raw is List) {
     for (final value in raw) {
-      final url = value?.toString().trim() ?? '';
+      if (value is! String) continue;
+      final url = value.trim();
       if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
     }
   }
@@ -13,6 +62,7 @@ List<String> _streamUrlList(Map<String, dynamic> json, String fallback) {
   if (single.isNotEmpty && !urls.contains(single)) urls.add(single);
   return List<String>.unmodifiable(urls);
 }
+
 class ChannelModel {
   final String id;
   final String title;
@@ -33,16 +83,16 @@ class ChannelModel {
   });
 
   factory ChannelModel.fromJson(Map<String, dynamic> json) => ChannelModel(
-    id: json['id'] as String? ?? '',
-    title: json['title'] as String? ?? 'Sin título',
-    synopsis: json['synopsis'] as String?,
-    category: json['category'] as String? ?? 'General',
-    logo: json['logo'] as String?,
-    urlStream: json['url_stream'] as String? ?? '',
-    streamFormat: json['stream_format'] as String? ?? 'hls',
-    countryCode: json['country_code'] as String? ?? 'AR',
-    sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-    isPublished: json['is_published'] as bool? ?? false,
+    id: _stringValue(json, 'id'),
+    title: _stringValue(json, 'title', 'Sin título'),
+    synopsis: _nullableString(json, 'synopsis'),
+    category: _stringValue(json, 'category', 'General'),
+    logo: _nullableString(json, 'logo'),
+    urlStream: _stringValue(json, 'url_stream'),
+    streamFormat: _stringValue(json, 'stream_format', 'hls'),
+    countryCode: _stringValue(json, 'country_code', 'AR'),
+    sortOrder: _intValue(json, 'sort_order'),
+    isPublished: _boolValue(json, 'is_published'),
   );
 }
 
@@ -70,20 +120,19 @@ class MovieModel {
   });
 
   factory MovieModel.fromJson(Map<String, dynamic> json) => MovieModel(
-    id: json['id'] as String? ?? '',
-    title: json['title'] as String? ?? 'Sin título',
-    synopsis: json['synopsis'] as String?,
-    category: json['category'] as String? ?? 'General',
-    genres: (json['genres'] as List<dynamic>?)
-        ?.map((value) => value.toString()).toList(growable: false) ?? const [],
-    logo: json['logo'] as String?,
-    backdropUrl: json['backdrop_url'] as String?,
-    urlStream: json['url_stream'] as String? ?? '',
-    streamUrls: _streamUrlList(json, json['url_stream'] as String? ?? ''),
-    releaseYear: (json['release_year'] as num?)?.toInt(),
-    durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
-    countryCode: json['country_code'] as String? ?? 'AR',
-    isPublished: json['is_published'] as bool? ?? false,
+    id: _stringValue(json, 'id'),
+    title: _stringValue(json, 'title', 'Sin título'),
+    synopsis: _nullableString(json, 'synopsis'),
+    category: _stringValue(json, 'category', 'General'),
+    genres: _stringList(json, 'genres'),
+    logo: _nullableString(json, 'logo'),
+    backdropUrl: _nullableString(json, 'backdrop_url'),
+    urlStream: _stringValue(json, 'url_stream'),
+    streamUrls: _streamUrlList(json, _stringValue(json, 'url_stream')),
+    releaseYear: _nullableInt(json, 'release_year'),
+    durationSeconds: _nullableInt(json, 'duration_seconds'),
+    countryCode: _stringValue(json, 'country_code', 'AR'),
+    isPublished: _boolValue(json, 'is_published'),
   );
 }
 
@@ -107,17 +156,16 @@ class SeriesModel {
   });
 
   factory SeriesModel.fromJson(Map<String, dynamic> json) => SeriesModel(
-    id: json['id'] as String? ?? '',
-    title: json['title'] as String? ?? 'Sin título',
-    synopsis: json['synopsis'] as String?,
-    category: json['category'] as String? ?? 'Series',
-    genres: (json['genres'] as List<dynamic>?)
-        ?.map((value) => value.toString()).toList(growable: false) ?? const [],
-    logo: json['logo'] as String?,
-    backdropUrl: json['backdrop_url'] as String?,
-    releaseYear: (json['release_year'] as num?)?.toInt(),
-    countryCode: json['country_code'] as String? ?? 'AR',
-    isPublished: json['is_published'] as bool? ?? false,
+    id: _stringValue(json, 'id'),
+    title: _stringValue(json, 'title', 'Sin título'),
+    synopsis: _nullableString(json, 'synopsis'),
+    category: _stringValue(json, 'category', 'Series'),
+    genres: _stringList(json, 'genres'),
+    logo: _nullableString(json, 'logo'),
+    backdropUrl: _nullableString(json, 'backdrop_url'),
+    releaseYear: _nullableInt(json, 'release_year'),
+    countryCode: _stringValue(json, 'country_code', 'AR'),
+    isPublished: _boolValue(json, 'is_published'),
   );
 }
 
@@ -149,15 +197,15 @@ class EpisodeModel {
   });
 
   factory EpisodeModel.fromJson(Map<String, dynamic> json) => EpisodeModel(
-        id: json['id'] as String? ?? '',
-        seriesId: json['series_id'] as String? ?? '',
-        title: json['title'] as String? ?? 'Episodio',
-        synopsis: json['synopsis'] as String?,
-        seasonNumber: (json['season_number'] as num?)?.toInt() ?? 1,
-        episodeNumber: (json['episode_number'] as num?)?.toInt() ?? 1,
-        urlStream: json['url_stream'] as String? ?? '',
-        streamUrls: _streamUrlList(json, json['url_stream'] as String? ?? ''),
-        durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
-        isPublished: json['is_published'] as bool? ?? false,
+        id: _stringValue(json, 'id'),
+        seriesId: _stringValue(json, 'series_id'),
+        title: _stringValue(json, 'title', 'Episodio'),
+        synopsis: _nullableString(json, 'synopsis'),
+        seasonNumber: _intValue(json, 'season_number', 1),
+        episodeNumber: _intValue(json, 'episode_number', 1),
+        urlStream: _stringValue(json, 'url_stream'),
+        streamUrls: _streamUrlList(json, _stringValue(json, 'url_stream')),
+        durationSeconds: _nullableInt(json, 'duration_seconds'),
+        isPublished: _boolValue(json, 'is_published'),
       );
 }
