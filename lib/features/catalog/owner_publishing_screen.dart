@@ -33,7 +33,6 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
   List<Map<String, dynamic>> _seriesOptions = const [];
   PlatformFile? _video;
   bool _publishing = false;
-  bool _published = true;
   String? _status;
 
   bool get _isOwner {
@@ -181,7 +180,7 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
             'url_stream': streamUrl,
             'release_year': year,
             'country_code': 'AR',
-            'is_published': _published,
+            'is_published': true,
           });
         } else {
           await client.from('episodes').insert({
@@ -192,7 +191,7 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
             'episode_number': int.parse(_episode.text.trim()),
             'logo': poster,
             'url_stream': streamUrl,
-            'is_published': _published,
+            'is_published': true,
           });
         }
       } else {
@@ -204,15 +203,13 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
           'logo': poster,
           'release_year': year,
           'country_code': 'AR',
-          'is_published': _published,
+          'is_published': true,
         });
         await _loadSeries();
       }
       if (!mounted) return;
       setState(() {
-        _status = _published
-            ? 'Contenido publicado. El catálogo lo mostrará a los usuarios autorizados.'
-            : 'Borrador guardado. Solo el propietario puede verlo hasta publicarlo.';
+        _status = 'Contenido publicado. El catálogo lo mostrará a los usuarios autorizados.';
         _title.clear();
         _synopsis.clear();
         _streamUrl.clear();
@@ -402,13 +399,6 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
                     ),
                   ],
                   const SizedBox(height: 14),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _published,
-                    onChanged: _publishing ? null : (value) => setState(() => _published = value),
-                    title: const Text('Publicar en el catálogo'),
-                    subtitle: const Text('Desactivado: guardar como borrador privado.'),
-                  ),
                   const SizedBox(height: 10),
                   FilledButton.icon(
                     onPressed: _publishing ? null : _publish,
