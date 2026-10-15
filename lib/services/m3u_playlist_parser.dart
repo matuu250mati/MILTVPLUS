@@ -1,8 +1,5 @@
 import '../models/tv_channel.dart';
 
-/// Parses standard M3U/M3U8 playlists into channels for MILTVPLUS.
-/// Accepts only HTTPS stream URLs and ignores malformed rows because Android
-/// cleartext traffic is disabled in the application manifest.
 class M3uPlaylistParser {
   const M3uPlaylistParser();
 
@@ -10,119 +7,92 @@ class M3uPlaylistParser {
     final lines = source.replaceAll('\r', '').split('\n');
     final channels = <TvChannel>[];
     final seen = <String>{};
-    String? pendingName;
-    String? pendingGroupTitle;
-    String? pendingCountry;
-    String? pendingLanguage;
 
-    for (final rawLine in lines) {
-      final line = rawLine.trim();
-      if (line.isEmpty || line.startsWith('#EXTM3U')) continue;
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (!line.startsWith('#EXTINF:')) continue;
+      final comma = _findUnquotedComma(line);
+      final metadata = comma < 0 ? line.substring('#EXTINF:'.length) : line.substring('#EXTINF:'.length, comma);
+      final displayName = comma < 0 ? '' : line.substring(comma + 1).trim();
+      final attributes = _attributes(metadata);
+      final tvgName = (attributes['tvg-name'] ?? '').trim();
+      final name = tvgName.isNotEmpty ? tvgName : (displayName.isNotEmpty ? displayName : 'Canal \${channels.length + 1}');
 
-      if (line.startsWith('#EXTINF:')) {
-        final comma = line.indexOf(',');
-        var name = comma >= 0 ? line.substring(comma + 1).trim() : '';
-        if (name.isEmpty) {
-          final match = RegExp(r'tvg-name="([^"]+)"').firstMatch(line);
-          name = match?.group(1)?.trim() ?? '';
-        }
-        pendingName = name.isEmpty ? 'Canal ${channels.length + 1}' : name;
-        pendingGroupTitle = _attribute(line, 'group-title');
-        pendingCountry = _attribute(line, 'tvg-country');
-        pendingLanguage = _attribute(line, 'tvg-language');
+      String? streamUrl;
+      for (var j = i + 1; j < lines.length; j++) {
+        final candidate = lines[j].trim();
+        if (candidate.isEmpty) continue;
+        if (candidate.startsWith('#EXTINF:')) break;
+        if (candidate.startsWith('#')) continue;
+        streamUrl = candidate;
+        i = j;
+        break;
+      }
+
+      if (streamUrl == null) continue;
+      final uri = Uri.tryParse(streamUrl);
+      if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
+          uri.scheme != 'https' || _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
         continue;
       }
+      if (!seen.add(_streamIdentity(uri))) continue;
 
-      if (line.startsWith('#')) continue;
-      final uri = Uri.tryParse(line);
-      if (uri == null ||
-          uri.host.isEmpty ||
-          uri.userInfo.isNotEmpty ||
-          uri.scheme != 'https' ||
-          _isWebPageOnlyHost(uri.host)) {
-        // Web-player pages (for example, YouTube or Twitch channel pages) are
-        // not direct media streams and cannot be opened by video_player.
-        pendingName = null;
-        pendingGroupTitle = null;
-        pendingCountry = null;
-        pendingLanguage = null;
-        continue;
-      }
-
-      final streamUrl = uri.toString();
-      // Fragments, host casing, and dot-segments do not identify different media.
-      // Preserve the original URL for playback but deduplicate by canonical identity.
-      if (seen.add(_streamIdentity(uri))) {
-        channels.add(TvChannel(
-          name: pendingName ?? _fallbackName(uri, channels.length + 1),
-          streamUrl: streamUrl,
-          groupTitle: _nonEmpty(pendingGroupTitle),
-          country: _nonEmpty(pendingCountry),
-          language: _nonEmpty(pendingLanguage),
-        ));
-      }
-      pendingName = null;
-      pendingGroupTitle = null;
-      pendingCountry = null;
-      pendingLanguage = null;
+      channels.add(TvChannel(
+        name: name,
+        streamUrl: streamUrl,
+        groupTitle: _nonEmpty(attributes['group-title']),
+        country: _nonEmpty(attributes['tvg-country']),
+        language: _nonEmpty(attributes['tvg-language']),
+        logoUrl: _nonEmpty(attributes['tvg-logo']),
+        tvgId: _nonEmpty(attributes['tvg-id']),
+      ));
     }
-
     return List<TvChannel>.unmodifiable(channels);
   }
 
-  String? _attribute(String line, String name) {
-    final match = RegExp('(?:^|\\s)$name="([^"]*)"').firstMatch(line);
-    return match?.group(1)?.trim();
+  int _findUnquotedComma(String line) {
+    var quoted = false;
+    for (var i = 0; i < line.length; i++) {
+      if (line[i] == '"') {
+        quoted = !quoted;
+      } else if (line[i] == ',' && !quoted) {
+        return i;
+      }
+    }
+    return -1;
   }
 
-  String? _nonEmpty(String? value) =>
-      value == null || value.trim().isEmpty ? null : value.trim();
-
-  String _streamIdentity(Uri uri) {
-    final scheme = uri.scheme.toLowerCase();
-    final host = uri.host.toLowerCase();
-    final isDefaultPort = (scheme == 'https' && uri.port == 443) ||
-        (scheme == 'http' && uri.port == 80);
-    return uri
-        .replace(
-          scheme: scheme,
-          host: host,
-          port: isDefaultPort ? null : (uri.hasPort ? uri.port : null),
-          path: uri.normalizePath().path,
-          fragment: '',
-        )
-        .toString();
+  Map<String, String> _attributes(String metadata) {
+    final values = <String, String>{};
+    final regex = RegExp(r'([\w-]+)\s*=\s*"([^"]*)"');
+    for (final match in regex.allMatches(metadata)) {
+      final key = match.group(1);
+      final value = match.group(2);
+      if (key != null && value != null) values[key] = value;
+    }
+    return values;
   }
+
+  String? _nonEmpty(String? value) {
+    final result = value?.trim() ?? '';
+    return result.isEmpty ? null : result;
+  }
+
+  String _streamIdentity(Uri uri) => uri.replace(
+    scheme: uri.scheme.toLowerCase(),
+    host: uri.host.toLowerCase(),
+    path: uri.normalizePath().path,
+    fragment: '',
+  ).toString();
 
   bool _isWebPageOnlyHost(String host) {
-    final normalized = host.toLowerCase();
     const hosts = <String>{
-      'youtube.com',
-      'www.youtube.com',
-      'm.youtube.com',
-      'youtu.be',
-      'twitch.tv',
-      'www.twitch.tv',
-      'facebook.com',
-      'www.facebook.com',
-      'fb.watch',
-      'vimeo.com',
-      'www.vimeo.com',
-      'dailymotion.com',
-      'www.dailymotion.com',
-      'tiktok.com',
-      'www.tiktok.com',
-      'instagram.com',
-      'www.instagram.com',
+      'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+      'twitch.tv', 'www.twitch.tv', 'facebook.com', 'www.facebook.com',
+      'fb.watch', 'vimeo.com', 'www.vimeo.com', 'dailymotion.com',
+      'www.dailymotion.com', 'tiktok.com', 'www.tiktok.com',
+      'instagram.com', 'www.instagram.com',
     };
-    return hosts.contains(normalized);
-  }
-
-  String _fallbackName(Uri uri, int index) {
-    final path = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
-    if (path.isNotEmpty && path.toLowerCase().endsWith('.m3u8')) {
-      return path.substring(0, path.length - 5);
-    }
-    return 'Canal $index';
+    return hosts.contains(host.toLowerCase());
   }
 }
