@@ -50,6 +50,11 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
   Future<void> _startScan() async {
     final raw = _urlController.text.trim();
     final uri = Uri.tryParse(raw);
+    if (_connection != 'Lista M3U/M3U8 HTTPS') {
+      setState(() => _error =
+          'Esta versión importa listas M3U/M3U8 por HTTPS. La lectura directa de IP local, archivos del equipo o un sintonizador DVB requiere una integración específica del fabricante y todavía no está implementada.');
+      return;
+    }
     if (_connection == 'Lista M3U/M3U8 HTTPS' &&
         (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty)) {
       setState(() => _error = 'Ingresá una URL HTTPS válida de una lista M3U/M3U8 autorizada.');
