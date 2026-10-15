@@ -234,6 +234,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: TextStyle(color: AppTheme.muted)),
         const SizedBox(height: 22),
         Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(children: [
+                Icon(Icons.verified_user_outlined, color: AppTheme.accent, size: 25),
+                SizedBox(width: 10),
+                Expanded(child: Text('Seguridad de la cuenta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 12),
+              _AccountStatusRow(
+                label: 'Correo electrónico',
+                value: user == null
+                    ? 'Sin sesión iniciada'
+                    : (user.emailConfirmedAt != null ? 'Verificado' : 'Pendiente de verificación'),
+                verified: user?.emailConfirmedAt != null,
+              ),
+              const SizedBox(height: 10),
+              _AccountStatusRow(
+                label: 'Teléfono de la cuenta',
+                value: user == null
+                    ? 'Iniciá sesión para consultar'
+                    : (user.phoneConfirmedAt != null ? 'Verificado por Supabase Auth' : 'No verificado'),
+                verified: user?.phoneConfirmedAt != null,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'El teléfono del perfil local no verifica identidad. El estado mostrado se basa exclusivamente en la confirmación de Supabase Auth.',
+                style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.45),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _openAuth,
+                  icon: const Icon(Icons.lock_open_rounded),
+                  label: Text(user == null ? 'INICIAR SESIÓN / VERIFICAR' : 'GESTIONAR CUENTA'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppTheme.panel,
@@ -783,4 +832,40 @@ class _FaqItem extends StatelessWidget {
       ],
     ),
   );
+}
+
+
+class _AccountStatusRow extends StatelessWidget {
+  const _AccountStatusRow({
+    required this.label,
+    required this.value,
+    required this.verified,
+  });
+
+  final String label;
+  final String value;
+  final bool verified;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            verified ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+            size: 19,
+            color: verified ? const Color(0xFF57D9A3) : AppTheme.muted,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      );
 }
