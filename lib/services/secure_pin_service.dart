@@ -12,6 +12,8 @@ class SecurePinService {
 
   Future<bool> hasPin() async => (await _storage.read(key: _pinKey)) != null;
 
+  Future<void> clearPin() async => _storage.delete(key: _pinKey);
+
   Future<void> setPin(String pin) async {
     if (!RegExp(r'^\d{4,8}$').hasMatch(pin)) {
       throw ArgumentError('El PIN debe tener entre 4 y 8 números.');
