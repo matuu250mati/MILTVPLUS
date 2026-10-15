@@ -107,11 +107,11 @@ Guardá la salida Base64 y los valores de la clave en **Settings → Secrets and
 
 La URL estable prevista para el sitio oficial es:
 
-`https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS-android.apk`
+`https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/app-release.apk`
 
 También se publica una copia con versión en el nombre del archivo. El checksum SHA-256 permite comprobar que el APK descargado no se alteró durante la transferencia.
 
 **Downloader:** el código numérico de Downloader no se puede inventar ni generar solo desde el APK. Primero hay que publicar y probar la URL definitiva; luego se crea el código con el servicio de acortamiento compatible con Downloader y se verifica desde un dispositivo real. El sitio debe apuntar a la URL estable anterior o a una redirección bajo el dominio oficial.
 
-El enlace estable solo estará disponible después de publicar el primer tag de versión; los artefactos de Actions son temporales y se conservan 14 días.
+El enlace OTA solo estará disponible después de publicar una Release mediante un tag de versión; los artefactos de Actions son temporales y se conservan 14 días.
 
