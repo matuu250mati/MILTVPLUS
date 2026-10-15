@@ -150,14 +150,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _showWelcomeOnce() async {
     final preferences = await SharedPreferences.getInstance();
     if (!mounted ||
-        (preferences.getBool('miltvplus_welcome_guide_seen_v1') ?? false)) {
+        (preferences.getBool('miltvplus_welcome_guide_seen_v2') ?? false)) {
       return;
     }
 
     final profileName =
         preferences.getString('miltv_profile_name_v1') ?? 'Usuario MILTVPLUS';
     await showMiltvPlusGuide(context, profileName: profileName);
-    await preferences.setBool('miltvplus_welcome_guide_seen_v1', true);
+    await preferences.setBool('miltvplus_welcome_guide_seen_v2', true);
   }
 
   bool get _isModerator {
