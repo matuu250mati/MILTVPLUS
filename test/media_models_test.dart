@@ -131,4 +131,29 @@ void main() {
     expect(culture.liveSection, 'Cultura/Documentales');
     expect(hbo.liveSection, 'HBO/Cine');
   });
+
+  test('classifies common international sports, news, documentary and movie feeds', () {
+    const sports = TvChannel(
+      name: 'beIN Sports 1',
+      streamUrl: 'https://media.example.org/sports.m3u8',
+      country: 'FR',
+    );
+    const news = TvChannel(
+      name: 'Al Jazeera English',
+      streamUrl: 'https://media.example.org/news.m3u8',
+    );
+    const documentary = TvChannel(
+      name: 'Discovery Channel',
+      streamUrl: 'https://media.example.org/discovery.m3u8',
+    );
+    const movies = TvChannel(
+      name: 'Movies HD',
+      streamUrl: 'https://media.example.org/movies.m3u8',
+    );
+
+    expect(sports.liveSection, 'Deportes');
+    expect(news.liveSection, 'Noticias');
+    expect(documentary.liveSection, 'Cultura/Documentales');
+    expect(movies.liveSection, 'HBO/Cine');
+  });
 }
