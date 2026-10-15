@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/accessibility_settings.dart';
 import '../../core/supabase_config.dart';
 import '../auth/auth_screen.dart';
+import '../onboarding/miltvplus_guide.dart';
 import '../../services/ota_update_service.dart';
 import '../../services/m3u_playlist_service.dart';
 import '../../services/channel_storage_service.dart';
@@ -25,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _checkingUpdates = false;
+  double _textScale = 1.0;
   String? _providerStatus;
   bool _importingPlaylist = false;
   final _playlistUrlController = TextEditingController();
@@ -42,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final preferences = await SharedPreferences.getInstance();
       _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILTVPLUS';
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
+      _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -88,6 +92,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _setTextScale(double value) async {
+    setState(() => _textScale = value);
+    try {
+      await AppAccessibilitySettings.setTextScale(value);
+      if (mounted) _showMessage('Tamaño de texto actualizado.');
+    } catch (_) {
+      if (mounted) _showMessage('No se pudo guardar el tamaño de texto.');
+    }
+  }
+
   Future<void> _checkForUpdates() async {
     if (_checkingUpdates) return;
     setState(() => _checkingUpdates = true);
@@ -95,6 +109,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final result = await OtaUpdateService().checkAndInstall();
       if (!mounted) return;
       _showMessage(result.message);
+    } catch (_) {
+      if (mounted) {
+        _showMessage('No se pudo comprobar la actualización. Revisá la conexión e intentá otra vez.');
+      }
     } finally {
       if (mounted) setState(() => _checkingUpdates = false);
     }
@@ -469,6 +487,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _InfoRow(icon: Icons.system_update_alt_rounded, color: Color(0xFFFF7CA8), title: 'Actualizaciones', description: 'La actualización automática requiere que exista una versión publicada en GitHub Releases.'),
             _InfoRow(icon: Icons.satellite_alt_rounded, color: Color(0xFF65B7FF), title: 'Equipos externos', description: 'Solo se integran sintonizadores compatibles o dispositivos que publiquen una señal autorizada por red; no se captura HDMI genérico.'),
           ]),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.accessibility_new_rounded, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Accesibilidad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Elegí un tamaño de texto más cómodo. El cambio se aplica a toda la aplicación y se conserva al volver a abrirla.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 8),
+              RadioGroup<double>(
+                groupValue: _textScale,
+                onChanged: (value) {
+                  if (value != null) _setTextScale(value);
+                },
+                child: const Column(
+                  children: [
+                    RadioListTile<double>(
+                      value: 1.0,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Normal'),
+                      subtitle: Text('Tamaño actual del diseño'),
+                    ),
+                    RadioListTile<double>(
+                      value: 1.15,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Grande'),
+                      subtitle: Text('Texto un poco más grande'),
+                    ),
+                    RadioListTile<double>(
+                      value: 1.3,
+                      activeColor: AppTheme.accent,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Muy grande'),
+                      subtitle: Text('Para una lectura más cómoda'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.menu_book_rounded, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Guía de uso', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Volvé a consultar las instrucciones de TV en Vivo, Deportes, configuración, actualizaciones y seguridad.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await showMiltvPlusGuide(
+                      context,
+                      profileName: _nameController.text.trim(),
+                    );
+                  },
+                  icon: const Icon(Icons.play_circle_outline_rounded),
+                  label: const Text('ABRIR GUÍA PASO A PASO'),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         Container(
