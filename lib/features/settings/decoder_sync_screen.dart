@@ -153,7 +153,7 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
         _reportSaved = true;
         _statusMessage = remoteMessage;
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _saving = false;
