@@ -45,8 +45,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final allowed = requested
         .map((value) => value.trim().toLowerCase())
         .toSet();
-    final category = channel.category?.trim().toLowerCase();
-    return category != null && allowed.contains(category);
+    final category = (channel.category?.trim().isNotEmpty == true
+            ? channel.category!.trim()
+            : channel.liveSection)
+        .toLowerCase();
+    return allowed.contains(category);
   }
 
   String _streamIdentity(String value) {
@@ -95,6 +98,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
             category: existing.category ?? channel.category,
+            logoUrl: existing.logoUrl ?? channel.logoUrl,
+            tvgId: existing.tvgId ?? channel.tvgId,
           );
         }
       }
@@ -237,6 +242,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     }
   }
 
+  static const _repositoryPlaylist =
+      'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT';
   static const _curatedFreePlaylist =
       'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
   static const _globalPublicPlaylist =
@@ -448,6 +455,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             country: existing.country ?? channel.country,
             language: existing.language ?? channel.language,
             category: existing.category ?? channel.category,
+            logoUrl: existing.logoUrl ?? channel.logoUrl,
+            tvgId: existing.tvgId ?? channel.tvgId,
           );
         }
       }
@@ -520,7 +529,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   Text(
                     widget.categoryFilter == null
                         ? 'TV EN VIVO'
-                        : widget.categoryFilter!.contains('Deportivo')
+                        : widget.categoryFilter!.contains('Deportes')
                             ? 'DEPORTES'
                             : 'TV EN VIVO · ARGENTINA',
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
@@ -800,7 +809,21 @@ class _ChannelList extends StatelessWidget {
                             selected: selected == channelIndex,
                             selectedTileColor: AppTheme.accent.withValues(alpha: .08),
                             onTap: () => onSelect(channelIndex),
-                            leading: Icon(Icons.circle, size: 9, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
+                            leading: channel.logoUrl?.isNotEmpty == true
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.network(
+                                  channel.logoUrl!,
+                                  width: 42,
+                                  height: 32,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    Icons.live_tv_rounded,
+                                    color: selected == channelIndex ? AppTheme.accent : AppTheme.muted,
+                                  ),
+                                ),
+                              )
+                            : Icon(Icons.live_tv_rounded, size: 22, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
                             title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               [
