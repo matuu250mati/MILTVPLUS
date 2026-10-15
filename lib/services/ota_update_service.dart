@@ -159,7 +159,7 @@ class OtaUpdateService {
         );
       }
 
-      return OtaUpdateResult(
+      return const OtaUpdateResult(
         message: 'APK verificado. Confirmá la instalación en el instalador de Android.',
         updateAvailable: true,
         installerOpened: true,
