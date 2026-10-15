@@ -48,11 +48,13 @@ class CatalogService {
           expandedCategories.addAll([
             category, 'Deportes', 'deportes', 'Sports', 'sports', 'Sport', 'sport',
           ]);
+          break;
         case 'noticias':
         case 'news':
           expandedCategories.addAll([
             category, 'Noticias', 'noticias', 'News', 'news',
           ]);
+          break;
         case 'cultura/documentales':
         case 'culture':
         case 'documentary':
@@ -61,6 +63,7 @@ class CatalogService {
             'documentary', 'Documentary', 'documentaries', 'Documentaries',
             'education', 'Education',
           ]);
+          break;
         case 'hbo/cine':
         case 'movies':
         case 'cinema':
@@ -68,11 +71,13 @@ class CatalogService {
             category, 'HBO/Cine', 'movies', 'Movies', 'cinema', 'Cinema',
             'film', 'Film', 'films', 'Films',
           ]);
+          break;
         case 'tv argentina':
         case 'argentina':
           expandedCategories.addAll([
             category, 'TV Argentina', 'Argentina', 'argentina',
           ]);
+          break;
         default:
           if (category.trim().isNotEmpty) expandedCategories.add(category.trim());
       }
