@@ -10,6 +10,7 @@ import '../catalog/catalog_screen.dart';
 import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
+import '../onboarding/miltvplus_guide.dart';
 import '../submissions/content_submission_screen.dart';
 import '../submissions/content_moderation_screen.dart';
 import '../../services/ota_update_service.dart';
@@ -148,37 +149,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   Future<void> _showWelcomeOnce() async {
     final preferences = await SharedPreferences.getInstance();
-    if (!mounted || (preferences.getBool('miltvplus_welcome_guide_seen_v1') ?? false)) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: const Color(0xFF111521),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Center(child: Icon(Icons.play_circle_fill_rounded, color: Color(0xFF5BE58B), size: 54)),
-            const SizedBox(height: 10),
-            const Center(child: Text('¡Bienvenido a MILTVPLUS! 🇦🇷', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
-            const SizedBox(height: 8),
-            const Center(child: Text('Tu entretenimiento, ordenado y a tu manera.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))),
-            const SizedBox(height: 18),
-            const _WelcomeStep(icon: Icons.live_tv_rounded, color: Color(0xFF58C7FF), title: 'TV en vivo', detail: 'Buscá por nombre, filtrá por país o categoría y tocá una señal para verla a pantalla completa.'),
-            const _WelcomeStep(icon: Icons.sports_soccer_rounded, color: Color(0xFFFFB74D), title: 'Deportes', detail: 'Explorá señales deportivas. La disponibilidad depende de las fuentes públicas o autorizadas que estén activas.'),
-            const _WelcomeStep(icon: Icons.lock_rounded, color: Color(0xFFB79CFF), title: 'Zona +18', detail: 'Requiere cuenta, confirmación de edad, aceptación de políticas y PIN. Guardá tu PIN en un lugar seguro.'),
-            const _WelcomeStep(icon: Icons.settings_rounded, color: Color(0xFFFF7CA8), title: 'Configuración', detail: 'Abrí el menú lateral y entrá en Perfil y configuración para cargar listas M3U, administrar seguridad, consultar información y buscar actualizaciones.'),
-            const SizedBox(height: 8),
-            const Text('Para consultar información detallada, abrí Configuración y buscá “Información de MILTVPLUS”.', style: TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
-            const SizedBox(height: 16),
-            SizedBox(width: double.infinity, child: FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('¡DALE, VAMOS!'),
-            )),
-          ]),
-        ),
-      ),
-    );
+    if (!mounted ||
+        (preferences.getBool('miltvplus_welcome_guide_seen_v1') ?? false)) {
+      return;
+    }
+
+    final profileName =
+        preferences.getString('miltv_profile_name_v1') ?? 'Usuario MILTVPLUS';
+    await showMiltvPlusGuide(context, profileName: profileName);
     await preferences.setBool('miltvplus_welcome_guide_seen_v1', true);
   }
 
