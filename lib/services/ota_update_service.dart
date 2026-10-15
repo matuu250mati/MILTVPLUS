@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -88,9 +87,7 @@ class OtaUpdateService {
 
       final directory = await getTemporaryDirectory();
       final apkFile = File('${directory.path}/miltvplus-update.apk');
-      final checksumFile = File('${directory.path}/miltvplus-update.apk.sha256');
       if (await apkFile.exists()) await apkFile.delete();
-      if (await checksumFile.exists()) await checksumFile.delete();
 
       final checksumResponse = await _dio.get<String>(
         _checksumUrl,
