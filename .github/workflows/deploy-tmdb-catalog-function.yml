@@ -1,0 +1,60 @@
+name: Deploy TMDB catalog sync function
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/sync-tmdb-catalog/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-tmdb-function-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_URL; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Missing repository secret: $name. Function deployment cannot proceed."
+              exit 1
+            fi
+          done
+          normalized="${SUPABASE_URL%/}"
+          if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co."
+            exit 1
+          fi
+          echo "SUPABASE_PROJECT_ID=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link intended Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Deploy secured catalog sync function
+        run: supabase functions deploy sync-tmdb-catalog --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Remind about runtime secrets
+        run: |
+          echo "Confirm TMDB_API_KEY and SYNC_SECRET are configured as Supabase Edge Function secrets."
+          echo "The deployment does not create or print secrets."
