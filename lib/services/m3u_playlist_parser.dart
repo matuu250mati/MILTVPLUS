@@ -16,7 +16,7 @@ class M3uPlaylistParser {
       final displayName = comma < 0 ? '' : line.substring(comma + 1).trim();
       final attributes = _attributes(metadata);
       final tvgName = (attributes['tvg-name'] ?? '').trim();
-      final name = tvgName.isNotEmpty ? tvgName : (displayName.isNotEmpty ? displayName : 'Canal \${channels.length + 1}');
+      final name = tvgName.isNotEmpty ? tvgName : (displayName.isNotEmpty ? displayName : 'Canal ${channels.length + 1}');
 
       String? streamUrl;
       for (var j = i + 1; j < lines.length; j++) {
