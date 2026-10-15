@@ -275,23 +275,7 @@ class OtaUpdateService {
 
   String? _readChecksum(String content) {
     final match = RegExp(
-      r'^([a-fA-F0-9]{64})(?:\\s+\\*?[\\w.-]+)?\\s*
-    final match = RegExp(r'v?(\d+(?:\.\d+){1,3})').firstMatch(version.trim());
-    if (match == null) return null;
-    return match.group(1)!.split('.').map(int.parse).toList();
-  }
-
-  int _compareVersions(List<int> left, List<int> right) {
-    final length = left.length > right.length ? left.length : right.length;
-    for (var i = 0; i < length; i++) {
-      final a = i < left.length ? left[i] : 0;
-      final b = i < right.length ? right[i] : 0;
-      if (a != b) return a.compareTo(b);
-    }
-    return 0;
-  }
-}
-,
+      r'^([a-fA-F0-9]{64})(?:\s+\*?[\w.-]+)?\s*$',
     ).firstMatch(content.trim());
     return match?.group(1)?.toLowerCase();
   }
