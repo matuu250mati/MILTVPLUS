@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
 import '../../services/channel_storage_service.dart';
-import '../../services/m3u_playlist_service.dart';
 
 class DecoderSyncScreen extends StatefulWidget {
   const DecoderSyncScreen({super.key});
@@ -26,12 +24,9 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
     'Modelo no especificado', 'S2 / DVB-S2', 'C / DVB-C', 'IPTV / HTTP',
   ];
 
-  final _urlController = TextEditingController();
   final _storage = ChannelStorageService();
-  final _playlistService = M3uPlaylistService();
   String _brand = _brands.first;
   String _model = _models.first;
-  String _connection = 'Lista M3U/M3U8 HTTPS';
   bool _scanning = false;
   bool _finished = false;
   bool _saving = false;
@@ -39,73 +34,34 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
   int _currentTp = 0;
   List<TvChannel> _foundChannels = const [];
   String? _error;
-  final List<String> _discoveredNames = [];
+  String? _scanMessage;
 
   @override
   void dispose() {
-    _urlController.dispose();
     super.dispose();
   }
 
   Future<void> _startScan() async {
-    final raw = _urlController.text.trim();
-    final uri = Uri.tryParse(raw);
-    if (_connection != 'Lista M3U/M3U8 HTTPS') {
-      setState(() => _error =
-          'Esta versión importa listas M3U/M3U8 por HTTPS. La lectura directa de IP local, archivos del equipo o un sintonizador DVB requiere una integración específica del fabricante y todavía no está implementada.');
-      return;
-    }
-    if (_connection == 'Lista M3U/M3U8 HTTPS' &&
-        (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty)) {
-      setState(() => _error = 'Ingresá una URL HTTPS válida de una lista M3U/M3U8 autorizada.');
-      return;
-    }
-    if (_connection == 'IP local / HTTP del equipo' &&
-        (uri == null || !uri.hasAuthority || (uri.scheme != 'http' && uri.scheme != 'https'))) {
-      setState(() => _error = 'Ingresá la URL HTTP/HTTPS publicada por el equipo en tu red local.');
-      return;
-    }
-
     setState(() {
       _scanning = true;
       _finished = false;
       _progress = 0;
       _currentTp = 0;
       _error = null;
+      _scanMessage = null;
       _foundChannels = const [];
-      _discoveredNames.clear();
     });
 
-    try {
-      // This is a UI progress simulation around an actual M3U import, not a DVB tuner scan.
-      final imported = await _playlistService.importFromUrl(raw);
-      if (imported.isEmpty) {
-        throw Exception('La fuente no devolvió canales compatibles.');
-      }
-      final limit = imported.length < 24 ? imported.length : 24;
-      for (var i = 0; i < limit; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 180));
-        if (!mounted) return;
-        setState(() {
-          _currentTp = i + 1;
-          _progress = (i + 1) / limit;
-          _discoveredNames.add(imported[i].name);
-        });
-      }
-      if (!mounted) return;
-      setState(() {
-        _foundChannels = imported;
-        _scanning = false;
-        _finished = true;
-        _progress = 1;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _scanning = false;
-        _error = error.toString().replaceFirst('Exception: ', '');
-      });
-    }
+    // Do not report a device as connected or invent signal readings. Generic
+    // decoder discovery and channel extraction require a supported device API.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    setState(() {
+      _scanning = false;
+      _finished = false;
+      _scanMessage =
+          'No hay un adaptador de detección compatible configurado. La selección de marca/modelo por sí sola no permite descubrir el equipo ni leer sus canales. Para habilitarlo hace falta integrar el protocolo/API del fabricante o un servicio estándar que el decodificador exponga en la red.';
+    });
   }
 
   Future<void> _saveAndSync() async {
@@ -129,8 +85,8 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
           'user_id': user.id,
           'device_brand': _brand,
           'device_model': _model,
-          'connection_type': _connection,
-          'source_host': Uri.tryParse(_urlController.text.trim())?.host ?? '',
+          'connection_type': 'detección de red',
+          'source_host': null,
           'channel_count': _foundChannels.length,
           'channels': _foundChannels.take(5000).map((channel) => {
             'name': channel.name,
@@ -195,46 +151,49 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
                 Expanded(child: Text('Equipo y fuente de canales', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
               ]),
               const SizedBox(height: 8),
-              const Text('La aplicación no puede controlar un sintonizador DVB-S2/DVB-C real sin hardware y una API compatibles. Este módulo importa una lista autorizada y muestra un progreso visual simulado.', style: TextStyle(color: AppTheme.muted, height: 1.45)),
+              const Text('Buscá un decodificador compatible en la red local. La conexión real y la lectura de canales solo se habilitan cuando existe un protocolo/API compatible con ese fabricante y modelo.', style: TextStyle(color: AppTheme.muted, height: 1.45)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _brand,
+                initialValue: _brand,
                 decoration: const InputDecoration(labelText: 'Marca del equipo'),
                 items: _brands.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                 onChanged: _scanning ? null : (v) => setState(() => _brand = v ?? _brands.first),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _model,
+                initialValue: _model,
                 decoration: const InputDecoration(labelText: 'Modelo / estándar'),
                 items: _models.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                 onChanged: _scanning ? null : (v) => setState(() => _model = v ?? _models.first),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _connection,
-                decoration: const InputDecoration(labelText: 'Tipo de conexión'),
-                items: const [
-                  DropdownMenuItem(value: 'Lista M3U/M3U8 HTTPS', child: Text('Lista M3U/M3U8 HTTPS')),
-                  DropdownMenuItem(value: 'IP local / HTTP del equipo', child: Text('IP local / HTTP del equipo')),
-                  DropdownMenuItem(value: 'Archivo exportado', child: Text('Archivo exportado (requiere URL importable)')),
-                ],
-                onChanged: _scanning ? null : (v) => setState(() => _connection = v ?? 'Lista M3U/M3U8 HTTPS'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _urlController,
-                enabled: !_scanning,
-                keyboardType: TextInputType.url,
-                decoration: const InputDecoration(
-                  labelText: 'URL de la lista o endpoint',
-                  hintText: 'https://servidor autorizado/lista.m3u',
-                  prefixIcon: Icon(Icons.link_rounded),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.background.withValues(alpha: .55),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: AppTheme.muted),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'No se solicitan URLs ni listas manuales. La detección directa del decodificador todavía necesita un adaptador de comunicación específico.',
+                        style: TextStyle(color: AppTheme.muted, height: 1.4),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!, style: const TextStyle(color: Colors.orangeAccent)),
+              ],
+              if (_scanMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(_scanMessage!, style: const TextStyle(color: Colors.orangeAccent, height: 1.4)),
               ],
               const SizedBox(height: 16),
               SizedBox(width: double.infinity, child: FilledButton.icon(
@@ -242,7 +201,7 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
                 icon: _scanning
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.radar_rounded),
-                label: Text(_scanning ? 'IMPORTANDO Y SIMULANDO ESCANEO…' : 'INICIAR BÚSQUEDA / SINCRONIZACIÓN'),
+                label: Text(_scanning ? 'BUSCANDO DISPOSITIVOS…' : 'BUSCAR DECODIFICADOR'),
               )),
             ]),
           ),
@@ -254,15 +213,11 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('ESTADO DEL ESCANEO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: _SignalMeter(label: 'Fuerza S', value: _scanning ? (_progress * 72).round() : 72)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _SignalMeter(label: 'Calidad Q', value: _scanning ? (_progress * 64).round() : 64)),
-                ]),
+                const Text('La fuerza y calidad reales solo pueden leerse desde el sintonizador mediante una API compatible.', style: TextStyle(color: AppTheme.muted, height: 1.4)),
                 const SizedBox(height: 14),
                 LinearProgressIndicator(value: _progress, minHeight: 8),
                 const SizedBox(height: 8),
-                Text(_finished ? 'Importación completada · 100%' : 'Buscando TP $_currentTp/24…', style: const TextStyle(color: AppTheme.muted)),
+                Text(_finished ? 'Sincronización completada' : 'Comprobando compatibilidad…', style: const TextStyle(color: AppTheme.muted)),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(child: _CountTile(label: 'TV', count: tvCount)),
@@ -271,28 +226,8 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
                   const SizedBox(width: 8),
                   Expanded(child: _CountTile(label: 'Total', count: _foundChannels.length)),
                 ]),
-                if (_discoveredNames.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  const Text('Señales encontradas', style: TextStyle(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  for (final name in _discoveredNames.take(24))
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.live_tv_rounded, color: AppTheme.accent),
-                      title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                ],
-                if (_finished) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(width: double.infinity, child: FilledButton.icon(
-                    onPressed: _saving ? null : _saveAndSync,
-                    icon: _saving
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.cloud_upload_outlined),
-                    label: Text(_saving ? 'GUARDANDO…' : 'GUARDAR Y SOLICITAR SINCRONIZACIÓN'),
-                  )),
-                ],
+
+
               ]),
             ),
           ],
@@ -300,19 +235,6 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
       ),
     );
   }
-}
-
-class _SignalMeter extends StatelessWidget {
-  const _SignalMeter({required this.label, required this.value});
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text('$label  $value%', style: const TextStyle(fontWeight: FontWeight.w700)),
-    const SizedBox(height: 6),
-    LinearProgressIndicator(value: value / 100, minHeight: 7),
-  ]);
 }
 
 class _CountTile extends StatelessWidget {
