@@ -584,6 +584,10 @@ class _ChannelList extends StatelessWidget {
                           final channelIndex = filteredIndices[index];
                           final channel = channels[channelIndex];
                           return ListTile(
+                            // Native Flutter focus support for Android TV / TV Box D-pad.
+                            // Keep the existing layout; only expose a visible focus highlight.
+                            autofocus: index == 0,
+                            focusColor: AppTheme.accent.withValues(alpha: .16),
                             selected: selected == channelIndex,
                             selectedTileColor: AppTheme.accent.withValues(alpha: .08),
                             onTap: () => onSelect(channelIndex),
