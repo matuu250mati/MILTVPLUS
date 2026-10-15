@@ -22,7 +22,7 @@ El panel **PUBLICAR** está disponible solo para un usuario cuyo JWT de Supabase
 - **Película:** ingresá título, descripción, categoría, año, póster y seleccioná un video local o una URL HTTPS autorizada.
 - **Serie:** publicá primero la ficha de la serie.
 - **Episodio:** elegí una serie existente, indicá temporada y episodio, y seleccioná un archivo o URL HTTPS.
-- Con **Publicar en el catálogo** activado, el contenido aparece a los usuarios que pueden leer el catálogo. Desactivado, queda como borrador visible solo para el propietario.
+- Al guardar, la ficha se publica directamente y aparece a los usuarios que pueden leer el catálogo. El panel no ofrece borradores para evitar que un archivo del bucket público quede accesible antes de publicar su ficha.
 - Los archivos seleccionados se guardan en el bucket `owner-media`. Los videos grandes dependen del límite de almacenamiento y de transferencia configurado en el plan de Supabase.
 
 ## Límites reales
