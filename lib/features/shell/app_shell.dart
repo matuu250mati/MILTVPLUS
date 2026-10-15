@@ -230,7 +230,16 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope<Object?>(
+      // Back from any section returns to the dashboard instead of closing the
+      // application. Back on the dashboard retains Android's normal exit behavior.
+      canPop: selected == 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && selected != 1 && mounted) {
+          setState(() => selected = 1);
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.background,
       appBar: selected == 10 ? null : AppBar(
         backgroundColor: const Color(0xFF080A10),
@@ -277,6 +286,7 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
