@@ -34,10 +34,13 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   bool _matchesCategoryFilter(TvChannel channel) {
     final requested = widget.categoryFilter;
-    if (requested == null || requested.isEmpty) return true;
+    // La sección general de TV en vivo excluye deportes: ese catálogo
+    // se consulta únicamente desde la sección DEPORTES. El filtro usa la
+    // clasificación canónica para M3U local, listas públicas y Supabase.
+    if (requested == null || requested.isEmpty) {
+      return channel.liveSection.trim().toLowerCase() != 'deportes';
+    }
 
-    // Use the canonical classifier for both Supabase and M3U entries, so
-    // imported sports/news channels are not lost just because category is absent.
     final allowed = requested
         .map((value) => value.trim().toLowerCase())
         .toSet();

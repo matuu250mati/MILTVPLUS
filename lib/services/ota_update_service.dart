@@ -6,6 +6,30 @@ import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+class OtaUpdateInfo {
+  const OtaUpdateInfo({
+    required this.message,
+    this.updateAvailable = false,
+    this.mandatory = false,
+    this.currentVersion = '',
+    this.latestVersion = '',
+    this.sizeBytes = 0,
+  });
+
+  final String message;
+  final bool updateAvailable;
+  final bool mandatory;
+  final String currentVersion;
+  final String latestVersion;
+  final int sizeBytes;
+
+  String get formattedSize {
+    if (sizeBytes <= 0) return 'Tamaño no publicado';
+    final mb = sizeBytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+}
+
 class OtaUpdateResult {
   const OtaUpdateResult({
     required this.message,
@@ -46,6 +70,60 @@ class OtaUpdateService {
   );
 
   final Dio _dio;
+
+  /// Reads release metadata without downloading or opening the installer.
+  /// A release is mandatory only when its description explicitly contains
+  /// MILTVPLUS-REQUIRED-UPDATE: true.
+  Future<OtaUpdateInfo> checkForUpdate() async {
+    if (!Platform.isAndroid) {
+      return const OtaUpdateInfo(message: 'La actualización automática solo está disponible en Android.');
+    }
+    try {
+      final response = await _dio.get<dynamic>(_releaseApi);
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        return const OtaUpdateInfo(message: 'Respuesta de versión no válida.');
+      }
+      final tag = data['tag_name'];
+      if (tag is! String || tag.trim().isEmpty) {
+        return const OtaUpdateInfo(message: 'La versión publicada no tiene una etiqueta válida.');
+      }
+      final package = await PackageInfo.fromPlatform();
+      final latest = _normalizeVersion(tag);
+      final installed = _normalizeVersion(package.version);
+      if (latest == null || installed == null) {
+        return const OtaUpdateInfo(message: 'No se pudieron comparar las versiones.');
+      }
+      final assets = data['assets'];
+      var sizeBytes = 0;
+      if (assets is List) {
+        for (final asset in assets) {
+          if (asset is Map<String, dynamic> &&
+              asset['name'] == 'app-release.apk' &&
+              asset['size'] is num) {
+            sizeBytes = (asset['size'] as num).toInt();
+            break;
+          }
+        }
+      }
+      final body = data['body'] is String ? data['body'] as String : '';
+      final mandatory = RegExp(
+        r'MILTVPLUS-REQUIRED-UPDATE:\s*true',
+        caseSensitive: false,
+      ).hasMatch(body);
+      final available = _compareVersions(latest, installed) > 0;
+      return OtaUpdateInfo(
+        updateAvailable: available,
+        mandatory: available && mandatory,
+        currentVersion: package.version,
+        latestVersion: tag,
+        sizeBytes: sizeBytes,
+        message: available ? 'Hay una versión nueva disponible.' : 'MILTVPLUS está actualizado.',
+      );
+    } catch (_) {
+      return const OtaUpdateInfo(message: 'No se pudo consultar la versión publicada.');
+    }
+  }
 
   Future<OtaUpdateResult> checkAndInstall() async {
     if (!Platform.isAndroid) {

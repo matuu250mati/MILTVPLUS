@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +12,7 @@ import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../submissions/content_submission_screen.dart';
 import '../submissions/content_moderation_screen.dart';
+import '../../services/ota_update_service.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -18,7 +21,7 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   static const items = <_NavItem>[
     _NavItem('TV EN VIVO', Icons.live_tv_rounded),
     _NavItem('INICIO', Icons.home_rounded),
@@ -36,11 +39,111 @@ class _AppShellState extends State<AppShell> {
   ];
 
   int selected = 1;
+  Timer? _updateTimer;
+  DateTime? _lastUpdateCheck;
+  bool _updateDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showWelcomeOnce());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _showWelcomeOnce();
+      if (mounted) await _checkForUpdate();
+    });
+    _updateTimer = Timer.periodic(const Duration(hours: 6), (_) {
+      _checkForUpdate();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _updateTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final lastCheck = _lastUpdateCheck;
+      if (lastCheck == null ||
+          DateTime.now().difference(lastCheck) > const Duration(minutes: 30)) {
+        _checkForUpdate();
+      }
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_updateDialogShowing || !mounted) return;
+    _lastUpdateCheck = DateTime.now();
+    final service = OtaUpdateService();
+    final info = await service.checkForUpdate();
+    if (!mounted || !info.updateAvailable) return;
+
+    final preferences = await SharedPreferences.getInstance();
+    final snoozedUntil = preferences.getInt('miltvplus_update_snooze_until_ms_v1') ?? 0;
+    if (!info.mandatory && DateTime.now().millisecondsSinceEpoch < snoozedUntil) return;
+    if (!mounted || _updateDialogShowing) return;
+
+    _updateDialogShowing = true;
+    bool installNow = false;
+    try {
+      installNow = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => AlertDialog(
+              backgroundColor: const Color(0xFF111521),
+              title: Row(
+                children: [
+                  const Icon(Icons.system_update_rounded, color: Color(0xFF5BE58B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(info.mandatory
+                        ? 'Actualización de seguridad obligatoria'
+                        : 'Nueva versión de MILTVPLUS'),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Versión instalada: ${info.currentVersion}\n'
+                'Nueva versión: ${info.latestVersion}\n'
+                'Tamaño aproximado: ${info.formattedSize}\n\n'
+                '${info.mandatory ? 'Esta versión se marcó como necesaria para continuar usando MILTVPLUS.' : 'Podés actualizar ahora o recordarlo más tarde.'}',
+                style: const TextStyle(height: 1.5),
+              ),
+              actions: [
+                if (!info.mandatory)
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('RECORDARME DESPUÉS'),
+                  ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(info.mandatory ? 'ACTUALIZAR PARA CONTINUAR' : 'ACTUALIZAR AHORA'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!installNow && !info.mandatory) {
+        await preferences.setInt(
+          'miltvplus_update_snooze_until_ms_v1',
+          DateTime.now().add(const Duration(hours: 12)).millisecondsSinceEpoch,
+        );
+      }
+    } finally {
+      _updateDialogShowing = false;
+    }
+
+    if (installNow && mounted) {
+      final result = await service.checkAndInstall();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message), duration: const Duration(seconds: 6)),
+        );
+      }
+    }
   }
 
   Future<void> _showWelcomeOnce() async {
@@ -64,7 +167,7 @@ class _AppShellState extends State<AppShell> {
             const _WelcomeStep(icon: Icons.live_tv_rounded, color: Color(0xFF58C7FF), title: 'TV en vivo', detail: 'Buscá por nombre, filtrá por país o categoría y tocá una señal para verla a pantalla completa.'),
             const _WelcomeStep(icon: Icons.sports_soccer_rounded, color: Color(0xFFFFB74D), title: 'Deportes', detail: 'Explorá señales deportivas. La disponibilidad depende de las fuentes públicas o autorizadas que estén activas.'),
             const _WelcomeStep(icon: Icons.lock_rounded, color: Color(0xFFB79CFF), title: 'Zona +18', detail: 'Requiere cuenta, confirmación de edad, aceptación de políticas y PIN. Guardá tu PIN en un lugar seguro.'),
-            const _WelcomeStep(icon: Icons.settings_rounded, color: Color(0xFFFF7CA8), title: 'Configuración', detail: 'En la tuerquita podés cargar listas M3U, administrar tu perfil, consultar información y buscar actualizaciones.'),
+            const _WelcomeStep(icon: Icons.settings_rounded, color: Color(0xFFFF7CA8), title: 'Configuración', detail: 'Abrí el menú lateral y entrá en Perfil y configuración para cargar listas M3U, administrar seguridad, consultar información y buscar actualizaciones.'),
             const SizedBox(height: 8),
             const Text('Para consultar información detallada, abrí Configuración y buscá “Información de MILTVPLUS”.', style: TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
             const SizedBox(height: 16),
@@ -306,14 +409,6 @@ class _AppShellState extends State<AppShell> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Configuración',
-            onPressed: () => setState(() => selected = 11),
-            icon: const Icon(Icons.settings_rounded),
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       drawer: _buildDrawer(),
       body: Stack(
