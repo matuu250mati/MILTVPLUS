@@ -442,8 +442,12 @@ String _categoryIcon(String value) {
   if (category.contains('deport') || category.contains('sport')) return '⚽';
   if (category.contains('noticia') || category.contains('news')) return '📰';
   if (category.contains('cultur') || category.contains('document')) return '🎭';
-  if (category.contains('película') || category.contains('pelicula') ||
-      category.contains('cine') || category.contains('movie')) return '🎬';
+  if (category.contains('película') ||
+      category.contains('pelicula') ||
+      category.contains('cine') ||
+      category.contains('movie')) {
+    return '🎬';
+  }
   if (category.contains('entreten') || category.contains('series')) return '🍿';
   if (category.contains('infantil') || category.contains('kids')) return '🧸';
   if (category.contains('música') || category.contains('music')) return '🎵';
