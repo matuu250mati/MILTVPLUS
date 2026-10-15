@@ -143,7 +143,7 @@ class OtaUpdateService {
       }
 
       // Stream the checksum instead of loading a 50+ MB APK into memory.
-      final actualHash = await sha256.bind(apkFile.openRead()).first;
+      final actualHash = (await sha256.bind(apkFile.openRead()).first).toString();
       if (actualHash.toLowerCase() != expectedHash) {
         await apkFile.delete();
         return const OtaUpdateResult(
