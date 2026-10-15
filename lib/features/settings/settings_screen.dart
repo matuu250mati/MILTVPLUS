@@ -10,6 +10,7 @@ import '../../services/ota_update_service.dart';
 import '../../services/m3u_playlist_service.dart';
 import '../../services/channel_storage_service.dart';
 import '../../models/tv_channel.dart';
+import 'decoder_sync_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -424,8 +425,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
               const SizedBox(height: 6),
               const Text(
-                'MILTVPLUS puede importar una URL de red o una lista expuesta por un equipo compatible. Un decodificador HDMI común no se puede detectar ni leer directamente desde una app Android: hace falta un sintonizador compatible con Android o un equipo que publique su salida en la red. No compartas claves de canales cifrados ni señales sin autorización.',
+                'Configurá un equipo compatible, importá una lista autorizada y revisá el progreso de la sincronización. El progreso de señal es demostrativo; no representa una medición física del sintonizador.',
                 style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DecoderSyncScreen()),
+                  ),
+                  icon: const Icon(Icons.satellite_alt_rounded),
+                  label: const Text('ABRIR SINCRONIZACIÓN DE EQUIPOS'),
+                ),
               ),
             ],
           ),
