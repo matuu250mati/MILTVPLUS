@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/supabase_config.dart';
 import '../auth/auth_screen.dart';
+import '../../services/ota_update_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _urlController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  bool _checkingUpdates = false;
   String? _providerStatus;
 
   @override
@@ -76,6 +78,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       _showMessage('No se pudo guardar la configuración.');
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (_checkingUpdates) return;
+    setState(() => _checkingUpdates = true);
+    try {
+      final result = await OtaUpdateService().checkAndInstall();
+      if (!mounted) return;
+      _showMessage(result.message);
+    } finally {
+      if (mounted) setState(() => _checkingUpdates = false);
     }
   }
 
@@ -301,6 +315,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: _clearImageCache,
                   icon: const Icon(Icons.delete_sweep_outlined),
                   label: const Text('LIMPIAR CACHÉ DE IMÁGENES'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.system_update_alt_rounded, color: AppTheme.accent, size: 25),
+                  SizedBox(width: 10),
+                  Text('Actualización de MILTVPLUS',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Buscá una versión publicada en GitHub. El APK se verifica antes de abrir el instalador de Android.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _checkingUpdates ? null : _checkForUpdates,
+                  icon: _checkingUpdates
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.system_update_alt_rounded),
+                  label: Text(_checkingUpdates ? 'BUSCANDO…' : 'Buscar actualizaciones'),
                 ),
               ),
             ],
