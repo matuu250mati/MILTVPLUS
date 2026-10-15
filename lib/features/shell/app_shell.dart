@@ -7,6 +7,7 @@ import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
+import '../catalog/owner_publishing_screen.dart';
 import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
@@ -160,10 +161,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     await preferences.setBool('miltvplus_welcome_guide_seen_v2', true);
   }
 
+  bool get _isOwner {
+    if (!isSupabaseConfigured) return false;
+    return Supabase.instance.client.auth.currentUser?.appMetadata['role'] == 'owner';
+  }
+
   bool get _isModerator {
     if (!isSupabaseConfigured) return false;
     final role = Supabase.instance.client.auth.currentUser?.appMetadata['role'];
-    return role == 'admin';
+    return role == 'admin' || role == 'owner';
   }
 
   Widget page() {
@@ -187,7 +193,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       case 8:
         return const CatalogScreen(category: 'EXPLORAR');
       case 9:
-        return const ContentSubmissionScreen();
+        return const OwnerPublishingScreen();
       case 10:
         return const AdultGateScreen();
       case 12:
@@ -294,7 +300,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
-                  if (_isModerator) _drawerItem(9),
+                  if (_isOwner) _drawerItem(9),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(10),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
