@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
@@ -307,7 +308,7 @@ Future<void> _openSeriesEpisodes(
     if (!context.mounted) return;
     if (episodes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Esta serie todavía no tiene episodios publicados.')),
+        const SnackBar(content: Text('Esta serie todavía no tiene episodios disponibles.')),
       );
       return;
     }
@@ -348,7 +349,7 @@ Future<void> _openSeriesEpisodes(
     if (selectedEpisode == null || !context.mounted) return;
     if (selectedEpisode.urlStream.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este episodio no tiene una URL de reproducción configurada.')),
+        const SnackBar(content: Text('Este episodio todavía no está disponible para reproducir.')),
       );
       return;
     }
@@ -389,7 +390,7 @@ class _CatalogCard extends StatelessWidget {
                 ? () => _openSeriesEpisodes(context, entry)
                 : () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Este título todavía no tiene una URL de reproducción configurada.'),
+                        content: Text('Este título todavía no está disponible para reproducir.'),
                       ),
                     ),
         child: Column(
@@ -408,10 +409,14 @@ class _CatalogCard extends StatelessWidget {
                   ? const Center(
                       child: Icon(Icons.movie_outlined, size: 48, color: AppTheme.accent),
                     )
-                  : Image.network(
-                      entry.posterUrl!,
+                  : CachedNetworkImage(
+                      imageUrl: entry.posterUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
+                      fadeInDuration: const Duration(milliseconds: 120),
+                      placeholder: (_, __) => const Center(
+                        child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                      errorWidget: (_, __, ___) => const Center(
                         child: Icon(Icons.movie_outlined, size: 48, color: AppTheme.accent),
                       ),
                     ),
