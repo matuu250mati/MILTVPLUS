@@ -121,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _ChannelRail(
                       channels: data.channels.take(compact ? 8 : 12).toList(),
                       compact: compact,
+                      onOpenLive: () => widget.onNavigate(0),
                     ),
                   SizedBox(height: compact ? 20 : 26),
                   _SectionHeader(
@@ -583,9 +584,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _ChannelRail extends StatelessWidget {
-  const _ChannelRail({required this.channels, required this.compact});
+  const _ChannelRail({required this.channels, required this.compact, required this.onOpenLive});
   final List<ChannelModel> channels;
   final bool compact;
+  final VoidCallback onOpenLive;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -604,11 +606,7 @@ class _ChannelRail extends StatelessWidget {
                 borderRadius: BorderRadius.circular(13),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(13),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => _ChannelOpenScreen(channel: channel),
-                    ),
-                  ),
+                  onTap: onOpenLive,
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
@@ -665,41 +663,6 @@ class _ChannelRail extends StatelessWidget {
               ),
             );
           },
-        ),
-      );
-}
-
-class _ChannelOpenScreen extends StatelessWidget {
-  const _ChannelOpenScreen({required this.channel});
-  final ChannelModel channel;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: AppTheme.background,
-        appBar: AppBar(title: Text(channel.title)),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.live_tv_rounded, size: 54, color: AppTheme.accent),
-                const SizedBox(height: 12),
-                Text(channel.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
-                const Text(
-                  'Abrí TV en vivo para reproducir este canal desde el reproductor integrado.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.muted, height: 1.4),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('VOLVER A INICIO'),
-                ),
-              ],
-            ),
-          ),
         ),
       );
 }
