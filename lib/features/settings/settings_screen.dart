@@ -5,6 +5,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/supabase_config.dart';
 import '../auth/auth_screen.dart';
 import '../../services/ota_update_service.dart';
+import '../../services/m3u_playlist_service.dart';
+import '../../services/channel_storage_service.dart';
+import '../../models/tv_channel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -23,6 +26,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _saving = false;
   bool _checkingUpdates = false;
   String? _providerStatus;
+  bool _importingPlaylist = false;
+  final _playlistUrlController = TextEditingController();
+  final _playlistService = M3uPlaylistService();
+  final _channelStorage = ChannelStorageService();
 
   @override
   void initState() {
@@ -93,6 +100,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  static const _playlistSources = <({String title, String url})>[
+    (title: 'Deportes internacionales', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u'),
+    (title: 'Canales de Argentina', url: 'https://iptv-org.github.io/iptv/countries/ar.m3u'),
+    (title: 'Canales en español', url: 'https://iptv-org.github.io/iptv/languages/spa.m3u'),
+    (title: 'Catálogo global', url: 'https://iptv-org.github.io/iptv/index.m3u'),
+    (title: 'Lista gratuita curada', url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8'),
+  ];
+
+  Future<void> _importPlaylist(String url, String title) async {
+    final normalizedUrl = url.trim();
+    final uri = Uri.tryParse(normalizedUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+      _showMessage('Ingresá una URL HTTPS válida de una lista propia o autorizada.');
+      return;
+    }
+    if (_importingPlaylist) return;
+    setState(() => _importingPlaylist = true);
+    try {
+      final imported = await _playlistService.importFromUrl(normalizedUrl);
+      final merged = <String, TvChannel>{};
+      for (final channel in await _channelStorage.load()) {
+        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+      }
+      for (final channel in imported) {
+        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+      }
+      await _channelStorage.save(merged.values.toList(growable: false));
+      _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
+    } catch (_) {
+      _showMessage('No se pudo cargar $title. Verificá que la lista sea pública, HTTPS y compatible con M3U.');
+    } finally {
+      if (mounted) setState(() => _importingPlaylist = false);
+    }
+  }
+
+  String _streamIdentity(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null || uri.host.isEmpty) return value.trim();
+    return uri.replace(scheme: uri.scheme.toLowerCase(), host: uri.host.toLowerCase(),
+        path: uri.normalizePath().path, fragment: '').toString();
+  }
+
+  Future<void> _importCustomPlaylist() async {
+    final url = _playlistUrlController.text.trim();
+    if (url.isEmpty) {
+      _showMessage('Pegá primero la URL HTTPS de tu lista M3U.');
+      return;
+    }
+    await _importPlaylist(url, 'Lista propia');
+  }
+
   void _clearImageCache() {
     final cache = PaintingBinding.instance.imageCache;
     cache.clear();
@@ -124,6 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _urlController.dispose();
+    _playlistUrlController.dispose();
     super.dispose();
   }
 
@@ -238,6 +297,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Row(children: [
+                Icon(Icons.playlist_add_check_circle_rounded, color: Color(0xFF57D9A3), size: 27),
+                SizedBox(width: 10),
+                Expanded(child: Text('Cargar listas de canales', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 8),
+              const Text(
+                'Administrá las listas desde acá para que TV en vivo y Deportes tengan todo el espacio disponible. Solo se importan señales públicas o que estés autorizado a usar.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              for (final source in _playlistSources)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _importingPlaylist ? null : () => _importPlaylist(source.url, source.title),
+                      icon: const Icon(Icons.download_rounded),
+                      label: Text(source.title),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _playlistUrlController,
+                keyboardType: TextInputType.url,
+                minLines: 1,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Mi lista M3U/M3U8 (HTTPS)',
+                  hintText: 'https://servidor/mi-lista.m3u',
+                  prefixIcon: Icon(Icons.link_rounded),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _importingPlaylist ? null : _importCustomPlaylist,
+                  icon: _importingPlaylist
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.playlist_add_rounded),
+                  label: Text(_importingPlaylist ? 'CARGANDO LISTA…' : 'IMPORTAR LISTA PROPIA'),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Divider(color: Color(0x223FFFFFF)),
+              const Row(children: [
+                Icon(Icons.satellite_alt_rounded, color: Color(0xFF65B7FF), size: 25),
+                SizedBox(width: 10),
+                Expanded(child: Text('Codificador o sintonizador', style: TextStyle(fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 6),
+              const Text(
+                'MILTVPLUS puede importar una URL de red o una lista expuesta por un equipo compatible. Un decodificador HDMI común no se puede detectar ni leer directamente desde una app Android: hace falta un sintonizador compatible con Android o un equipo que publique su salida en la red. No compartas claves de canales cifrados ni señales sin autorización.',
+                style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const Row(
                 children: [
                   Icon(Icons.verified_user_outlined, color: AppTheme.accent, size: 25),
@@ -328,6 +459,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: .07)),
           ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Información de MILTVPLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            const _InfoRow(icon: Icons.security_rounded, color: Color(0xFF5BE58B), title: 'Seguridad', description: 'PIN de +18 protegido en almacenamiento seguro; las cuentas y los catálogos remotos dependen de Supabase y sus permisos.'),
+            const _InfoRow(icon: Icons.live_tv_rounded, color: Color(0xFF58C7FF), title: 'TV en vivo', description: 'Listas públicas, listas M3U autorizadas, búsqueda, filtros y reproducción a pantalla completa.'),
+            const _InfoRow(icon: Icons.sports_soccer_rounded, color: Color(0xFFFFB74D), title: 'Deportes', description: 'Catálogos internacionales y señales argentinas gratuitas disponibles en las fuentes importadas.'),
+            const _InfoRow(icon: Icons.lock_rounded, color: Color(0xFFB79CFF), title: 'Zona +18', description: 'Acceso con cuenta, confirmación de mayoría de edad y PIN local. No reemplaza controles parentales del dispositivo.'),
+            const _InfoRow(icon: Icons.system_update_alt_rounded, color: Color(0xFFFF7CA8), title: 'Actualizaciones', description: 'La actualización automática requiere que exista una versión publicada en GitHub Releases.'),
+            const _InfoRow(icon: Icons.satellite_alt_rounded, color: Color(0xFF65B7FF), title: 'Equipos externos', description: 'Solo se integran sintonizadores compatibles o dispositivos que publiquen una señal autorizada por red; no se captura HDMI genérico.'),
+          ]),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -365,4 +515,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.color, required this.title, required this.description});
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 38, height: 38,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withValues(alpha: .13),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: .20), blurRadius: 12, spreadRadius: 1)],
+        ),
+        child: Icon(icon, color: color, size: 21),
+      ),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 3),
+        Text(description, style: const TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
+      ])),
+    ]),
+  );
 }
