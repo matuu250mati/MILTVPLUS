@@ -49,10 +49,30 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   String _countryLabel(String? value) {
     final normalized = (value ?? '').trim().toLowerCase();
-    if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'Argentina';
-    if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'Estados Unidos';
-    if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'Reino Unido';
-    return (value ?? '').trim();
+    const labels = <String, String>{
+      'ar': 'Argentina', 'arg': 'Argentina', 'argentina': 'Argentina',
+      'argentine republic': 'Argentina',
+      'us': 'Estados Unidos', 'usa': 'Estados Unidos',
+      'united states': 'Estados Unidos',
+      'united states of america': 'Estados Unidos',
+      'gb': 'Reino Unido', 'uk': 'Reino Unido',
+      'united kingdom': 'Reino Unido', 'great britain': 'Reino Unido',
+      'es': 'España', 'spain': 'España', 'esp': 'España',
+      'br': 'Brasil', 'brazil': 'Brasil', 'bra': 'Brasil',
+      'mx': 'México', 'mexico': 'México', 'mex': 'México',
+      'uy': 'Uruguay', 'ury': 'Uruguay',
+      'cl': 'Chile', 'chl': 'Chile',
+      'co': 'Colombia', 'col': 'Colombia',
+      'pe': 'Perú', 'peru': 'Perú', 'per': 'Perú',
+      'it': 'Italia', 'ita': 'Italia',
+      'fr': 'Francia', 'fra': 'Francia',
+      'de': 'Alemania', 'deu': 'Alemania',
+      'pt': 'Portugal', 'prt': 'Portugal',
+      'ca': 'Canadá', 'canada': 'Canadá', 'can': 'Canadá',
+      'au': 'Australia', 'aus': 'Australia',
+      'jp': 'Japón', 'japan': 'Japón', 'jpn': 'Japón',
+    };
+    return labels[normalized] ?? (value ?? '').trim();
   }
 
   String _streamIdentity(String value) {
@@ -457,10 +477,32 @@ String _categoryIcon(String value) {
 
 String _normalizeCountry(String? value) {
   final normalized = (value ?? '').trim().toLowerCase();
-  if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'argentina';
-  if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'united states';
-  if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'united kingdom';
-  return normalized;
+  // M3U providers mix ISO-2/ISO-3 codes and country names. Normalize both
+  // sides to the same canonical value so selecting a flag chip actually filters.
+  const aliases = <String, String>{
+    'ar': 'argentina', 'arg': 'argentina', 'argentina': 'argentina',
+    'argentine republic': 'argentina',
+    'us': 'united states', 'usa': 'united states',
+    'united states': 'united states',
+    'united states of america': 'united states',
+    'gb': 'united kingdom', 'uk': 'united kingdom',
+    'united kingdom': 'united kingdom', 'great britain': 'united kingdom',
+    'es': 'spain', 'esp': 'spain', 'spain': 'spain', 'españa': 'spain',
+    'br': 'brazil', 'bra': 'brazil', 'brazil': 'brazil', 'brasil': 'brazil',
+    'mx': 'mexico', 'mex': 'mexico', 'mexico': 'mexico', 'méxico': 'mexico',
+    'uy': 'uruguay', 'ury': 'uruguay', 'uruguay': 'uruguay',
+    'cl': 'chile', 'chl': 'chile', 'chile': 'chile',
+    'co': 'colombia', 'col': 'colombia', 'colombia': 'colombia',
+    'pe': 'peru', 'per': 'peru', 'peru': 'peru', 'perú': 'peru',
+    'it': 'italy', 'ita': 'italy', 'italy': 'italy', 'italia': 'italy',
+    'fr': 'france', 'fra': 'france', 'france': 'france', 'francia': 'france',
+    'de': 'germany', 'deu': 'germany', 'germany': 'germany', 'alemania': 'germany',
+    'pt': 'portugal', 'prt': 'portugal', 'portugal': 'portugal',
+    'ca': 'canada', 'can': 'canada', 'canada': 'canada', 'canadá': 'canada',
+    'au': 'australia', 'aus': 'australia', 'australia': 'australia',
+    'jp': 'japan', 'jpn': 'japan', 'japan': 'japan', 'japón': 'japan',
+  };
+  return aliases[normalized] ?? normalized;
 }
 
 class _ChannelList extends StatelessWidget {
