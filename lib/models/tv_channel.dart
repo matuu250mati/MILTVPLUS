@@ -6,6 +6,8 @@ class TvChannel {
     this.country,
     this.language,
     this.category,
+    this.logoUrl,
+    this.tvgId,
   });
 
   final String name;
@@ -14,6 +16,8 @@ class TvChannel {
   final String? country;
   final String? language;
   final String? category;
+  final String? logoUrl;
+  final String? tvgId;
 
   String get liveSection {
     final categoryText = (category ?? '').trim();
