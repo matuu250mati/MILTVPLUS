@@ -37,12 +37,6 @@ class _DecoderSyncScreenState extends State<DecoderSyncScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final radioCount = _foundChannels.where((c) =>
-      (c.category ?? '').toLowerCase().contains('radio') ||
-      (c.groupTitle ?? '').toLowerCase().contains('radio') ||
-      c.name.toLowerCase().startsWith('radio ')).length;
-    final tvCount = _foundChannels.length - radioCount;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sincronización de equipos'),
