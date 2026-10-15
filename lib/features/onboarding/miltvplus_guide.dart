@@ -26,7 +26,7 @@ Future<void> showMiltvPlusGuide(
     const _GuideStep(
       icon: Icons.live_tv_rounded,
       color: Color(0xFF58C7FF),
-      title: 'TV en Vivo: buscá y filtrá',
+      title: 'TV en Vivo y Deportes',
       detail: 'Entrá a TV en Vivo para consultar las señales disponibles. Usá el buscador para encontrar un canal o país y los filtros para reducir la lista. Tocá una señal para intentar reproducirla. La disponibilidad depende de que la fuente siga activa, sea compatible y tengas autorización para verla.',
     ),
     const _GuideStep(
