@@ -12,7 +12,6 @@ import '../home/home_screen.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
-import '../submissions/content_submission_screen.dart';
 import '../submissions/content_moderation_screen.dart';
 import '../../services/ota_update_service.dart';
 
