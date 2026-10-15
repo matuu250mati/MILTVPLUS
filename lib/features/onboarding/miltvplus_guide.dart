@@ -20,7 +20,7 @@ Future<void> showMiltvPlusGuide(
     const _GuideStep(
       icon: Icons.home_rounded,
       color: Color(0xFF5BE58B),
-      title: 'Empezá por Inicio',
+      title: 'TV en Vivo y Deportes',
       detail: 'Inicio es el punto de partida para recorrer la aplicación. Usá el menú lateral para entrar a cada sección. En celulares, tocá una opción; en Android TV o dispositivos compatibles, probá las flechas y el botón central del control remoto. Si algo no responde, volvé a Inicio e intentá de nuevo.',
     ),
     const _GuideStep(
