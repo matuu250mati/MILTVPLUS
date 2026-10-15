@@ -13,7 +13,10 @@ import '../../models/tv_channel.dart';
 import 'decoder_sync_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.section});
+
+  /// Null shows the categorized settings hub; otherwise shows one dedicated section.
+  final String? section;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -224,9 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-      children: [
+    final allSections = <Widget>[
         const Text('PERFIL Y CONFIGURACIÓN',
             style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
@@ -774,9 +775,144 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+      ];
+
+    final section = widget.section;
+    if (section == null) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+        children: [
+          const Text('PERFIL Y CONFIGURACIÓN',
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          const Text('Elegí una categoría para administrar MILTVPLUS.',
+              style: TextStyle(color: AppTheme.muted)),
+          const SizedBox(height: 22),
+          _SettingsMenuTile(
+            icon: Icons.person_outline_rounded,
+            title: 'Perfil del usuario',
+            subtitle: 'Nombre, avatar y datos locales',
+            onTap: () => _openSection('profile'),
+          ),
+          _SettingsMenuTile(
+            icon: Icons.shield_outlined,
+            title: 'Cuenta y seguridad',
+            subtitle: 'Inicio de sesión, verificación y gestión de cuenta',
+            onTap: () => _openSection('account'),
+          ),
+          _SettingsMenuTile(
+            icon: Icons.playlist_play_rounded,
+            title: 'Contenido y listas',
+            subtitle: 'Proveedor, listas M3U y equipos compatibles',
+            onTap: () => _openSection('content'),
+          ),
+          _SettingsMenuTile(
+            icon: Icons.tune_rounded,
+            title: 'Ajustes de la aplicación',
+            subtitle: 'Accesibilidad, almacenamiento y actualizaciones',
+            onTap: () => _openSection('app'),
+          ),
+          _SettingsMenuTile(
+            icon: Icons.help_outline_rounded,
+            title: 'Ayuda y soporte',
+            subtitle: 'Información, guía de uso y preguntas frecuentes',
+            onTap: () => _openSection('help'),
+          ),
+        ],
+      );
+    }
+
+    final sectionIndices = <String, List<int>>{
+      // Each group keeps the original functional widgets and their spacing.
+      'account': [4, 5, 12, 13],
+      'profile': [6, 7],
+      'content': [8, 9, 10, 11],
+      'app': [14, 15, 18, 19, 24],
+      'help': [16, 17, 20, 21, 22, 23],
+    };
+    final indices = sectionIndices[section] ?? const <int>[];
+    final titles = <String, String>{
+      'profile': 'Perfil del usuario',
+      'account': 'Cuenta y seguridad',
+      'content': 'Contenido y listas',
+      'app': 'Ajustes de la aplicación',
+      'help': 'Ayuda y soporte',
+    };
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+      children: [
+        Row(
+          children: [
+            IconButton(
+              tooltip: 'Volver a configuración',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            Expanded(
+              child: Text(
+                titles[section] ?? 'Configuración',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (final index in indices)
+          if (index >= 0 && index < allSections.length) allSections[index],
       ],
     );
   }
+
+  void _openSection(String section) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsScreen(section: section),
+      ),
+    );
+  }
+}
+
+class _SettingsMenuTile extends StatelessWidget {
+  const _SettingsMenuTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.panel,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: .08)),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon, color: AppTheme.accent),
+          ),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(subtitle, style: const TextStyle(color: AppTheme.muted)),
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.accent),
+          onTap: onTap,
+        ),
+      );
 }
 
 class _InfoRow extends StatelessWidget {
