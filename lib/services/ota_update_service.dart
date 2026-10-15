@@ -95,30 +95,31 @@ class OtaUpdateService {
         return const OtaUpdateInfo(message: 'No se pudieron comparar las versiones.');
       }
       final assets = data['assets'];
-      var sizeBytes = 0;
-      if (assets is List) {
-        for (final asset in assets) {
-          if (asset is Map<String, dynamic> &&
-              asset['name'] == 'app-release.apk' &&
-              asset['size'] is num) {
-            sizeBytes = (asset['size'] as num).toInt();
-            break;
-          }
-        }
-      }
+      final apkSize = _releaseAssetSize(assets, 'app-release.apk');
+      final hasApk = apkSize > 0;
+      final hasChecksum = _hasReleaseAsset(assets, 'app-release.apk.sha256');
+      final sizeBytes = apkSize;
       final body = data['body'] is String ? data['body'] as String : '';
       final mandatory = RegExp(
         r'MILTVPLUS-REQUIRED-UPDATE:\s*true',
         caseSensitive: false,
       ).hasMatch(body);
-      final available = _compareVersions(latest, installed) > 0;
+      final versionIsNewer = _compareVersions(latest, installed) > 0;
+      if (versionIsNewer && (!hasApk || !hasChecksum)) {
+        return OtaUpdateInfo(
+          message: 'La versión $tag está publicada, pero faltan el APK o su archivo SHA-256. No se ofrecerá una instalación incompleta.',
+          currentVersion: package.version,
+          latestVersion: tag,
+          sizeBytes: sizeBytes,
+        );
+      }
       return OtaUpdateInfo(
-        updateAvailable: available,
-        mandatory: available && mandatory,
+        updateAvailable: versionIsNewer,
+        mandatory: versionIsNewer && mandatory,
         currentVersion: package.version,
         latestVersion: tag,
         sizeBytes: sizeBytes,
-        message: available ? 'Hay una versión nueva disponible.' : 'MILTVPLUS está actualizado.',
+        message: versionIsNewer ? 'Hay una versión nueva disponible.' : 'MILTVPLUS está actualizado.',
       );
     } catch (_) {
       return const OtaUpdateInfo(message: 'No se pudo consultar la versión publicada.');
@@ -163,6 +164,14 @@ class OtaUpdateService {
         );
       }
 
+      final apkSize = _releaseAssetSize(data['assets'], 'app-release.apk');
+      if (apkSize <= 0 ||
+          !_hasReleaseAsset(data['assets'], 'app-release.apk.sha256')) {
+        return const OtaUpdateResult(
+          message: 'La Release nueva no incluye app-release.apk y app-release.apk.sha256. No se descargará un paquete incompleto.',
+        );
+      }
+
       final directory = await getTemporaryDirectory();
       final apkFile = File('${directory.path}/miltvplus-update.apk');
       if (await apkFile.exists()) await apkFile.delete();
@@ -190,7 +199,8 @@ class OtaUpdateService {
 
       if (downloadResponse.statusCode != HttpStatus.ok ||
           !await apkFile.exists() ||
-          await apkFile.length() < 1024 * 1024) {
+          await apkFile.length() < 1024 * 1024 ||
+          await apkFile.length() != apkSize) {
         if (await apkFile.exists()) await apkFile.delete();
         return const OtaUpdateResult(
           message: 'La descarga del APK quedó incompleta o la Release no está publicada.',
@@ -264,8 +274,45 @@ class OtaUpdateService {
   }
 
   String? _readChecksum(String content) {
-    final match = RegExp(r'^[a-fA-F0-9]{64}').firstMatch(content.trim());
-    return match?.group(0)?.toLowerCase();
+    final match = RegExp(
+      r'^([a-fA-F0-9]{64})(?:\\s+\\*?[\\w.-]+)?\\s*
+    final match = RegExp(r'v?(\d+(?:\.\d+){1,3})').firstMatch(version.trim());
+    if (match == null) return null;
+    return match.group(1)!.split('.').map(int.parse).toList();
+  }
+
+  int _compareVersions(List<int> left, List<int> right) {
+    final length = left.length > right.length ? left.length : right.length;
+    for (var i = 0; i < length; i++) {
+      final a = i < left.length ? left[i] : 0;
+      final b = i < right.length ? right[i] : 0;
+      if (a != b) return a.compareTo(b);
+    }
+    return 0;
+  }
+}
+,
+    ).firstMatch(content.trim());
+    return match?.group(1)?.toLowerCase();
+  }
+
+  bool _hasReleaseAsset(dynamic assets, String name) {
+    if (assets is! List) return false;
+    return assets.any(
+      (asset) => asset is Map<String, dynamic> && asset['name'] == name,
+    );
+  }
+
+  int _releaseAssetSize(dynamic assets, String name) {
+    if (assets is! List) return 0;
+    for (final asset in assets) {
+      if (asset is Map<String, dynamic> &&
+          asset['name'] == name &&
+          asset['size'] is num) {
+        return (asset['size'] as num).toInt();
+      }
+    }
+    return 0;
   }
 
   List<int>? _normalizeVersion(String version) {
