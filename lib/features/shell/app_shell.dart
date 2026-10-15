@@ -425,36 +425,6 @@ class _AmbientBackground extends StatelessWidget {
       );
 }
 
-class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({required this.icon, required this.color, required this.title, required this.detail});
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 13),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        width: 38, height: 38,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color.withValues(alpha: .13),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: .2), blurRadius: 10)],
-        ),
-        child: Icon(icon, color: color),
-      ),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 3),
-        Text(detail, style: const TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
-      ])),
-    ]),
-  );
-}
-
 class _NavItem {
   const _NavItem(this.label, this.icon);
 
