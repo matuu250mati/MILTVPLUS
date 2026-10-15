@@ -26,6 +26,24 @@ void main() {
     expect(episode.isPublished, isTrue);
   });
 
+  test('parses ordered episode mirror URLs and keeps the legacy URL as fallback', () {
+    final episode = EpisodeModel.fromJson({
+      'series_id': 'series-mirrors',
+      'title': 'Episodio con espejos',
+      'url_stream': 'https://media.example.org/primary.m3u8',
+      'stream_urls': [
+        'https://media.example.org/primary.m3u8',
+        'https://backup.example.org/episode.m3u8',
+        'https://backup.example.org/episode.m3u8',
+      ],
+    });
+
+    expect(episode.streamUrls, [
+      'https://media.example.org/primary.m3u8',
+      'https://backup.example.org/episode.m3u8',
+    ]);
+  });
+
   test('uses safe defaults for optional episode metadata', () {
     final episode = EpisodeModel.fromJson({
       'series_id': 'series-2',
