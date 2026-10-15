@@ -81,6 +81,18 @@ class CatalogService {
         default:
           if (category.trim().isNotEmpty) expandedCategories.add(category.trim());
       }
+      // Include generic database buckets as candidates. TvChannel.liveSection
+      // performs the final classification from category, group and channel
+      // name; otherwise a sports/news channel stored as "General" is never
+      // returned by Supabase and cannot be classified by the UI.
+      expandedCategories.addAll([
+        'General',
+        'general',
+        'Entretenimiento y general',
+        'entretenimiento y general',
+        'Otros canales',
+        'otros canales',
+      ]);
     }
 
     final query = _supabase
