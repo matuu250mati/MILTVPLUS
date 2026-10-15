@@ -272,7 +272,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
-                  _drawerItem(9),
+                  if (_isModerator) _drawerItem(9),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(10),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
@@ -365,7 +365,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       },
       child: Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: selected == 10 ? null : AppBar(
+      appBar: (selected == 10 || selected == 0 || selected == 5) ? AppBar(
+        backgroundColor: const Color(0xFF080A10),
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: AppTheme.accent),
+        titleSpacing: 4,
+        title: const SizedBox.shrink(),
+      ) : AppBar(
         backgroundColor: const Color(0xFF080A10),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
