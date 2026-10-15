@@ -362,50 +362,27 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 2, 4, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    IconButton(
-                      tooltip: 'Volver al inicio',
-                      onPressed: widget.onBack,
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.categoryFilter == null
-                                ? 'TV EN VIVO'
-                                : widget.categoryFilter!.contains('Deportes')
-                                    ? 'DEPORTES'
-                                    : 'TV EN VIVO',
-                            maxLines: 2,
-                            softWrap: true,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: compact ? 21 : 26,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${channels.length} señales disponibles · elegí una para reproducir',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppTheme.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                IconButton(
+                  tooltip: 'Volver al inicio',
+                  onPressed: widget.onBack,
+                  icon: const Icon(Icons.arrow_back_rounded),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${channels.length} señales disponibles',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -431,6 +408,50 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     );
   }
 
+}
+
+
+String _countryFlag(String value) {
+  final code = value.trim().toUpperCase();
+  if (code == 'TODOS' || code.isEmpty) return '';
+  if (code.length == 2 &&
+      code.codeUnits.every((unit) => unit >= 65 && unit <= 90)) {
+    return String.fromCharCodes(code.codeUnits.map((unit) => 0x1F1E6 + unit - 65));
+  }
+  const known = <String, String>{
+    'ARGENTINA': '🇦🇷',
+    'ESTADOS UNIDOS': '🇺🇸',
+    'UNITED STATES': '🇺🇸',
+    'REINO UNIDO': '🇬🇧',
+    'UNITED KINGDOM': '🇬🇧',
+    'ESPAÑA': '🇪🇸',
+    'SPAIN': '🇪🇸',
+    'BRASIL': '🇧🇷',
+    'BRAZIL': '🇧🇷',
+    'MÉXICO': '🇲🇽',
+    'MEXICO': '🇲🇽',
+    'URUGUAY': '🇺🇾',
+    'CHILE': '🇨🇱',
+    'COLOMBIA': '🇨🇴',
+    'PERÚ': '🇵🇪',
+    'PERU': '🇵🇪',
+  };
+  return known[code] ?? '🌐';
+}
+
+String _categoryIcon(String value) {
+  final category = value.trim().toLowerCase();
+  if (category == 'todos') return '📺';
+  if (category.contains('deport') || category.contains('sport')) return '⚽';
+  if (category.contains('noticia') || category.contains('news')) return '📰';
+  if (category.contains('cultur') || category.contains('document')) return '🎭';
+  if (category.contains('película') || category.contains('pelicula') ||
+      category.contains('cine') || category.contains('movie')) return '🎬';
+  if (category.contains('entreten') || category.contains('series')) return '🍿';
+  if (category.contains('infantil') || category.contains('kids')) return '🧸';
+  if (category.contains('música') || category.contains('music')) return '🎵';
+  if (category.contains('educación') || category.contains('educacion')) return '📚';
+  return '📺';
 }
 
 String _normalizeCountry(String? value) {
@@ -485,16 +506,15 @@ class _ChannelList extends StatelessWidget {
             (selectedCountry == 'Todos' || _normalizeCountry(channels[i].country) == _normalizeCountry(selectedCountry)))
           i,
     ];
-    return Container(
-      decoration: BoxDecoration(color: AppTheme.panel.withValues(alpha: .92), borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: .07))),
+    return ColoredBox(
+      color: AppTheme.panel.withValues(alpha: .35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(padding: EdgeInsets.fromLTRB(16, 17, 16, 12),
+          const Padding(padding: EdgeInsets.fromLTRB(8, 10, 8, 8),
               child: Text('CANALES', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2))),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
             child: TextField(
               controller: searchController,
               onChanged: onQueryChanged,
@@ -518,20 +538,20 @@ class _ChannelList extends StatelessWidget {
           ),
           if (groups.isNotEmpty) ...[
             const Padding(
-              padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
+              padding: EdgeInsets.fromLTRB(6, 8, 6, 4),
               child: Text('CATEGORÍA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
             ),
             SizedBox(
               height: 42,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 children: [
                   for (final value in <String>['Todos', ...groups])
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
-                        label: Text(value),
+                        label: Text('${_categoryIcon(value)} $value'),
                         selected: selectedGroup == value,
                         autofocus: selectedGroup == value,
                         onSelected: (_) => onGroupChanged(value),
@@ -543,7 +563,7 @@ class _ChannelList extends StatelessWidget {
           ],
           if (countries.isNotEmpty) ...[
             const Padding(
-              padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+              padding: EdgeInsets.fromLTRB(6, 6, 6, 4),
               child: Text('PAÍS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
             ),
             SizedBox(
@@ -556,7 +576,7 @@ class _ChannelList extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
-                        label: Text(value),
+                        label: Text('${_countryFlag(value)} $value'),
                         selected: selectedCountry == value,
                         onSelected: (_) => onCountryChanged(value),
                       ),
@@ -610,7 +630,7 @@ class _ChannelList extends StatelessWidget {
                             subtitle: Text(
                               [
                                 if (channel.groupTitle?.isNotEmpty == true) channel.groupTitle!,
-                                if (channel.country?.isNotEmpty == true) channel.country!,
+                                if (channel.country?.isNotEmpty == true) '${_countryFlag(channel.country!)} ${channel.country!}',
                                 if (channel.groupTitle == null && channel.country == null) 'TV EN VIVO',
                               ].join(' · '),
                               style: const TextStyle(color: AppTheme.muted, fontSize: 10),
