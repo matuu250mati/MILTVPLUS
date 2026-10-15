@@ -24,6 +24,8 @@ class ChannelStorageService {
               country: decoded['country'] is String ? decoded['country'] as String : null,
               language: decoded['language'] is String ? decoded['language'] as String : null,
               category: decoded['category'] is String ? decoded['category'] as String : null,
+              logoUrl: decoded['logoUrl'] is String ? decoded['logoUrl'] as String : null,
+              tvgId: decoded['tvgId'] is String ? decoded['tvgId'] as String : null,
             ));
           }
         }
@@ -44,6 +46,8 @@ class ChannelStorageService {
               'country': channel.country,
               'language': channel.language,
               'category': channel.category,
+              'logoUrl': channel.logoUrl,
+              'tvgId': channel.tvgId,
             }))
         .toList(growable: false);
     await preferences.setStringList(_storageKey, encoded);
