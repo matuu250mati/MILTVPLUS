@@ -21,6 +21,15 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   static const _profileKey = 'miltv_profile_name_v1';
   static const _providerUrlKey = 'miltv_provider_url_v1';
+  static const _profilePhoneKey = 'miltv_profile_phone_v1';
+  static const _profileAvatarKey = 'miltv_profile_avatar_v1';
+
+  final _phoneController = TextEditingController();
+  int _avatarIndex = 0;
+  static const _profileAvatars = <IconData>[
+    Icons.person_rounded, Icons.face_rounded, Icons.sports_soccer_rounded,
+    Icons.movie_rounded, Icons.pets_rounded, Icons.star_rounded,
+  ];
 
   final _nameController = TextEditingController();
   final _urlController = TextEditingController();
@@ -44,6 +53,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final preferences = await SharedPreferences.getInstance();
       _nameController.text = preferences.getString(_profileKey) ?? 'Usuario MILTVPLUS';
+      _phoneController.text = preferences.getString(_profilePhoneKey) ?? '';
+      _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
       _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
     } finally {
@@ -72,6 +83,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final preferences = await SharedPreferences.getInstance();
       await preferences.setString(_profileKey, name);
+      await preferences.setString(_profilePhoneKey, _phoneController.text.trim());
+      await preferences.setInt(_profileAvatarKey, _avatarIndex);
       if (rawUrl.isEmpty) {
         await preferences.remove(_providerUrlKey);
       } else {
@@ -199,6 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _urlController.dispose();
     _playlistUrlController.dispose();
     super.dispose();
@@ -236,12 +250,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: 18),
+              Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor: AppTheme.accent.withValues(alpha: .16),
+                      child: Icon(_profileAvatars[_avatarIndex], size: 38, color: AppTheme.accent),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: List.generate(_profileAvatars.length, (index) => IconButton(
+                        tooltip: 'Elegir avatar ${index + 1}',
+                        onPressed: () => setState(() => _avatarIndex = index),
+                        style: IconButton.styleFrom(
+                          backgroundColor: _avatarIndex == index
+                              ? AppTheme.accent.withValues(alpha: .20)
+                              : Colors.white.withValues(alpha: .04),
+                          foregroundColor: _avatarIndex == index ? AppTheme.accent : AppTheme.muted,
+                        ),
+                        icon: Icon(_profileAvatars[index]),
+                      )),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
               TextField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nombre de perfil',
                   prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Teléfono (opcional)',
+                  hintText: '+54 9 11 1234-5678',
+                  helperText: 'Se guarda solo en este dispositivo; no verifica tu identidad.',
+                  prefixIcon: Icon(Icons.phone_iphone_rounded),
                 ),
               ),
               const SizedBox(height: 16),
@@ -594,6 +648,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: .07)),
           ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.quiz_outlined, color: AppTheme.accent, size: 25),
+                SizedBox(width: 10),
+                Expanded(child: Text('Preguntas frecuentes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+              ]),
+              SizedBox(height: 8),
+              Text('Respuestas claras a las dudas más comunes.', style: TextStyle(color: AppTheme.muted, height: 1.5)),
+              SizedBox(height: 8),
+              _FaqItem(question: '¿Por qué un canal no reproduce?', answer: 'Puede estar fuera de servicio, haber cambiado de dirección, requerir autorización o usar un formato no compatible. Probá otra señal y revisá tu conexión.'),
+              _FaqItem(question: '¿Qué pasa cuando importo una lista?', answer: 'MILTVPLUS lee las entradas compatibles y guarda las señales reconocidas en el almacenamiento local. Importar una lista no garantiza que cada señal esté activa ni que tengas permiso para acceder a servicios restringidos.'),
+              _FaqItem(question: '¿Mi teléfono queda verificado al escribirlo en Perfil?', answer: 'No. El teléfono del perfil es un dato local de referencia. No se envía para verificar identidad ni activa recuperación de cuenta.'),
+              _FaqItem(question: '¿MILTVPLUS activa la verificación en dos pasos?', answer: 'La verificación adicional depende del proveedor de identidad y de que esté habilitada en el servidor. Esta pantalla no afirma que exista un segundo factor si no se ha configurado y comprobado.'),
+              _FaqItem(question: '¿Puede leer cualquier codificador por HDMI?', answer: 'No. Android no puede leer automáticamente una entrada HDMI de otro aparato. Hace falta un equipo compatible que publique la señal mediante una interfaz admitida o una lista autorizada.'),
+              _FaqItem(question: '¿Se pierden mis listas al cerrar sesión?', answer: 'Cerrar sesión cierra la cuenta conectada. Las listas importadas en el almacenamiento local se administran por separado; no uses Limpiar caché como si fuera una copia de seguridad.'),
+              _FaqItem(question: '¿Cómo mantengo segura mi cuenta?', answer: 'Usá una contraseña única, no compartas códigos, cerrá la sesión en dispositivos ajenos y activá el segundo factor desde el proveedor cuando esté disponible. La aplicación no puede prometer protección absoluta.'),
+              _FaqItem(question: '¿Por qué hay canales que desaparecen?', answer: 'Las fuentes pueden cambiar, quedar sin conexión o retirar una señal. MILTVPLUS no controla la disponibilidad de fuentes externas.'),
+              _FaqItem(question: '¿Cómo actualizo MILTVPLUS?', answer: 'Entrá en Actualización de MILTVPLUS y buscá una versión publicada. Android puede pedir autorización para instalarla. Solo instalá versiones del proyecto oficial.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -660,5 +745,30 @@ class _InfoRow extends StatelessWidget {
         Text(description, style: const TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
       ])),
     ]),
+  );
+}
+
+
+class _FaqItem extends StatelessWidget {
+  const _FaqItem({required this.question, required this.answer});
+  final String question;
+  final String answer;
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+    child: ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 12),
+      iconColor: AppTheme.accent,
+      collapsedIconColor: AppTheme.muted,
+      title: Text(question, style: const TextStyle(fontWeight: FontWeight.w700)),
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(answer, style: const TextStyle(color: AppTheme.muted, height: 1.5)),
+        ),
+      ],
+    ),
   );
 }
