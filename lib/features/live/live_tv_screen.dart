@@ -50,6 +50,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     return allowed.contains(channel.liveSection.trim().toLowerCase());
   }
 
+  String _countryLabel(String? value) {
+    final normalized = (value ?? '').trim().toLowerCase();
+    if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'Argentina';
+    if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'Estados Unidos';
+    if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'Reino Unido';
+    return (value ?? '').trim();
+  }
+
   String _streamIdentity(String value) {
     final uri = Uri.tryParse(value.trim());
     if (uri == null || uri.host.isEmpty) return value.trim();
@@ -141,9 +149,27 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Continue with Supabase and cached channels when GitHub Raw is offline.
       }
 
+      // Deportes merges the global sports list with Argentina's country catalog.
+      // Only channels identified as sports are shown in the Deportes section.
+      final isSportsScreen = (widget.categoryFilter ?? const <String>[])
+          .any((value) => value.trim().toLowerCase() == 'deportes');
+      if (isSportsScreen) {
+        for (final sourceId in const ['sports', 'argentina']) {
+          for (final item in _publicPlaylistSources.where((source) => source.id == sourceId)) {
+            try {
+              final additionalChannels = await m3uPlaylistService.importFromUrl(item.url);
+              for (final channel in additionalChannels) {
+                if (_matchesCategoryFilter(channel)) addUnique(channel);
+              }
+            } catch (_) {
+              // Keep local and remote channels if a public source is unavailable.
+            }
+          }
+        }
+      }
+
       // If the primary playlist is unavailable or contains no channels for the
-      // selected genre, try a smaller, genre-specific public playlist. Previously
-      // this fallback ran only on the all-TV screen, leaving Deportes empty.
+      // selected genre, try a smaller, genre-specific public playlist.
       if (merged.isEmpty) {
         final requested = (widget.categoryFilter ?? const <String>[])
             .map((value) => value.trim().toLowerCase())
@@ -551,8 +577,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final compact = size.width < 900;
     final groups = channels.map((channel) => channel.liveSection).toSet().toList()..sort();
     final countries = channels
-        .map((channel) => channel.country?.trim())
-        .whereType<String>()
+        .map((channel) => _countryLabel(channel.country))
         .where((value) => value.isNotEmpty)
         .toSet()
         .toList()..sort();
@@ -611,29 +636,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _loadingChannels ? null : () => loadSavedChannels(showFeedback: true),
-                      icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
-                      label: const Text('RECARGAR'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _loadingChannels ? null : importPlaylist,
-                      icon: const Icon(Icons.playlist_add_rounded),
-                      label: const Text('FUENTES DE TV'),
-                    ),
-                    if (widget.categoryFilter == null)
-                      FilledButton.icon(
-                        onPressed: addChannel,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('AGREGAR'),
-                      ),
-                  ],
-                ),
+                const SizedBox(height: 2),
               ],
             ),
           ),
@@ -736,6 +739,14 @@ class _PlayerPanel extends StatelessWidget {
   }
 }
 
+String _normalizeCountry(String? value) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'argentina';
+  if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'united states';
+  if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'united kingdom';
+  return normalized;
+}
+
 class _ChannelList extends StatelessWidget {
   const _ChannelList({
     required this.channels,
@@ -777,7 +788,7 @@ class _ChannelList extends StatelessWidget {
                 (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
                 (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
             (selectedGroup == 'Todos' || channels[i].liveSection == selectedGroup) &&
-            (selectedCountry == 'Todos' || channels[i].country == selectedCountry))
+            (selectedCountry == 'Todos' || _normalizeCountry(channels[i].country) == _normalizeCountry(selectedCountry)))
           i,
     ];
     return Container(
