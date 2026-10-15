@@ -96,6 +96,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final result = await OtaUpdateService().checkAndInstall();
       if (!mounted) return;
       _showMessage(result.message);
+    } catch (_) {
+      if (mounted) {
+        _showMessage('No se pudo comprobar la actualización. Revisá la conexión e intentá otra vez.');
+      }
     } finally {
       if (mounted) setState(() => _checkingUpdates = false);
     }
