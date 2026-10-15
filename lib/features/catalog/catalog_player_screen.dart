@@ -224,7 +224,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                               right: 20,
                               bottom: 14,
                               child: ValueListenableBuilder<VideoPlayerValue>(
-                                valueListenable: controller!,
+                                valueListenable: controller,
                                 builder: (context, value, _) => Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
