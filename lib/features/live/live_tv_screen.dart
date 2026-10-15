@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
-import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
 import '../../services/m3u_playlist_service.dart';
 import 'live_player_screen.dart';
