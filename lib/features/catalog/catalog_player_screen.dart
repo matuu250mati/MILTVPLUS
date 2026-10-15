@@ -229,7 +229,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                                 builder: (context, value, _) => IconButton.filledTonal(
                                   tooltip: value.isPlaying ? 'Pausar' : 'Reproducir',
                                   iconSize: 42,
-                                  onPressed: () => value.isPlaying ? controller!.pause() : controller!.play(),
+                                  onPressed: () => value.isPlaying ? controller.pause() : controller.play(),
                                   icon: Icon(value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
                                 ),
                               ),
@@ -239,12 +239,12 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                               right: 20,
                               bottom: 14,
                               child: ValueListenableBuilder<VideoPlayerValue>(
-                                valueListenable: controller!,
+                                valueListenable: controller,
                                 builder: (context, value, _) => Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     VideoProgressIndicator(
-                                      controller!,
+                                      controller,
                                       allowScrubbing: true,
                                       padding: const EdgeInsets.symmetric(vertical: 8),
                                       colors: const VideoProgressColors(
