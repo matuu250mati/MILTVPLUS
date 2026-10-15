@@ -3,6 +3,49 @@ import 'package:miltv_plus/models/media_models.dart';
 import 'package:miltv_plus/models/tv_channel.dart';
 
 void main() {
+  test('movie and series models tolerate nulls and unexpected JSON field types', () {
+    final movie = MovieModel.fromJson({
+      'id': 17,
+      'title': null,
+      'synopsis': 99,
+      'category': false,
+      'genres': 'not-a-list',
+      'logo': 12,
+      'backdrop_url': <String, dynamic>{},
+      'url_stream': null,
+      'release_year': '2024',
+      'duration_seconds': 'bad-number',
+      'country_code': null,
+      'is_published': 'false',
+      'stream_urls': [' https://media.example.org/a.m3u8 ', 4, null],
+    });
+    final series = SeriesModel.fromJson({
+      'id': null,
+      'title': <String>[],
+      'genres': [null, 'Drama', 7, ''],
+      'release_year': 2022.8,
+      'is_published': 1,
+    });
+
+    expect(movie.id, '');
+    expect(movie.title, 'Sin título');
+    expect(movie.synopsis, isNull);
+    expect(movie.category, 'General');
+    expect(movie.genres, isEmpty);
+    expect(movie.logo, isNull);
+    expect(movie.backdropUrl, isNull);
+    expect(movie.releaseYear, 2024);
+    expect(movie.durationSeconds, isNull);
+    expect(movie.isPublished, isFalse);
+    expect(movie.streamUrls, ['https://media.example.org/a.m3u8']);
+
+    expect(series.id, '');
+    expect(series.title, 'Sin título');
+    expect(series.genres, ['Drama']);
+    expect(series.releaseYear, 2022);
+    expect(series.isPublished, isTrue);
+  });
+
   test('parses a published episode with provider playback URL', () {
     final episode = EpisodeModel.fromJson({
       'id': 'episode-1',
