@@ -216,9 +216,13 @@ String _catalogCategoryIcon(String value) {
   if (category.contains('deport') || category.contains('sport')) return '⚽';
   if (category.contains('cultur') || category.contains('document')) return '🎭';
   if (category.contains('noticia') || category.contains('news')) return '📰';
-  if (category.contains('película') || category.contains('pelicula') ||
-      category.contains('cine') || category.contains('movie') ||
-      category.contains('explorar')) return '🎬';
+  if (category.contains('película') ||
+      category.contains('pelicula') ||
+      category.contains('cine') ||
+      category.contains('movie') ||
+      category.contains('explorar')) {
+    return '🎬';
+  }
   if (category.contains('serie') || category.contains('entreten')) return '🍿';
   if (category.contains('infantil') || category.contains('kids')) return '🧸';
   return '📺';
