@@ -619,7 +619,7 @@ class _ChannelRail extends StatelessWidget {
                         Expanded(
                           child: Center(
                             child: channel.logo == null || channel.logo!.trim().isEmpty
-                                ? Icon(Icons.live_tv_rounded, size: 30, color: AppTheme.accent)
+                                ? const Icon(Icons.live_tv_rounded, size: 30, color: AppTheme.accent)
                                 : CachedNetworkImage(
                                     imageUrl: channel.logo!,
                                     fit: BoxFit.contain,
