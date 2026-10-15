@@ -64,7 +64,7 @@ class _AppShellState extends State<AppShell> {
             const _WelcomeStep(icon: Icons.live_tv_rounded, color: Color(0xFF58C7FF), title: 'TV en vivo', detail: 'Buscá por nombre, filtrá por país o categoría y tocá una señal para verla a pantalla completa.'),
             const _WelcomeStep(icon: Icons.sports_soccer_rounded, color: Color(0xFFFFB74D), title: 'Deportes', detail: 'Explorá señales deportivas. La disponibilidad depende de las fuentes públicas o autorizadas que estén activas.'),
             const _WelcomeStep(icon: Icons.lock_rounded, color: Color(0xFFB79CFF), title: 'Zona +18', detail: 'Requiere cuenta, confirmación de edad, aceptación de políticas y PIN. Guardá tu PIN en un lugar seguro.'),
-            const _WelcomeStep(icon: Icons.settings_rounded, color: Color(0xFFFF7CA8), title: 'Configuración', detail: 'En la tuerquita podés cargar listas M3U, administrar tu perfil, consultar información y buscar actualizaciones.'),
+            const _WelcomeStep(icon: Icons.settings_rounded, color: Color(0xFFFF7CA8), title: 'Configuración', detail: 'Abrí el menú lateral y entrá en Perfil y configuración para cargar listas M3U, administrar seguridad, consultar información y buscar actualizaciones.'),
             const SizedBox(height: 8),
             const Text('Para consultar información detallada, abrí Configuración y buscá “Información de MILTVPLUS”.', style: TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
             const SizedBox(height: 16),
@@ -306,14 +306,6 @@ class _AppShellState extends State<AppShell> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Configuración',
-            onPressed: () => setState(() => selected = 11),
-            icon: const Icon(Icons.settings_rounded),
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       drawer: _buildDrawer(),
       body: Stack(
