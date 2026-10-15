@@ -459,8 +459,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: .07)),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Información de MILTVPLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Información de MILTVPLUS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             const _InfoRow(icon: Icons.security_rounded, color: Color(0xFF5BE58B), title: 'Seguridad', description: 'PIN de +18 protegido en almacenamiento seguro; las cuentas y los catálogos remotos dependen de Supabase y sus permisos.'),
             const _InfoRow(icon: Icons.live_tv_rounded, color: Color(0xFF58C7FF), title: 'TV en vivo', description: 'Listas públicas, listas M3U autorizadas, búsqueda, filtros y reproducción a pantalla completa.'),
