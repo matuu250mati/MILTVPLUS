@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
-import '../../services/stream_service.dart';
 import '../../services/channel_storage_service.dart';
 import '../../services/m3u_playlist_service.dart';
 import 'live_player_screen.dart';
@@ -24,13 +22,9 @@ class LiveTvScreen extends StatefulWidget {
 
 class _LiveTvScreenState extends State<LiveTvScreen> {
   final channels = <TvChannel>[];
-  final service = const StreamService();
   final channelStorage = ChannelStorageService();
   final catalogService = CatalogService();
   final m3uPlaylistService = M3uPlaylistService();
-  VideoPlayerController? controller;
-  String? error;
-  bool loading = false;
   bool _loadingChannels = false;
   int selected = -1;
   String _channelQuery = '';
@@ -48,6 +42,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         .map((value) => value.trim().toLowerCase())
         .toSet();
     return allowed.contains(channel.liveSection.trim().toLowerCase());
+  }
+
+  String _countryLabel(String? value) {
+    final normalized = (value ?? '').trim().toLowerCase();
+    if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'Argentina';
+    if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'Estados Unidos';
+    if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'Reino Unido';
+    return (value ?? '').trim();
   }
 
   String _streamIdentity(String value) {
@@ -141,9 +143,27 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Continue with Supabase and cached channels when GitHub Raw is offline.
       }
 
+      // Deportes merges the global sports list with Argentina's country catalog.
+      // Only channels identified as sports are shown in the Deportes section.
+      final isSportsScreen = (widget.categoryFilter ?? const <String>[])
+          .any((value) => value.trim().toLowerCase() == 'deportes');
+      if (isSportsScreen) {
+        for (final sourceId in const ['sports', 'argentina']) {
+          for (final item in _publicPlaylistSources.where((source) => source.id == sourceId)) {
+            try {
+              final additionalChannels = await m3uPlaylistService.importFromUrl(item.url);
+              for (final channel in additionalChannels) {
+                if (_matchesCategoryFilter(channel)) addUnique(channel);
+              }
+            } catch (_) {
+              // Keep local and remote channels if a public source is unavailable.
+            }
+          }
+        }
+      }
+
       // If the primary playlist is unavailable or contains no channels for the
-      // selected genre, try a smaller, genre-specific public playlist. Previously
-      // this fallback ran only on the all-TV screen, leaving Deportes empty.
+      // selected genre, try a smaller, genre-specific public playlist.
       if (merged.isEmpty) {
         final requested = (widget.categoryFilter ?? const <String>[])
             .map((value) => value.trim().toLowerCase())
@@ -215,81 +235,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   @override
   void dispose() {
-    controller?.dispose();
     _channelSearchController.dispose();
     super.dispose();
-  }
-
-  Future<void> addChannel() async {
-    final nameController = TextEditingController();
-    final urlController = TextEditingController();
-    final result = await showDialog<TvChannel>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Agregar señal autorizada'),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Nombre del canal')),
-              const SizedBox(height: 12),
-              TextField(controller: urlController, keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(labelText: 'URL directa de señal (HLS/MP4)', hintText: 'https://servidor/stream.m3u8')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CANCELAR')),
-          FilledButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final url = urlController.text.trim();
-              final parsedUrl = Uri.tryParse(url);
-              if (name.isEmpty || !service.isSupportedHlsUrl(url) || parsedUrl == null || parsedUrl.userInfo.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre y una URL HTTPS directa de una señal autorizada.')));
-                return;
-              }
-              Navigator.pop(dialogContext, TvChannel(name: name, streamUrl: url));
-            },
-            child: const Text('AGREGAR'),
-          ),
-        ],
-      ),
-    );
-    nameController.dispose();
-    urlController.dispose();
-    if (result != null && mounted) {
-      final normalizedUrl = _streamIdentity(result.streamUrl);
-      final duplicate = channels.any(
-        (channel) => _streamIdentity(channel.streamUrl) == normalizedUrl,
-      );
-      if (duplicate) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ese canal ya está guardado.')),
-        );
-        return;
-      }
-      setState(() => channels.add(result));
-      try {
-        await channelStorage.save(channels);
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('El canal se agregó, pero no se pudo guardar en este dispositivo.')),
-          );
-        }
-      }
-      await play(channels.length - 1);
-    }
   }
 
   static const _repositoryPlaylist =
       'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT';
   static const _curatedFreePlaylist =
       'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
-  static const _globalPublicPlaylist =
-      'https://iptv-org.github.io/iptv/index.m3u';
 
   static const _publicPlaylistSources = <({String id, String title, String subtitle, String url})>[
     (
@@ -366,170 +319,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     ),
   ];
 
-  Future<void> importPlaylist() async {
-    final source = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Fuentes de TV en vivo'),
-        content: SizedBox(
-          width: 520,
-          height: 480,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.verified_outlined),
-                title: const Text('Lista pública curada'),
-                subtitle: const Text('Free-TV · señales gratuitas seleccionadas'),
-                onTap: () => Navigator.pop(dialogContext, 'free-tv'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.public_rounded),
-                title: const Text('Catálogo público global'),
-                subtitle: const Text('IPTV-org · catálogo comunitario internacional'),
-                onTap: () => Navigator.pop(dialogContext, 'iptv-org'),
-              ),
-              const Divider(),
-              ..._publicPlaylistSources.map((item) => ListTile(
-                    leading: const Icon(Icons.live_tv_rounded),
-                    title: Text(item.title),
-                    subtitle: Text(item.subtitle),
-                    onTap: () => Navigator.pop(dialogContext, item.id),
-                  )),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.link_rounded),
-                title: const Text('Usar mi propia lista M3U'),
-                subtitle: const Text('Ingresar una URL pública o autorizada'),
-                onTap: () => Navigator.pop(dialogContext, 'custom'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCELAR'),
-          ),
-        ],
-      ),
-    );
-    if (source == null || !mounted) return;
-
-    if (source == 'free-tv') {
-      await _importPlaylistUrl(_curatedFreePlaylist, 'Free-TV');
-      return;
-    }
-    if (source == 'iptv-org') {
-      await _importPlaylistUrl(_globalPublicPlaylist, 'IPTV-org');
-      return;
-    }
-    for (final item in _publicPlaylistSources) {
-      if (source == item.id) {
-        await _importPlaylistUrl(item.url, item.title);
-        return;
-      }
-    }
-
-    final urlController = TextEditingController();
-    final playlistUrl = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Importar lista M3U propia'),
-        content: SizedBox(
-          width: 520,
-          child: TextField(
-            controller: urlController,
-            keyboardType: TextInputType.url,
-            minLines: 1,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'URL pública o autorizada de la lista',
-              hintText: 'https://servidor/lista.m3u',
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, urlController.text.trim()),
-            child: const Text('IMPORTAR'),
-          ),
-        ],
-      ),
-    );
-    urlController.dispose();
-    if (playlistUrl == null || playlistUrl.isEmpty || !mounted) return;
-    await _importPlaylistUrl(playlistUrl, 'lista propia');
-  }
-
-  Future<void> _importPlaylistUrl(String playlistUrl, String sourceName) async {
-    if (!mounted) return;
-    setState(() {
-      _loadingChannels = true;
-      error = null;
-    });
-    try {
-      final imported = await m3uPlaylistService.importFromUrl(playlistUrl);
-      final merged = <String, TvChannel>{};
-      // Merge against the complete persisted list, not the currently filtered
-      // view, so importing from a category screen never deletes other channels.
-      final savedChannels = await channelStorage.load();
-      for (final channel in savedChannels) {
-        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
-      }
-      for (final channel in imported) {
-        final key = _streamIdentity(channel.streamUrl);
-        final existing = merged[key];
-        if (existing == null) {
-          merged[key] = channel;
-        } else if ((existing.groupTitle == null && channel.groupTitle != null) ||
-            (existing.country == null && channel.country != null) ||
-            (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null) ||
-            (existing.logoUrl == null && channel.logoUrl != null) ||
-            (existing.tvgId == null && channel.tvgId != null)) {
-          merged[key] = TvChannel(
-            name: existing.name,
-            streamUrl: existing.streamUrl,
-            groupTitle: existing.groupTitle ?? channel.groupTitle,
-            country: existing.country ?? channel.country,
-            language: existing.language ?? channel.language,
-            category: existing.category ?? channel.category,
-            logoUrl: existing.logoUrl ?? channel.logoUrl,
-            tvgId: existing.tvgId ?? channel.tvgId,
-          );
-        }
-      }
-      final combined = merged.values.toList(growable: false);
-      final visibleChannels = combined.where(_matchesCategoryFilter).toList(growable: false);
-      await channelStorage.save(combined);
-      if (!mounted) return;
-      setState(() {
-        channels
-          ..clear()
-          ..addAll(visibleChannels);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '$sourceName: ${imported.length} señales importadas; ${combined.length} canales únicos guardados, ${visibleChannels.length} visibles en esta categoría. La reproducción se confirma al abrir cada canal.',
-          ),
-        ),
-      );
-    } catch (exception) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar $sourceName: $exception')),
-      );
-    } finally {
-      if (mounted) setState(() => _loadingChannels = false);
-    }
-  }
-
   Future<void> play(int index) async {
     if (index < 0 || index >= channels.length || !mounted) return;
     // Open the selected signal directly in the dedicated immersive player.
@@ -551,8 +340,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     final compact = size.width < 900;
     final groups = channels.map((channel) => channel.liveSection).toSet().toList()..sort();
     final countries = channels
-        .map((channel) => channel.country?.trim())
-        .whereType<String>()
+        .map((channel) => _countryLabel(channel.country))
         .where((value) => value.isNotEmpty)
         .toSet()
         .toList()..sort();
@@ -611,78 +399,26 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _loadingChannels ? null : () => loadSavedChannels(showFeedback: true),
-                      icon: Icon(_loadingChannels ? Icons.sync_rounded : Icons.refresh_rounded),
-                      label: const Text('RECARGAR'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _loadingChannels ? null : importPlaylist,
-                      icon: const Icon(Icons.playlist_add_rounded),
-                      label: const Text('FUENTES DE TV'),
-                    ),
-                    if (widget.categoryFilter == null)
-                      FilledButton.icon(
-                        onPressed: addChannel,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('AGREGAR'),
-                      ),
-                  ],
-                ),
+                const SizedBox(height: 2),
               ],
             ),
           ),
           Expanded(
-            child: compact
-                // On phones, dedicate the entire viewport to the channel list.
-                // Playback opens in LivePlayerScreen after a channel is tapped.
-                ? _ChannelList(
-                    channels: channels,
-                    selected: selected,
-                    query: _channelQuery,
-                    searchController: _channelSearchController,
-                    selectedGroup: activeGroup,
-                    groups: groups,
-                    selectedCountry: activeCountry,
-                    countries: countries,
-                    onQueryChanged: (value) => setState(() => _channelQuery = value),
-                    onGroupChanged: (value) => setState(() => _selectedGroup = value),
-                    onCountryChanged: (value) => setState(() => _selectedCountry = value),
-                    onSelect: play,
-                    loading: _loadingChannels,
-                  )
-                : Row(
-                    children: [
-                      Expanded(
-                        flex: 6,
-                        child: _PlayerPanel(controller: controller, loading: loading, error: error),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 4,
-                        child: _ChannelList(
-                          channels: channels,
-                          selected: selected,
-                          query: _channelQuery,
-                          searchController: _channelSearchController,
-                          selectedGroup: activeGroup,
-                          groups: groups,
-                          selectedCountry: activeCountry,
-                          countries: countries,
-                          onQueryChanged: (value) => setState(() => _channelQuery = value),
-                          onGroupChanged: (value) => setState(() => _selectedGroup = value),
-                          onCountryChanged: (value) => setState(() => _selectedCountry = value),
-                          onSelect: play,
-                          loading: _loadingChannels,
-                        ),
-                      ),
-                    ],
-                  ),
+            child: _ChannelList(
+              channels: channels,
+              selected: selected,
+              query: _channelQuery,
+              searchController: _channelSearchController,
+              selectedGroup: activeGroup,
+              groups: groups,
+              selectedCountry: activeCountry,
+              countries: countries,
+              onQueryChanged: (value) => setState(() => _channelQuery = value),
+              onGroupChanged: (value) => setState(() => _selectedGroup = value),
+              onCountryChanged: (value) => setState(() => _selectedCountry = value),
+              onSelect: play,
+              loading: _loadingChannels,
+            ),
           ),
         ],
       ),
@@ -691,49 +427,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
 }
 
-class _PlayerPanel extends StatelessWidget {
-  const _PlayerPanel({required this.controller, required this.loading, required this.error});
-  final VideoPlayerController? controller;
-  final bool loading;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) {
-    final ready = controller?.value.isInitialized == true;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(color: const Color(0xFF030407), borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: .08))),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (ready)
-            Center(child: AspectRatio(
-              aspectRatio: controller!.value.aspectRatio > 0 ? controller!.value.aspectRatio : 16 / 9,
-              child: VideoPlayer(controller!),
-            ))
-          else
-            const Icon(Icons.live_tv_rounded, size: 70, color: Color(0xFF343A4B)),
-          if (loading) const CircularProgressIndicator(),
-          if (error != null)
-            Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70))),
-          if (!ready && !loading && error == null)
-            const Positioned(bottom: 28, left: 20, right: 20,
-                child: Text('Agregá una URL directa de señal autorizada para comenzar.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))),
-          if (ready)
-            Positioned(
-              bottom: 10,
-              right: 10,
-              child: IconButton.filledTonal(
-                onPressed: () => controller!.value.isPlaying ? controller!.pause() : controller!.play(),
-                icon: Icon(controller!.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+String _normalizeCountry(String? value) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  if (const {'ar', 'arg', 'argentina', 'argentine republic'}.contains(normalized)) return 'argentina';
+  if (const {'us', 'usa', 'united states', 'united states of america'}.contains(normalized)) return 'united states';
+  if (const {'gb', 'uk', 'united kingdom', 'great britain'}.contains(normalized)) return 'united kingdom';
+  return normalized;
 }
 
 class _ChannelList extends StatelessWidget {
@@ -777,7 +476,7 @@ class _ChannelList extends StatelessWidget {
                 (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
                 (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
             (selectedGroup == 'Todos' || channels[i].liveSection == selectedGroup) &&
-            (selectedCountry == 'Todos' || channels[i].country == selectedCountry))
+            (selectedCountry == 'Todos' || _normalizeCountry(channels[i].country) == _normalizeCountry(selectedCountry)))
           i,
     ];
     return Container(
