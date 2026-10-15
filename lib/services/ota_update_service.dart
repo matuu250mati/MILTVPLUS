@@ -119,8 +119,16 @@ class OtaUpdateService {
         sizeBytes: sizeBytes,
         message: versionIsNewer ? 'Hay una versión nueva disponible.' : 'MILTVPLUS está actualizado.',
       );
-    } catch (_) {
-      return const OtaUpdateInfo(message: 'No se pudo consultar la versión publicada.');
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+      final detail = status == null ? error.type.name : 'HTTP $status';
+      return OtaUpdateInfo(
+        message: 'No se pudo consultar la versión publicada ($detail). Revisá Internet y volvé a intentar.',
+      );
+    } catch (error) {
+      return OtaUpdateInfo(
+        message: 'Falló la comprobación de actualizaciones (${error.runtimeType}). Volvé a intentar.',
+      );
     }
   }
 
