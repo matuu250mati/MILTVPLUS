@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
@@ -22,6 +23,40 @@ class _AuthScreenState extends State<AuthScreen> {
   final _submitFocus = FocusNode(debugLabel: 'login-submit');
   final _registerFocus = FocusNode(debugLabel: 'login-register');
   final _phoneModeFocus = FocusNode(debugLabel: 'login-phone-mode');
+
+  @override
+  void initState() {
+    super.initState();
+    // Explicit D-pad routing avoids traversal getting trapped in helper controls
+    // between the email, password and primary action on Android TV remotes.
+    _emailFocus.onKeyEvent = (_, event) =>
+        _handleDpadNavigation(event, down: _passwordFocus);
+    _passwordFocus.onKeyEvent = (_, event) =>
+        _handleDpadNavigation(event, up: _emailFocus, down: _submitFocus);
+    _submitFocus.onKeyEvent = (_, event) =>
+        _handleDpadNavigation(event, up: _passwordFocus, down: _registerFocus);
+    _registerFocus.onKeyEvent = (_, event) =>
+        _handleDpadNavigation(event, up: _submitFocus, down: _phoneModeFocus);
+    _phoneModeFocus.onKeyEvent = (_, event) =>
+        _handleDpadNavigation(event, up: _registerFocus);
+  }
+
+  KeyEventResult _handleDpadNavigation(
+    KeyEvent event, {
+    FocusNode? up,
+    FocusNode? down,
+  }) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown && down != null) {
+      down.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp && up != null) {
+      up.requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
   bool _phoneMode = false;
   bool _otpSent = false;
   String? _pendingPhone;
