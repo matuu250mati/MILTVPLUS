@@ -539,10 +539,10 @@ class _SectionHeader extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: AppTheme.accent.withValues(alpha: .12),
+              color: color.withValues(alpha: .13),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, color: AppTheme.accent, size: 20),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 10),
           Expanded(
