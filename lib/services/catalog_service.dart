@@ -118,7 +118,7 @@ class CatalogService {
         .from('movies')
         .select()
         .eq('is_published', true)
-        .order('created_at', ascending: false);
+        .order('title', ascending: true);
 
     return (response as List<dynamic>)
         .map((item) => MovieModel.fromJson(
