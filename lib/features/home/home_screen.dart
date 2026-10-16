@@ -479,6 +479,8 @@ class _CategoryStrip extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               child: InkWell(
                 borderRadius: BorderRadius.circular(15),
+                focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
+                hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
                 onTap: () => onNavigate(item.route),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
@@ -590,6 +592,8 @@ class _ChannelRail extends StatelessWidget {
                 borderRadius: BorderRadius.circular(13),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(13),
+                  focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
+                  hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
                   onTap: onOpenLive,
                   child: Container(
                     padding: const EdgeInsets.all(10),
@@ -684,6 +688,8 @@ class _PosterRail<T> extends StatelessWidget {
             width: cardWidth,
             child: InkWell(
               onTap: () => onTap(item),
+              focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
+              hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
               borderRadius: BorderRadius.circular(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
