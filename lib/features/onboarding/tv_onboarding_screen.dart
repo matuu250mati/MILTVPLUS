@@ -196,7 +196,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                               child: const Text('VOLVER A INTENTAR'),
                             ),
                             FilledButton(
-                              onPressed: () => setState(() => _step = 1),
+                              onPressed: _syncSuccessful ? () => setState(() => _step = 1) : null,
                               child: const Text('CONTINUAR'),
                             ),
                           ],
