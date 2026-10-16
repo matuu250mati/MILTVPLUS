@@ -648,18 +648,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       subtitle: Text('Tamaño actual del diseño'),
                     ),
                     RadioListTile<double>(
-                      value: 1.15,
+                      value: 1.1,
                       activeColor: AppTheme.accent,
                       contentPadding: EdgeInsets.zero,
                       title: Text('Grande'),
-                      subtitle: Text('Texto un poco más grande'),
+                      subtitle: Text('Texto ligeramente más grande'),
                     ),
                     RadioListTile<double>(
-                      value: 1.3,
+                      value: 1.2,
                       activeColor: AppTheme.accent,
                       contentPadding: EdgeInsets.zero,
                       title: Text('Muy grande'),
-                      subtitle: Text('Para una lectura más cómoda'),
+                      subtitle: Text('Aumento moderado, con diseño adaptable'),
                     ),
                   ],
                 ),
@@ -827,13 +827,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
 
+    // Indices refer to the actual allSections list above. Keep each category
+    // mapped to its own widgets; stale indices previously mixed account,
+    // storage, accessibility and help content between sections.
     final sectionIndices = <String, List<int>>{
-      // Each group keeps the original functional widgets and their spacing.
-      'account': [4, 5, 12, 13],
+      'account': [4, 5, 14],
       'profile': [6, 7],
-      'content': [8, 9, 10, 11],
-      'app': [14, 15, 18, 19, 24],
-      'help': [16, 17, 20, 21, 22, 23],
+      'content': [8, 9, 10, 11, 12],
+      'app': [16, 17, 20, 21, 26],
+      'help': [18, 19, 22, 23, 24, 25],
     };
     final indices = sectionIndices[section] ?? const <int>[];
     final titles = <String, String>{

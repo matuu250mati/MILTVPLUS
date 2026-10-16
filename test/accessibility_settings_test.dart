@@ -14,15 +14,15 @@ void main() {
     expect(AppAccessibilitySettings.textScale.value, 1.0);
 
     await AppAccessibilitySettings.setTextScale(1.3);
-    expect(AppAccessibilitySettings.textScale.value, 1.3);
+    expect(AppAccessibilitySettings.textScale.value, 1.2);
 
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences.getDouble('miltvplus_accessibility_text_scale_v1'),
-      1.3,
+      1.2,
     );
 
     await AppAccessibilitySettings.setTextScale(2.0);
-    expect(AppAccessibilitySettings.textScale.value, 1.35);
+    expect(AppAccessibilitySettings.textScale.value, 1.2);
   });
 }
