@@ -881,31 +881,36 @@ cat > "$root_dir/android/app/src/main/res/drawable/miltvplus_ic_platform_robot.x
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Silueta de televisor futurista: mantener todo dentro de la zona segura adaptativa. -->
-    <path
-        android:fillColor="#B8FF35"
-        android:pathData="M39,24 L31,16 C30.2,15.2 30.2,13.9 31,13.1 C31.8,12.3 33.1,12.3 33.9,13.1 L44.8,24 Z" />
-    <path
-        android:fillColor="#B8FF35"
-        android:pathData="M69,24 L77,16 C77.8,15.2 77.8,13.9 77,13.1 C76.2,12.3 74.9,12.3 74.1,13.1 L63.2,24 Z" />
-    <path
-        android:fillColor="#B8FF35"
-        android:pathData="M25,27 L83,27 C87.4,27 91,30.6 91,35 L91,69 C91,73.4 87.4,77 83,77 L25,77 C20.6,77 17,73.4 17,69 L17,35 C17,30.6 20.6,27 25,27 Z" />
-    <path
-        android:fillColor="#071426"
-        android:pathData="M27,33 L81,33 C83.2,33 85,34.8 85,37 L85,67 C85,69.2 83.2,71 81,71 L27,71 C24.8,71 23,69.2 23,67 L23,37 C23,34.8 24.8,33 27,33 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M44,39.5 C44,38.7 44.9,38.2 45.6,38.7 L67,51.3 C67.9,51.8 67.9,53.2 67,53.7 L45.6,66.3 C44.9,66.8 44,66.3 44,65.5 Z" />
-    <path
-        android:fillColor="#B8FF35"
-        android:pathData="M39,81 L69,81 L74,87 L34,87 Z" />
-    <path
-        android:fillColor="#B8FF35"
-        android:pathData="M45,89 L63,89 L63,93 L45,93 Z" />
-    <path
-        android:fillColor="#38D9FF"
-        android:pathData="M77,39 L81,39 L81,43 L77,43 Z" />
+    <!-- Keep the complete mark inside the adaptive-icon safe zone. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.78"
+        android:scaleY="0.78">
+        <!-- Cyan edge behind the brand-green outline creates a crisp neon accent. -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FF38D9FF"
+            android:strokeWidth="3.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M39,24 L31,16 M69,24 L77,16 M25,27 L83,27 C87.4,27 91,30.6 91,35 L91,69 C91,73.4 87.4,77 83,77 L25,77 C20.6,77 17,73.4 17,69 L17,35 C17,30.6 20.6,27 25,27 Z" />
+        <path
+            android:fillColor="#071426"
+            android:strokeColor="#B8FF35"
+            android:strokeWidth="3.5"
+            android:strokeLineJoin="round"
+            android:pathData="M25,27 L83,27 C87.4,27 91,30.6 91,35 L91,69 C91,73.4 87.4,77 83,77 L25,77 C20.6,77 17,73.4 17,69 L17,35 C17,30.6 20.6,27 25,27 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M44,39.5 C44,38.7 44.9,38.2 45.6,38.7 L67,51.3 C67.9,51.8 67.9,53.2 67,53.7 L45.6,66.3 C44.9,66.8 44,66.3 44,65.5 Z" />
+        <path
+            android:fillColor="#B8FF35"
+            android:pathData="M39,81 L69,81 L74,87 L34,87 Z M45,89 L63,89 L63,93 L45,93 Z" />
+        <path
+            android:fillColor="#38D9FF"
+            android:pathData="M77,39 L81,39 L81,43 L77,43 Z" />
+    </group>
 </vector>
 PLATFORM_ROBOT
 
@@ -1128,6 +1133,30 @@ with open(os.path.join(os.path.dirname(res), "miltvplus_branding_version.txt"), 
     marker.write("MILTVPLUS launcher branding v1\n")
 print("Iconos de launcher MILTVPLUS generados para mdpi, hdpi, xhdpi, xxhdpi y xxxhdpi.")
 PY_ICON
+
+# Branded native launch background: gradient base plus the same safe-zone logo.
+# Flutter's animated SplashScreen takes over after the first frame; this avoids a generic
+# platform splash during engine startup. The vector stays crisp at different densities.
+mkdir -p "$root_dir/android/app/src/main/res/drawable-v21"
+cat > "$root_dir/android/app/src/main/res/drawable/launch_background.xml" <<'NATIVE_SPLASH'
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#10262F"
+                android:centerColor="#101725"
+                android:endColor="#070B12"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/miltvplus_ic_platform_robot"
+        android:gravity="center" />
+</layer-list>
+NATIVE_SPLASH
+cp "$root_dir/android/app/src/main/res/drawable/launch_background.xml" "$root_dir/android/app/src/main/res/drawable-v21/launch_background.xml"
 
 echo "Estructura Android generada con selectores de color MILTVPLUS y manifiesto para móviles, Android TV y TV Box."
 echo "Siguiente paso: ejecutar flutter pub get, flutter analyze y las pruebas del proyecto."
