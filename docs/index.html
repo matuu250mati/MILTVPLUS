@@ -92,6 +92,13 @@ nav{position:sticky;top:0;z-index:20;background:#050806eF;backdrop-filter:blur(1
   });
  });
  const voteButtons=[...document.querySelectorAll('.feedback-vote')];
+ const voteStorageKey='miltvplus-feedback-votes-v1';
+ let voteCounts={up:0,down:0};
+ try{const saved=JSON.parse(localStorage.getItem(voteStorageKey)||'{}');voteCounts.up=Math.max(0,Number(saved.up)||0);voteCounts.down=Math.max(0,Number(saved.down)||0);}catch(_){}
+ const renderVoteStats=()=>{const total=voteCounts.up+voteCounts.down;const upPct=total?Math.round(voteCounts.up/total*100):0;const downPct=total?100-upPct:0;document.getElementById('vote-up-count').textContent=voteCounts.up;document.getElementById('vote-down-count').textContent=voteCounts.down;document.getElementById('vote-up-bar').style.width=upPct+'%';document.getElementById('vote-down-bar').style.width=downPct+'%';document.getElementById('vote-up-percent').textContent=upPct+'% de los votos locales';document.getElementById('vote-down-percent').textContent=downPct+'% de los votos locales';};
+ renderVoteStats();
+ window.addEventListener('storage',event=>{if(event.key===voteStorageKey){try{const saved=JSON.parse(event.newValue||'{}');voteCounts={up:Math.max(0,Number(saved.up)||0),down:Math.max(0,Number(saved.down)||0)};renderVoteStats();}catch(_){}}});
+ voteButtons.forEach(button=>button.addEventListener('click',()=>{const chosen=button.dataset.vote.includes('Me gusta')?'up':'down';let previous='';try{previous=sessionStorage.getItem('miltvplus-vote-cast')||'';}catch(_){}if(previous!==chosen){if(previous==='up'||previous==='down')voteCounts[previous]=Math.max(0,voteCounts[previous]-1);voteCounts[chosen]++;try{sessionStorage.setItem('miltvplus-vote-cast',chosen);localStorage.setItem(voteStorageKey,JSON.stringify(voteCounts));}catch(_){}renderVoteStats();}}));
  const feedbackPanel=document.getElementById('feedback-panel'), feedbackForm=document.getElementById('feedback-form'), feedbackVote=document.getElementById('feedback-vote'), feedbackTitle=document.getElementById('feedback-title'), feedbackResult=document.getElementById('feedback-result'), feedbackOutput=document.getElementById('feedback-output');
  voteButtons.forEach(button=>button.addEventListener('click',()=>{voteButtons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));feedbackVote.value=button.dataset.vote;feedbackTitle.textContent=button.dataset.vote;feedbackPanel.hidden=false;feedbackResult.hidden=true;feedbackPanel.scrollIntoView({behavior:'smooth',block:'start'});}));
  document.getElementById('cancel-feedback').addEventListener('click',()=>{feedbackPanel.hidden=true;feedbackForm.reset();voteButtons.forEach(item=>item.setAttribute('aria-pressed','false'));feedbackResult.hidden=true;});
