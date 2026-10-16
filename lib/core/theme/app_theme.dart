@@ -24,7 +24,6 @@ class AppTheme {
     hoverColor: selectedAccent.withValues(alpha: 0.10),
     splashColor: selectedAccent.withValues(alpha: 0.14),
     listTileTheme: ListTileThemeData(
-      focusColor: selectedAccent.withValues(alpha: 0.20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
     ),
     filledButtonTheme: FilledButtonThemeData(
