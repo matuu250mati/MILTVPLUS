@@ -75,7 +75,7 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
   void initState() {
     super.initState();
     // Restore the saved, bounded text scale before the main screens are shown.
-    AppAccessibilitySettings.load();
+    unawaited(AppAccessibilitySettings.load().catchError((_) {}));
     _introTimer = Timer(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
       setState(() => _introComplete = true);
