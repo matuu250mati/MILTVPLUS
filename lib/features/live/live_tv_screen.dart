@@ -265,8 +265,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   static const _repositoryPlaylist =
       'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT';
-  static const _curatedFreePlaylist =
-      'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
 
   static const _publicPlaylistSources = <({String id, String title, String subtitle, String url})>[
     (
