@@ -8,9 +8,29 @@ fi
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Keep Android 5.0 (API 21) as the declared minimum in generated Android projects.
+# Apply this on both fresh scaffolds and already-complete Android directories.
+ensure_min_android_sdk() {
+  local gradle_file="$root_dir/android/app/build.gradle.kts"
+  if [[ -f "$gradle_file" ]]; then
+    python3 - "$gradle_file" <<'PY_MIN_SDK'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+content = path.read_text()
+content = content.replace("minSdk = flutter.minSdkVersion", "minSdk = 21")
+path.write_text(content)
+if "minSdk = 21" not in content:
+    raise SystemExit("Android configuration validation failed: minSdk must be explicitly set to API 21.")
+PY_MIN_SDK
+  fi
+}
+
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
 if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/miltvplus_signing_configured.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
+  ensure_min_android_sdk
   echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
   exit 0
 fi
@@ -22,6 +42,7 @@ flutter create --platforms=android --project-name miltv_plus --org com.miltvplus
 mkdir -p "$root_dir/android"
 # -n evita sobrescribir cualquier archivo nativo que ya exista.
 cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+ensure_min_android_sdk
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
 # y nunca se almacena en el repositorio. Sin key.properties, Flutter conserva la firma debug
