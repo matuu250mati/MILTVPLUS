@@ -1,106 +1,84 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07110b">
-  <meta name="description" content="Descargá MILTVPLUS para Android TV y Smart TV compatible.">
-  <title>MILTVPLUS · Descarga para Android TV</title>
-  <style>
-    :root{color-scheme:dark;--bg:#050b07;--panel:#0c1710;--green:#4dff88;--green2:#19c963;--text:#effff3;--muted:#a6b8ab;--line:#20452e}
-    *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{margin:0;background:radial-gradient(ellipse at 50% -15%,#124523 0,transparent 48%),var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
-    a{color:var(--green)}
-    .wrap{width:min(100% - 32px,960px);margin:auto}
-    header{padding:34px 0 18px;text-align:center}
-    .mark{display:inline-grid;place-items:center;width:64px;height:64px;border:2px solid var(--green);border-radius:18px;color:var(--green);font-size:27px;font-weight:900;box-shadow:0 0 26px #25ff7033}
-    h1{margin:14px 0 0;font-size:clamp(2rem,7vw,4rem);line-height:1.08;letter-spacing:.04em}
-    h1 span{color:var(--green);text-shadow:0 0 22px #20ff6944}
-    .tagline{color:var(--muted);max-width:620px;margin:14px auto 0}
-    .hero{margin:26px auto 42px;padding:clamp(22px,5vw,42px);max-width:760px;text-align:center;background:linear-gradient(145deg,#102519,#09120c);border:1px solid var(--line);border-radius:24px;box-shadow:0 18px 70px #0008}
-    .pill{display:inline-block;border:1px solid #287747;border-radius:999px;padding:4px 12px;color:var(--green);font-size:.82rem;font-weight:700}
-    .hero h2{font-size:clamp(1.5rem,4vw,2.25rem);line-height:1.2;margin:18px 0 10px}
-    .hero p{color:var(--muted);margin:0 auto 24px;max-width:540px}
-    .download{display:inline-flex;justify-content:center;align-items:center;gap:10px;width:min(100%,440px);padding:17px 20px;border-radius:14px;background:var(--green);color:#041009;text-decoration:none;font-weight:900;font-size:1.12rem;box-shadow:0 0 30px #20ff6940;transition:transform .15s,background .15s}
-    .download:hover,.download:focus{background:#8dffb0;transform:translateY(-2px)}
-    .note{font-size:.86rem;color:var(--muted);margin-top:14px!important;margin-bottom:0!important}
-    section{margin:38px 0}
-    h2.section-title{font-size:1.55rem;margin:0 0 16px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
-    .card{background:var(--panel);border:1px solid #1a3825;border-radius:16px;padding:19px}
-    .card h3{margin:0 0 6px;color:var(--green);font-size:1.05rem}
-    .card p{margin:0;color:var(--muted);font-size:.94rem}
-    details{background:var(--panel);border:1px solid #1a3825;border-radius:12px;padding:15px 17px;margin:10px 0}
-    summary{font-weight:750;cursor:pointer}
-    details p{color:var(--muted);margin:10px 0 0}
-    .url{overflow-wrap:anywhere;background:#050b07;border:1px solid #23442e;border-radius:9px;padding:12px;color:#d5ffe1;font-size:.88rem}
-    footer{padding:28px 0 38px;border-top:1px solid #193522;color:var(--muted);font-size:.85rem;text-align:center}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07110b">
+<meta name="description" content="MILTVPLUS: centro de descarga, versiones y soporte para Android TV y Smart TV compatibles.">
+<title>MILTVPLUS — Entretenimiento para tu TV</title>
+<style>
+:root{color-scheme:dark;--bg:#050806;--panel:#0b1510;--panel2:#0e1d14;--green:#52ff91;--green2:#19d76b;--text:#effff4;--muted:#a8b8ad;--line:#244532;--max:1180px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}body{margin:0;background:radial-gradient(ellipse at 80% -20%,#174d2b 0,transparent 38%),radial-gradient(ellipse at 0 42%,#0b2415 0,transparent 35%),var(--bg);color:var(--text);font:16px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--green)}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--green);outline-offset:4px}.wrap{width:min(calc(100% - 36px),var(--max));margin-inline:auto}
+nav{position:sticky;top:0;z-index:20;background:#050806eF;backdrop-filter:blur(16px);border-bottom:1px solid #244532} .nav-inner{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;color:var(--text);text-decoration:none;font-weight:950;letter-spacing:.06em}.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;border:1px solid var(--green);color:var(--green);box-shadow:0 0 24px #52ff9120;font-weight:950}.brand span span{color:var(--green)}.links{display:flex;align-items:center;gap:clamp(12px,2.2vw,28px)}.links a{text-decoration:none;color:var(--muted);font-size:.91rem;font-weight:700}.links a:hover{color:var(--green)}.nav-cta,.btn{display:inline-flex;justify-content:center;align-items:center;gap:9px;border:1px solid var(--green);border-radius:12px;padding:12px 18px;font-weight:850;text-decoration:none;transition:transform .18s,background .18s}.nav-cta,.btn.primary{background:var(--green);color:#031008}.btn.secondary{color:var(--text);background:#0c1911;border-color:var(--line)}.btn:hover,.nav-cta:hover{transform:translateY(-2px);background:#9dffbd;color:#031008}.hero{padding:clamp(64px,10vw,124px) 0 76px}.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:54px}.eyebrow{display:inline-flex;align-items:center;gap:9px;color:var(--green);font-size:.78rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}h1{font-size:clamp(2.8rem,6.8vw,5.7rem);line-height:.99;letter-spacing:-.065em;margin:22px 0}h1 em{font-style:normal;color:var(--green);text-shadow:0 0 38px #52ff912a}.lead{max-width:650px;color:var(--muted);font-size:clamp(1.05rem,2vw,1.2rem)}.actions{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 18px}.fine{font-size:.84rem;color:var(--muted)}.visual{min-height:365px;position:relative;display:grid;place-items:center;border:1px solid var(--line);border-radius:30px;overflow:hidden;background:linear-gradient(145deg,#10271a,#07100b 72%);box-shadow:0 30px 100px #0008}.visual:before,.visual:after{content:"";position:absolute;border:1px solid #52ff9125;border-radius:50%;width:310px;height:310px}.visual:after{width:430px;height:430px}.screen{z-index:1;width:min(78%,360px);aspect-ratio:4/3;border:1px solid #52ff9166;border-radius:20px;background:linear-gradient(145deg,#142a1c,#050806);padding:20px;box-shadow:0 0 70px #52ff9115;transform:perspective(900px) rotateY(-7deg)}.screen-top{display:flex;justify-content:space-between;color:var(--green);font-size:.7rem;font-weight:900;letter-spacing:.1em}.screen-play{height:72%;display:grid;place-items:center}.play{display:grid;place-items:center;width:76px;height:76px;border-radius:24px;background:var(--green);color:#031008;font-size:2rem;box-shadow:0 0 42px #52ff9140}.screen-bars{display:flex;gap:8px}.screen-bars i{height:5px;border-radius:9px;background:#244532;flex:1}.screen-bars i:first-child{background:var(--green)}section{padding:66px 0}.section-head{max-width:720px;margin-bottom:28px}.section-head h2{font-size:clamp(1.8rem,4vw,3rem);line-height:1.1;letter-spacing:-.04em;margin:12px 0}.section-head p{color:var(--muted);margin:0}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card{background:linear-gradient(145deg,#0e1b13,#09100b);border:1px solid var(--line);border-radius:18px;padding:24px;min-height:174px;transition:transform .2s,border-color .2s}.card:hover{transform:translateY(-4px);border-color:#52ff9180}.card .symbol{font-size:1.35rem;color:var(--green);margin-bottom:14px}.card h3{margin:0 0 8px;font-size:1.1rem}.card p{margin:0;color:var(--muted);font-size:.94rem}.split{display:grid;grid-template-columns:.8fr 1.2fr;gap:32px;align-items:start}.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:clamp(22px,4vw,36px)}.steps{list-style:none;padding:0;margin:0;counter-reset:step}.steps li{position:relative;padding:0 0 22px 52px;counter-increment:step;color:var(--muted)}.steps li:last-child{padding-bottom:0}.steps li:before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:0;width:36px;height:36px;display:grid;place-items:center;border:1px solid #52ff9166;border-radius:11px;color:var(--green);font-size:.75rem;font-weight:900}.steps strong{display:block;color:var(--text);margin-bottom:4px}.url{padding:14px;border-radius:12px;background:#040805;border:1px solid var(--line);overflow-wrap:anywhere;color:#caffd9;font-size:.9rem}.faq details{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:17px 20px;margin:10px 0}.faq summary{font-weight:800;cursor:pointer}.faq details p{color:var(--muted);margin:12px 0 0}.version{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px}.version h3{margin:0 0 5px}.version p{color:var(--muted);margin:0}.badge{display:inline-block;padding:4px 10px;border-radius:99px;border:1px solid #287747;color:var(--green);font-size:.75rem;font-weight:850}footer{border-top:1px solid var(--line);padding:32px 0 42px;color:var(--muted);font-size:.85rem}.footer-row{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.footer-links{display:flex;gap:18px;flex-wrap:wrap}.footer-links a{color:var(--muted)}.trust-strip{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.trust-item{border:1px solid var(--line);border-radius:12px;background:#08120b;padding:12px 15px;font-size:.88rem;color:var(--muted)}.trust-item strong{color:var(--green)}.downloader-code{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:24px;padding:18px 20px;background:linear-gradient(100deg,#102d1b,#0a130d);border:1px solid #36734b;border-radius:16px}.downloader-code strong{display:block;color:var(--green);font-size:1.8rem;letter-spacing:.16em}.downloader-code button,.platform-tab{font:inherit;font-weight:800;cursor:pointer;border:1px solid var(--green);border-radius:10px;padding:10px 14px;background:var(--green);color:#031008}.platform-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.platform-tab{background:#0b1710;color:var(--text);border-color:var(--line)}.platform-tab[aria-selected="true"]{background:var(--green);color:#031008;border-color:var(--green)}.platform-panel{border:1px solid var(--line);background:var(--panel);padding:24px;border-radius:18px}.platform-panel[hidden]{display:none}.security-note{border-left:3px solid var(--green);padding:12px 16px;color:var(--muted);background:#0a160e}@media(max-width:850px){.hero-grid,.split{grid-template-columns:1fr}.visual{min-height:300px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.links{gap:12px}.links a{font-size:.82rem}.nav-cta{display:none}}@media(max-width:560px){.wrap{width:min(calc(100% - 26px),var(--max))}.nav-inner{min-height:66px}.links{gap:10px}.links a{font-size:.75rem}.links a:nth-child(2){display:none}.brand{font-size:.9rem}.logo{width:36px;height:36px}.hero{padding-top:58px}.grid{grid-template-columns:1fr}.visual{min-height:260px}.actions .btn{width:100%}section{padding:48px 0}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+</style>
 </head>
 <body>
-  <header class="wrap">
-    <div class="mark" aria-hidden="true">M+</div>
-    <h1>MILT<span>VPLUS</span></h1>
-    <p class="tagline">Tu centro de entretenimiento para Android TV y dispositivos compatibles.</p>
-  </header>
+<nav aria-label="Navegación principal"><div class="wrap nav-inner">
+<a class="brand" href="#inicio"><span class="logo">M+</span><span>MILT<span>VPLUS</span></span></a>
+<div class="links"><a href="#inicio">Inicio</a><a href="#catalogo">Catálogo</a><a href="#descargas">Descargas</a><a href="#seguridad">Seguridad</a><a href="#soporte">Soporte</a><a href="#empresa">Empresa</a></div>
+<a class="nav-cta" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">Descargar APK ↗</a>
+</div></nav>
+<main>
+<section class="hero wrap" id="inicio"><div class="hero-grid"><div>
+<div class="eyebrow"><span class="dot"></span> Plataforma para pantallas grandes</div>
+<h1>Tu pantalla.<br>Tu contenido.<br><em>MILTVPLUS.</em></h1>
+<p class="lead">Una experiencia multimedia diseñada para Android TV y dispositivos compatibles. Accedé a la aplicación, consultá las versiones publicadas y encontrá la guía de instalación en un solo lugar.</p>
+<div class="actions"><a class="btn primary" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">↓ Descargar última versión</a><a class="btn secondary" href="#instalacion">Guía de instalación</a></div>
+<p class="fine">APK distribuido mediante GitHub Releases. Requiere Android compatible y permisos de instalación concedidos por el usuario.</p><div class="trust-strip"><div class="trust-item"><strong>Descarga oficial</strong><br>GitHub Releases</div><div class="trust-item"><strong>Versión publicada</strong><br>Consultá las notas de release</div><div class="trust-item"><strong>Disponibilidad</strong><br>No se muestra uptime en vivo sin monitor público</div></div><div class="downloader-code"><div><span class="fine">CÓDIGO DOWNLOADER INDICADO</span><strong>1857055</strong><span class="fine">Si el código no funciona, usá la URL directa.</span></div><button type="button" id="copy-code">Copiar código</button></div>
+</div><div class="visual" aria-label="Ilustración de una pantalla de MILTVPLUS"><div class="screen"><div class="screen-top"><span>MILT VPLUS</span><span>● ONLINE UI</span></div><div class="screen-play"><div class="play" aria-hidden="true">▶</div></div><div class="screen-bars"><i></i><i></i><i></i><i></i></div></div></div></div></section>
+<section class="wrap" id="catalogo"><div class="section-head"><div class="eyebrow">Explorá la plataforma</div><h2>Todo organizado para navegar con tu control remoto.</h2><p>Estas tarjetas describen áreas de contenido previstas por la aplicación. La disponibilidad de canales, títulos y transmisiones depende del catálogo activo y de los derechos de acceso.</p></div>
+<div class="grid">
+<article class="card"><div class="symbol">◉</div><h3>TV en vivo</h3><p>Acceso a canales disponibles, con una experiencia pensada para pantalla grande.</p></article>
+<article class="card"><div class="symbol">⚽</div><h3>Deportes</h3><p>Explorá el contenido deportivo que esté habilitado en el catálogo de la plataforma.</p></article>
+<article class="card"><div class="symbol">▣</div><h3>Películas y series · VOD</h3><p>Contenido bajo demanda según los títulos configurados y disponibles en el servicio.</p></article>
+<article class="card"><div class="symbol">✦</div><h3>Anime</h3><p>Sección dedicada a las series y películas de anime incluidas en el catálogo.</p></article>
+<article class="card"><div class="symbol">⌂</div><h3>Kids</h3><p>Espacio infantil cuando haya contenido apropiado publicado y habilitado.</p></article>
+<article class="card"><div class="symbol">⌁</div><h3>Diseñada para TV</h3><p>Interacción mediante flechas, botón OK/Enter y controles direccionales compatibles.</p></article>
+</div></section>
+<section class="wrap" id="instalacion"><div class="section-head"><div class="eyebrow">Puesta en marcha</div><h2>Instalación en Android TV / Smart TV</h2><p>Seguí estos pasos en el televisor. Los nombres exactos de los menús pueden cambiar según la marca y la versión de Android TV o Google TV.</p></div>
+<div class="split"><div class="panel"><h3>Descarga oficial del proyecto</h3><p class="fine">El enlace siguiente apunta al APK de la última Release publicada en GitHub.</p><p><a class="btn primary" style="width:100%" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">Descargar MILTVPLUS.apk</a></p><div class="url">https://matuu250mati.github.io/MILTVPLUS/</div><p class="fine">Código de Downloader indicado para esta guía: <strong>1857055</strong>. Si el código no abre esta página, ingresá la URL directamente; los códigos cortos dependen del servicio Downloader y pueden cambiar.</p></div>
+<ol class="steps"><li><strong>Abrí Downloader</strong>Instalá o abrí Downloader en el televisor y entrá en su campo de URL/código.</li><li><strong>Ingresá el código o la dirección</strong>Probá el código 1857055. Si no funciona, escribí la dirección de esta página o abrila desde el navegador de Downloader.</li><li><strong>Descargá el APK</strong>Seleccioná “Descargar última versión” y esperá a que finalice la transferencia.</li><li><strong>Autorizá la instalación si Android lo pide</strong>Permití instalar aplicaciones desde Downloader solo si reconocés el archivo y su origen; luego volvé al instalador.</li><li><strong>Instalá y abrí MILTVPLUS</strong>Confirmá la instalación. Para actualizar, instalá el APK firmado con la misma clave que la versión anterior; no desinstales primero salvo que entiendas que podrías perder datos.</li></ol></div></section>
 
-  <main class="wrap">
-    <div class="hero">
-      <span class="pill">DESCARGA PARA ANDROID TV</span>
-      <h2>Instalá MILTVPLUS en tu televisor</h2>
-      <p>Descargá el APK publicado en la última versión disponible de GitHub Releases. Usá el botón desde el navegador de Downloader o desde otro navegador compatible.</p>
-      <a class="download" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk" rel="noopener">⬇ DESCARGAR MILTVPLUS APK</a>
-      <p class="note">La descarga requiere conexión a internet. Android puede pedir autorización para instalar aplicaciones desde esa fuente.</p>
-    </div>
-
-    <section aria-labelledby="features">
-      <h2 class="section-title" id="features">Explorá MILTVPLUS</h2>
-      <div class="grid">
-        <article class="card"><h3>Deportes argentinos</h3><p>Acceso a las secciones deportivas disponibles en la aplicación.</p></article>
-        <article class="card"><h3>TV en vivo</h3><p>Explorá los canales disponibles y navegá con el control remoto.</p></article>
-        <article class="card"><h3>Películas y series</h3><p>Catálogo VOD según el contenido configurado en la plataforma.</p></article>
-        <article class="card"><h3>Anime</h3><p>Una sección dedicada al contenido de anime disponible.</p></article>
-        <article class="card"><h3>Kids</h3><p>Sección infantil cuando el catálogo correspondiente esté disponible.</p></article>
-        <article class="card"><h3>Diseñada para TV</h3><p>Navegación enfocada en pantallas grandes y controles direccionales.</p></article>
-      </div>
-    </section>
-
-    <section aria-labelledby="install">
-      <h2 class="section-title" id="install">Cómo instalar</h2>
-      <div class="card">
-        <ol>
-          <li>En Downloader, abrí el navegador o el campo de URL.</li>
-          <li>Visitá esta página y seleccioná <strong>DESCARGAR MILTVPLUS APK</strong>.</li>
-          <li>Cuando termine la descarga, abrí el archivo APK.</li>
-          <li>Si Android lo solicita, permití a Downloader instalar aplicaciones desde esa fuente y volvé al instalador.</li>
-          <li>Confirmá la instalación y abrí MILTVPLUS.</li>
-        </ol>
-        <p><strong>Nota:</strong> los nombres de los menús pueden variar según el modelo de televisor y la versión de Android/Google TV.</p>
-      </div>
-    </section>
-
-    <section aria-labelledby="faq">
-      <h2 class="section-title" id="faq">Preguntas frecuentes</h2>
-      <details><summary>¿Cómo instalo el APK?</summary><p>Descargalo desde el botón de esta página, abrí el archivo y seguí las indicaciones del sistema. Habilitá la instalación desde Downloader solo si confías en el archivo y en su procedencia.</p></details>
-      <details><summary>¿Cómo navego con el control remoto?</summary><p>Usá las flechas para moverte entre los elementos, el botón central/OK para seleccionar y Atrás para regresar. La respuesta puede variar según el control y el dispositivo.</p></details>
-      <details><summary>¿Cómo actualizo MILTVPLUS?</summary><p>Volvé a esta página y descargá la versión publicada más reciente. Si Android no permite instalarla sobre la versión existente, no desinstales la aplicación de inmediato: podría eliminar datos locales. Revisá primero el mensaje de error y la compatibilidad de firma.</p></details>
-      <details><summary>¿Por qué Android muestra una advertencia?</summary><p>Android suele advertir cuando se instala una aplicación descargada fuera de una tienda. Continuá solo si reconocés el origen y querés instalar el APK.</p></details>
-      <details><summary>¿Esta página me da un código de 5 dígitos para Downloader?</summary><p>No. Los códigos numéricos cortos los genera el servicio de AFTVnews Downloader. Este sitio no puede asignar ni inventar uno. Podés abrir esta página desde el navegador de Downloader o registrar esta URL en el servicio de códigos de AFTVnews si está disponible para tu cuenta.</p></details>
-    </section>
-
-    <section aria-labelledby="short-url">
-      <h2 class="section-title" id="short-url">Dirección de descarga</h2>
-      <p class="tagline" style="margin:0 0 12px">Si necesitás ingresar el enlace manualmente, esta dirección apunta a la descarga de la última Release publicada:</p>
-      <div class="url">https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk</div>
-    </section>
-  </main>
-
-  <footer class="wrap">
-    <p><strong>MILTVPLUS</strong> · Página de descarga del proyecto.</p>
-    <p>Instalá aplicaciones únicamente desde fuentes en las que confíes. La disponibilidad del contenido depende de la configuración y los servicios asociados al proyecto.</p>
-    <p><a href="https://github.com/matuu250mati/MILTVPLUS/releases" rel="noopener">Releases y versiones publicadas en GitHub</a></p>
-  </footer>
-</body>
-</html>
+<section class="wrap" id="descargas"><div class="section-head"><div class="eyebrow">Centro de descargas</div><h2>Elegí tu dispositivo.</h2><p>Consultá la ruta adecuada antes de instalar. El APK está destinado a Android; no se presenta como instalador nativo para Windows o Linux.</p></div>
+<div class="platform-tabs" role="tablist" aria-label="Plataformas de instalación">
+<button class="platform-tab" role="tab" id="tab-tv" aria-controls="panel-tv" aria-selected="true" type="button">Smart TV / Android TV</button>
+<button class="platform-tab" role="tab" id="tab-mobile" aria-controls="panel-mobile" aria-selected="false" type="button">Celular / Tablet</button>
+<button class="platform-tab" role="tab" id="tab-box" aria-controls="panel-box" aria-selected="false" type="button">TV Box / Fire TV</button>
+<button class="platform-tab" role="tab" id="tab-pc" aria-controls="panel-pc" aria-selected="false" type="button">Windows / Linux / PC</button>
+</div>
+<div class="platform-panel" role="tabpanel" id="panel-tv" aria-labelledby="tab-tv"><h3>Smart TV, TCL y Android TV</h3><p>Usá Downloader o un navegador compatible, abrí esta página y descargá el APK. Navegá con las flechas del control remoto y el botón OK. La compatibilidad depende de la versión de Android y de la arquitectura del televisor.</p><a class="btn primary" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">Descargar APK para Android TV</a></div>
+<div class="platform-panel" role="tabpanel" id="panel-mobile" aria-labelledby="tab-mobile" hidden><h3>Celulares y tablets Android</h3><p>Descargá el APK, abrilo desde Descargas y confirmá la instalación si Android lo solicita. La experiencia táctil depende de las pantallas que incluya la versión instalada.</p><a class="btn primary" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">Descargar APK para Android</a></div>
+<div class="platform-panel" role="tabpanel" id="panel-box" aria-labelledby="tab-box" hidden><h3>TV Box y dispositivos externos</h3><p>En Android TV Box, seguí la guía de Android TV. Fire TV puede tener restricciones y diferencias de sistema; no se garantiza compatibilidad con todos los modelos ni versiones.</p><a class="btn primary" href="https://github.com/matuu250mati/MILTVPLUS/releases/latest/download/MILTVPLUS.apk">Descargar APK Android</a></div>
+<div class="platform-panel" role="tabpanel" id="panel-pc" aria-labelledby="tab-pc" hidden><h3>Windows, Linux y PC</h3><p>El APK no es un instalador nativo de escritorio. Podés consultar el código fuente y la documentación del proyecto; ejecutar Android en un emulador no garantiza compatibilidad y requiere configuración propia.</p><a class="btn secondary" href="https://github.com/matuu250mati/MILTVPLUS">Ver repositorio y documentación ↗</a></div>
+</section>
+<section class="wrap" id="seguridad"><div class="section-head"><div class="eyebrow">Seguridad y privacidad</div><h2>Información técnica sin promesas vacías.</h2><p>La confianza se construye explicando qué está comprobado y qué debe verificarse.</p></div>
+<div class="grid">
+<article class="card"><div class="symbol">⌁</div><h3>Transporte cifrado</h3><p>El portal utiliza enlaces HTTPS para los destinos externos. El cifrado entre la app, Supabase y otros servicios depende de la configuración real de cada conexión.</p></article>
+<article class="card"><div class="symbol">◈</div><h3>Autenticación</h3><p>La aplicación puede usar Supabase para gestionar autenticación. La protección efectiva depende de políticas RLS, permisos, gestión de claves y configuración del proyecto.</p></article>
+<article class="card"><div class="symbol">▣</div><h3>Privacidad y acceso</h3><p>No afirmamos privacidad absoluta ni auditoría de seguridad certificada. Evitá compartir contraseñas, tokens o datos sensibles y revisá los permisos solicitados.</p></article>
+</div><p class="security-note" style="margin-top:18px">Estado del servicio: no hay aquí un monitor público conectado ni métricas verificadas de disponibilidad. Por eso no mostramos un porcentaje de uptime como si fuera tiempo real.</p></section>
+<section class="wrap" id="empresa"><div class="panel"><div class="eyebrow">Sobre el proyecto</div><h2>MILTVPLUS</h2><p>Proyecto de software multimedia con código y publicaciones disponibles en GitHub. Este portal reúne descargas, documentación y rutas de soporte. La disponibilidad de contenidos depende de las fuentes configuradas y de los derechos correspondientes.</p><p><a class="btn secondary" href="https://github.com/matuu250mati/MILTVPLUS">Repositorio del proyecto ↗</a> <a class="btn secondary" href="https://github.com/matuu250mati/MILTVPLUS/issues">Reportar un problema ↗</a></p></div></section>
+\n<section class="wrap" id="soporte"><div class="section-head"><div class="eyebrow">Ayuda técnica</div><h2>Soporte y diagnóstico</h2><p>Consultá estas comprobaciones antes de reinstalar la aplicación.</p></div><div class="grid">
+<article class="card"><h3>La descarga no empieza</h3><p>Comprobá la conexión, probá el enlace de Releases y verificá que el televisor tenga espacio disponible.</p></article><article class="card"><h3>Android bloquea el APK</h3><p>Revisá el permiso de instalación para Downloader. Continuá únicamente si confiás en el origen del archivo.</p></article><article class="card"><h3>No se instala la actualización</h3><p>Una firma distinta, una versión incompatible o un paquete diferente pueden impedir la instalación sobre la app existente.</p></article></div><p style="margin-top:20px"><a class="btn secondary" href="https://github.com/matuu250mati/MILTVPLUS/issues">Abrir incidencias en GitHub ↗</a></p></section>
+<section class="wrap faq" id="faq"><div class="section-head"><div class="eyebrow">Preguntas frecuentes</div><h2>Respuestas rápidas.</h2></div>
+<details><summary>¿La página aloja el APK directamente?</summary><p>No. El botón descarga el archivo publicado en GitHub Releases; esta página funciona como portal informativo y punto de acceso.</p></details>
+<details><summary>¿Puedo instalar una actualización sin desinstalar?</summary><p>Normalmente sí, si conserva el mismo identificador de paquete, usa una firma compatible y tiene un número de versión superior. Android siempre puede requerir confirmación del usuario.</p></details>
+<details><summary>¿La actualización se instala sola?</summary><p>No. La aplicación puede avisar y descargar una versión nueva, pero Android exige intervención/confirmación para instalar APK externos. No se debe prometer instalación silenciosa en un dispositivo normal.</p></details>
+<details><summary>¿Por qué no reproduce un canal o una película?</summary><p>La disponibilidad depende de que la URL sea accesible y de que el formato, los permisos y el servidor sean compatibles. Un título visible en el catálogo no garantiza que su fuente siga activa.</p></details>
+<details><summary>¿Qué hago si el control remoto se queda en un campo?</summary><p>Probá flechas arriba/abajo y OK. Si el foco no avanza, registrá el modelo del televisor, la versión de Android TV y el paso exacto para reportarlo en GitHub.</p></details>
+<details><summary>¿Dónde veo los cambios y las versiones?</summary><p>Las Releases publicadas y el historial de código están disponibles en el repositorio oficial del proyecto.</p></details>
+</section>
+<section class="wrap" id="versiones"><div class="panel version"><div><span class="badge">Canal oficial</span><h3>Versiones y notas de publicación</h3><p>Consultá el número de versión, los cambios y el APK disponible en GitHub Releases.</p></div><a class="btn primary" href="https://github.com/matuu250mati/MILTVPLUS/releases">Ver versiones ↗</a></div></section>
+</main>
+<footer><div class="wrap footer-row"><div><strong style="color:var(--text)">MILTVPLUS</strong><br>Portal de descarga y documentación del proyecto.</div><div class="footer-links"><a href="#inicio">Inicio</a><a href="#soporte">Soporte</a><a href="#faq">FAQ</a><a href="https://github.com/matuu250mati/MILTVPLUS">Repositorio</a><a href="https://github.com/matuu250mati/MILTVPLUS/releases">Releases</a></div></div><div class="wrap" style="margin-top:18px">Instalá software solo desde fuentes confiables. El acceso al contenido está sujeto a disponibilidad, configuración y derechos aplicables.</div></footer>
+<script>
+(function(){
+ const tabs=[...document.querySelectorAll('.platform-tab')];
+ tabs.forEach((tab,index)=>tab.addEventListener('click',()=>{
+  tabs.forEach((item,i)=>{item.setAttribute('aria-selected',String(i===index));document.getElementById(item.getAttribute('aria-controls')).hidden=i!==index;});
+ }));
+ const copy=document.getElementById('copy-code');
+ if(copy) copy.addEventListener('click',async()=>{
+  try { await navigator.clipboard.writeText('1857055'); copy.textContent='Código copiado'; }
+  catch (_) { copy.textContent='Código: 1857055'; }
+ });
+})();
+</script></body></html>

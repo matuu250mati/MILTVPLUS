@@ -17,6 +17,11 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   final _phone = TextEditingController();
   final _otp = TextEditingController();
+  final _emailFocus = FocusNode(debugLabel: 'login-email');
+  final _passwordFocus = FocusNode(debugLabel: 'login-password');
+  final _submitFocus = FocusNode(debugLabel: 'login-submit');
+  final _registerFocus = FocusNode(debugLabel: 'login-register');
+  final _phoneModeFocus = FocusNode(debugLabel: 'login-phone-mode');
   bool _phoneMode = false;
   bool _otpSent = false;
   String? _pendingPhone;
@@ -32,6 +37,11 @@ class _AuthScreenState extends State<AuthScreen> {
     _password.dispose();
     _phone.dispose();
     _otp.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _submitFocus.dispose();
+    _registerFocus.dispose();
+    _phoneModeFocus.dispose();
     super.dispose();
   }
 
@@ -191,8 +201,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 26),
                     if (!_phoneMode) ...[
                     TextFormField(
+                      focusNode: _emailFocus,
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
                       autofillHints: const [AutofillHints.username, AutofillHints.email],
                       decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.mail_outline_rounded)),
                       validator: (v) {
@@ -202,8 +215,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
+                      focusNode: _passwordFocus,
                       controller: _password,
                       obscureText: _hidePassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submitFocus.requestFocus(),
                       autofillHints: _register ? const [AutofillHints.newPassword] : const [AutofillHints.password],
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
@@ -233,6 +249,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       const SizedBox(height: 14),
                     ],
                     FilledButton(
+                      focusNode: _submitFocus,
                       onPressed: _busy ? null : _submit,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 13),
@@ -243,10 +260,12 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 8),
                     TextButton(
+                      focusNode: _registerFocus,
                       onPressed: _busy ? null : () => setState(() { _register = !_register; _message = null; }),
                       child: Text(_register ? 'Ya tengo cuenta · Iniciar sesión' : '¿Primera vez? · Crear cuenta'),
                     ),
                       TextButton(
+                        focusNode: _phoneModeFocus,
                         onPressed: _busy ? null : () => setState(() {
                           _phoneMode = true;
                           _message = null;
