@@ -25,20 +25,20 @@ class MiltvPlusApp extends StatelessWidget {
           // the center/OK button as Enter or Select. Keep these mappings global
           // so standard Flutter controls work consistently across screens.
           shortcuts: const <ShortcutActivator, Intent>{
-            const SingleActivator(LogicalKeyboardKey.arrowUp):
-                const DirectionalFocusIntent(TraversalDirection.up),
-            const SingleActivator(LogicalKeyboardKey.arrowDown):
-                const DirectionalFocusIntent(TraversalDirection.down),
-            const SingleActivator(LogicalKeyboardKey.arrowLeft):
-                const DirectionalFocusIntent(TraversalDirection.left),
-            const SingleActivator(LogicalKeyboardKey.arrowRight):
-                const DirectionalFocusIntent(TraversalDirection.right),
-            const SingleActivator(LogicalKeyboardKey.enter):
-                const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.numpadEnter):
-                const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.select):
-                const ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.arrowUp):
+                DirectionalFocusIntent(TraversalDirection.up),
+            SingleActivator(LogicalKeyboardKey.arrowDown):
+                DirectionalFocusIntent(TraversalDirection.down),
+            SingleActivator(LogicalKeyboardKey.arrowLeft):
+                DirectionalFocusIntent(TraversalDirection.left),
+            SingleActivator(LogicalKeyboardKey.arrowRight):
+                DirectionalFocusIntent(TraversalDirection.right),
+            SingleActivator(LogicalKeyboardKey.enter):
+                ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.numpadEnter):
+                ActivateIntent(),
+            SingleActivator(LogicalKeyboardKey.select):
+                ActivateIntent(),
           },
           child: FocusTraversalGroup(
             policy: ReadingOrderTraversalPolicy(),
