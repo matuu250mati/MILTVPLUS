@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -241,66 +243,67 @@ class _HomeData {
   final List<SeriesModel> series;
 }
 
-class _DashboardHeader extends StatelessWidget {
+class _DashboardHeader extends StatefulWidget {
   const _DashboardHeader({required this.compact, required this.onNavigate});
-
   final bool compact;
   final ValueChanged<int> onNavigate;
+  @override
+  State<_DashboardHeader> createState() => _DashboardHeaderState();
+}
 
+class _DashboardHeaderState extends State<_DashboardHeader> {
+  late DateTime _now;
+  Timer? _clockTimer;
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) { if (mounted) setState(() => _now = DateTime.now()); });
+  }
+  @override
+  void dispose() { _clockTimer?.cancel(); super.dispose(); }
+  String get _formattedDateTime {
+    const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final day = weekdays[_now.weekday - 1];
+    final date = '${_now.day.toString().padLeft(2, '0')}/${_now.month.toString().padLeft(2, '0')}/${_now.year}';
+    final time = '${_now.hour.toString().padLeft(2, '0')}:${_now.minute.toString().padLeft(2, '0')}';
+    return '$day, $date · $time';
+  }
+  void _showNotifications() {
+    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      backgroundColor: const Color(0xFF111521),
+      title: const Row(children: [Icon(Icons.notifications_active_outlined, color: AppTheme.accent), SizedBox(width: 10), Expanded(child: Text('Notificaciones MILTVPLUS'))]),
+      content: const Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Actualizaciones', style: TextStyle(fontWeight: FontWeight.w800)),
+        SizedBox(height: 4),
+        Text('La aplicación comprueba si hay una nueva versión oficial publicada.'),
+        SizedBox(height: 14),
+        Text('Novedades', style: TextStyle(fontWeight: FontWeight.w800)),
+        SizedBox(height: 4),
+        Text('Las novedades del catálogo aparecen cuando se publican y se sincronizan los contenidos.'),
+      ]),
+      actions: [
+        TextButton(onPressed: () { Navigator.of(dialogContext).pop(); widget.onNavigate(11); }, child: const Text('VER AJUSTES')),
+        FilledButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('CERRAR')),
+      ],
+    ));
+  }
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: compact ? 38 : 46,
-          height: compact ? 38 : 46,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(13),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.accent.withValues(alpha: .16),
-                blurRadius: 16,
-              ),
-            ],
-          ),
-          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 32),
-        ),
+    final compact = widget.compact;
+    final onNavigate = widget.onNavigate;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Container(width: compact ? 38 : 46, height: compact ? 38 : 46, decoration: BoxDecoration(borderRadius: BorderRadius.circular(13), gradient: const LinearGradient(colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: .16), blurRadius: 16)]), child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 32)),
         const SizedBox(width: 10),
-        Expanded(
-          child: RichText(
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            text: TextSpan(
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: compact ? 19 : 24,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -.6,
-              ),
-              children: const [
-                TextSpan(text: 'MILTV '),
-                TextSpan(text: 'PLUS', style: TextStyle(color: AppTheme.accent)),
-              ],
-            ),
-          ),
-        ),
-        IconButton(
-          tooltip: 'Buscar contenido',
-          onPressed: () => onNavigate(8),
-          icon: const Icon(Icons.search_rounded),
-        ),
-        IconButton(
-          tooltip: 'Configuración',
-          onPressed: () => onNavigate(11),
-          icon: const Icon(Icons.settings_outlined),
-        ),
-      ],
-    );
+        Expanded(child: RichText(maxLines: 1, overflow: TextOverflow.ellipsis, text: TextSpan(style: TextStyle(color: Colors.white, fontSize: compact ? 19 : 24, fontWeight: FontWeight.w900, letterSpacing: -.6), children: const [TextSpan(text: 'MILTV '), TextSpan(text: 'PLUS', style: TextStyle(color: AppTheme.accent))]))),
+        IconButton(tooltip: 'Buscar contenido', onPressed: () => onNavigate(8), icon: const Icon(Icons.search_rounded)),
+        IconButton(tooltip: 'Notificaciones', onPressed: _showNotifications, icon: const Icon(Icons.notifications_none_rounded)),
+        IconButton(tooltip: 'Configuración', onPressed: () => onNavigate(11), icon: const Icon(Icons.settings_outlined)),
+      ]),
+      const SizedBox(height: 3),
+      Padding(padding: const EdgeInsets.only(left: 2), child: Text(_formattedDateTime, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.muted, fontSize: 10, letterSpacing: .2))),
+    ]);
   }
 }
 

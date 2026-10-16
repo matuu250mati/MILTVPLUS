@@ -851,6 +851,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 titles[section] ?? 'Configuración',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
             ),
@@ -904,10 +906,10 @@ class _SettingsMenuTile extends StatelessWidget {
             ),
             child: Icon(icon, color: AppTheme.accent),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(subtitle, style: const TextStyle(color: AppTheme.muted)),
+            child: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.muted)),
           ),
           trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.accent),
           onTap: onTap,
