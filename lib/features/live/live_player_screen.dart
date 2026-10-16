@@ -32,7 +32,6 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   bool _controlsVisible = true;
   bool _variantsLoading = false;
   bool _recovering = false;
-  List<String> _activeUrls = const [];
   int _activeStreamIndex = 0;
   Timer? _hideControlsTimer;
 
@@ -116,7 +115,6 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       _variantsLoading = false;
       _controlsVisible = true;
       _recovering = recovering;
-      _activeUrls = urls;
     });
     try {
       await previous?.pause();
