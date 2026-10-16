@@ -24,7 +24,7 @@ class MiltvPlusApp extends StatelessWidget {
           // Android TV remotes commonly expose their D-pad as arrow keys and
           // the center/OK button as Enter or Select. Keep these mappings global
           // so standard Flutter controls work consistently across screens.
-          shortcuts: <ShortcutActivator, Intent>{
+          shortcuts: const <ShortcutActivator, Intent>{
             const SingleActivator(LogicalKeyboardKey.arrowUp):
                 const DirectionalFocusIntent(TraversalDirection.up),
             const SingleActivator(LogicalKeyboardKey.arrowDown):
