@@ -8,6 +8,7 @@ import 'core/accessibility_settings.dart';
 import 'core/navigation/legacy_route_registry.dart';
 import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'core/update_service.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/onboarding/tv_onboarding_screen.dart';
 import 'features/shell/app_shell.dart';
@@ -70,6 +71,7 @@ class _IntroCoordinator extends StatefulWidget {
 class _IntroCoordinatorState extends State<_IntroCoordinator> {
   Timer? _introTimer;
   bool _introComplete = false;
+  bool _updateCheckStarted = false;
 
   @override
   void initState() {
@@ -77,7 +79,71 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
     _introTimer = Timer(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
       setState(() => _introComplete = true);
+      _checkForUpdates();
     });
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (_updateCheckStarted) return;
+    _updateCheckStarted = true;
+    final update = await UpdateService.checkForUpdate();
+    if (!mounted || update == null) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !update.forceUpdate,
+      builder: (dialogContext) => PopScope(
+        canPop: !update.forceUpdate,
+        child: AlertDialog(
+          title: Text(update.forceUpdate
+              ? 'Actualización obligatoria'
+              : 'Nueva versión disponible'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Versión instalada: ${update.currentVersion}'),
+                Text('Nueva versión: ${update.latestVersion}'),
+                if (update.releaseNotes.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(update.releaseNotes),
+                ],
+                if (update.forceUpdate) ...[
+                  const SizedBox(height: 12),
+                  const Text('Necesitás actualizar para continuar usando MILTVPLUS.'),
+                ],
+                const SizedBox(height: 10),
+                const Text(
+                  'Android solicitará confirmación para instalar el APK. No hace falta desinstalar primero.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (!update.forceUpdate)
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Más tarde'),
+              ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await UpdateService.downloadAndOpenInstaller(update.downloadUrl);
+                } catch (error) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No se pudo iniciar la actualización: $error')),
+                  );
+                }
+              },
+              child: const Text('Descargar e instalar'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
