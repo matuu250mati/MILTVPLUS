@@ -8,6 +8,7 @@ class TvChannel {
     this.category,
     this.logoUrl,
     this.tvgId,
+    this.backupStreamUrls = const [],
   });
 
   final String name;
@@ -18,6 +19,17 @@ class TvChannel {
   final String? category;
   final String? logoUrl;
   final String? tvgId;
+  /// Ordered, authorized alternate stream URLs. The primary URL remains [streamUrl].
+  final List<String> backupStreamUrls;
+
+  List<String> get streamUrls {
+    final urls = <String>[];
+    for (final raw in [streamUrl, ...backupStreamUrls]) {
+      final value = raw.trim();
+      if (value.isNotEmpty && !urls.contains(value)) urls.add(value);
+    }
+    return List<String>.unmodifiable(urls);
+  }
 
   String get liveSection {
     final categoryText = (category ?? '').trim();
