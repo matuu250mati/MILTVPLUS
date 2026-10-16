@@ -31,6 +31,9 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   bool _loading = true;
   bool _controlsVisible = true;
   bool _variantsLoading = false;
+  bool _recovering = false;
+  List<String> _activeUrls = const [];
+  int _activeStreamIndex = 0;
   Timer? _hideControlsTimer;
 
   TvChannel get _channel => widget.channels.isEmpty
@@ -85,19 +88,22 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     });
   }
 
-  Future<void> _openChannel(int index, {String? streamOverride}) async {
+  Future<void> _openChannel(
+    int index, {
+    String? streamOverride,
+    int startFrom = 0,
+    bool recovering = false,
+  }) async {
     if (widget.channels.isEmpty || index < 0 || index >= widget.channels.length) return;
     final request = ++_requestId;
     final channel = widget.channels[index];
-    final uri = Uri.tryParse((streamOverride ?? channel.streamUrl).trim());
-    if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
-        uri.scheme != 'https') {
-      setState(() {
-        _index = index;
-        _loading = false;
-        _error = 'La dirección de esta señal no es válida.';
-      });
-      return;
+    final urls = <String>[];
+    for (final raw in [
+      if (streamOverride != null) streamOverride,
+      ...channel.streamUrls,
+    ]) {
+      final value = raw.trim();
+      if (value.isNotEmpty && !urls.contains(value)) urls.add(value);
     }
 
     final previous = _controller;
@@ -109,6 +115,8 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       _variants = const [];
       _variantsLoading = false;
       _controlsVisible = true;
+      _recovering = recovering;
+      _activeUrls = urls;
     });
     try {
       await previous?.pause();
@@ -118,37 +126,61 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     } catch (_) {}
     if (!mounted || request != _requestId) return;
 
-    final next = VideoPlayerController.networkUrl(
-      uri,
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
-    );
-    try {
-      await next.initialize().timeout(const Duration(seconds: 12));
-      if (!mounted || request != _requestId) {
-        await next.dispose();
-        return;
+    var lastFailure = 'No se encontró una fuente de reproducción válida.';
+    for (var candidateIndex = startFrom; candidateIndex < urls.length; candidateIndex++) {
+      final uri = Uri.tryParse(urls[candidateIndex]);
+      if (uri == null ||
+          !uri.hasAuthority ||
+          uri.userInfo.isNotEmpty ||
+          uri.scheme != 'https') {
+        lastFailure = 'Se omitió una URL de transmisión no válida.';
+        continue;
       }
-      next.setLooping(false);
-      await next.play();
-      if (!mounted || request != _requestId) {
-        await next.dispose();
+
+      final next = VideoPlayerController.networkUrl(
+        uri,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+      );
+      try {
+        await next.initialize().timeout(const Duration(seconds: 12));
+        if (!mounted || request != _requestId) {
+          await next.dispose();
+          return;
+        }
+        next.setLooping(false);
+        await next.play();
+        if (!mounted || request != _requestId) {
+          await next.dispose();
+          return;
+        }
+        _activeStreamIndex = candidateIndex;
+        _controller = next;
+        next.addListener(() => _handleControllerUpdate(next, request));
+        setState(() {
+          _loading = false;
+          _error = null;
+          _recovering = false;
+        });
+        _showControls();
+        unawaited(_loadVariants(urls[candidateIndex], request));
         return;
+      } catch (_) {
+        try {
+          await next.dispose();
+        } catch (_) {}
+        if (!mounted || request != _requestId) return;
+        lastFailure = 'La fuente no respondió o no pudo iniciar la reproducción.';
       }
-      _controller = next;
-      next.addListener(() => _handleControllerUpdate(next, request));
-      setState(() {
-        _loading = false;
-      });
-      _showControls();
-      unawaited(_loadVariants(channel.streamUrl, request));
-    } catch (_) {
-      await next.dispose();
-      if (!mounted || request != _requestId) return;
-      setState(() {
-        _loading = false;
-        _error = 'La señal no respondió a tiempo. Puede estar caída, bloqueada por región o requerir otra URL autorizada.';
-      });
     }
+
+    if (!mounted || request != _requestId) return;
+    setState(() {
+      _loading = false;
+      _recovering = false;
+      _error = urls.isEmpty
+          ? 'Este canal todavía no tiene una URL de transmisión publicada.'
+          : 'No se pudo reproducir esta señal con las fuentes disponibles. $lastFailure';
+    });
   }
 
   void _handleControllerUpdate(VideoPlayerController controller, int request) {
@@ -156,16 +188,26 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
         request != _requestId ||
         !identical(_controller, controller) ||
         !controller.value.hasError ||
-        _error != null) {
+        _recovering) {
       return;
     }
-    // Some streams fail only after initialization (expired tokens, segment
-    // errors, or a server stopping the live feed). Surface a recoverable error
-    // instead of leaving a black player with controls that appear functional.
-    setState(() {
-      _loading = false;
-      _error = 'La reproducción se interrumpió. Revisá la URL autorizada o probá otra señal.';
-    });
+    // Runtime failures (for example, expired URLs or a stopped HLS origin)
+    // trigger a silent attempt at the next configured mirror.
+    _recoverFromFailure(controller, request);
+  }
+
+  Future<void> _recoverFromFailure(
+    VideoPlayerController controller,
+    int request,
+  ) async {
+    if (_recovering ||
+        request != _requestId ||
+        !identical(_controller, controller)) {
+      return;
+    }
+    _recovering = true;
+    final nextIndex = _activeStreamIndex + 1;
+    await _openChannel(_index, startFrom: nextIndex, recovering: true);
   }
 
   Future<void> _loadVariants(String source, int request) async {
