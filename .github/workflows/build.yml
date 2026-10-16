@@ -270,7 +270,7 @@ jobs:
             version="build-${GITHUB_SHA::7}"
           fi
           apk="build/MILTVPLUS-${version}-android.apk"
-          latest_apk="build/MILTVPLUS-android.apk"
+          latest_apk="build/MILTVPLUS.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "$apk"
           cp "$apk" "$latest_apk"
           (cd build && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
@@ -296,8 +296,8 @@ jobs:
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
-            build/MILTVPLUS-android.apk
-            build/MILTVPLUS-android.apk.sha256
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -309,8 +309,8 @@ jobs:
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
-            build/MILTVPLUS-android.apk
-            build/MILTVPLUS-android.apk.sha256
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -350,5 +350,7 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
           files: |
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
             build/app-release.apk
             build/app-release.apk.sha256
