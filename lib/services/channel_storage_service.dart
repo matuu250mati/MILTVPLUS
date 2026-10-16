@@ -26,6 +26,9 @@ class ChannelStorageService {
               category: decoded['category'] is String ? decoded['category'] as String : null,
               logoUrl: decoded['logoUrl'] is String ? decoded['logoUrl'] as String : null,
               tvgId: decoded['tvgId'] is String ? decoded['tvgId'] as String : null,
+              backupStreamUrls: decoded['backupStreamUrls'] is List
+                  ? (decoded['backupStreamUrls'] as List).whereType<String>().toList(growable: false)
+                  : const [],
             ));
           }
         }
@@ -48,6 +51,7 @@ class ChannelStorageService {
               'category': channel.category,
               'logoUrl': channel.logoUrl,
               'tvgId': channel.tvgId,
+              'backupStreamUrls': channel.backupStreamUrls,
             }))
         .toList(growable: false);
     await preferences.setStringList(_storageKey, encoded);
