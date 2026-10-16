@@ -23,6 +23,32 @@ class AppTheme {
     focusColor: selectedAccent.withValues(alpha: 0.18),
     hoverColor: selectedAccent.withValues(alpha: 0.10),
     splashColor: selectedAccent.withValues(alpha: 0.14),
+    listTileTheme: ListTileThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: ButtonStyle(
+        overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.focused)) {
+            return selectedAccent.withValues(alpha: 0.24);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return selectedAccent.withValues(alpha: 0.14);
+          }
+          return null;
+        }),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: ButtonStyle(
+        overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.focused)) {
+            return selectedAccent.withValues(alpha: 0.22);
+          }
+          return null;
+        }),
+      ),
+    ),
     useMaterial3: true,
     appBarTheme: const AppBarTheme(
       backgroundColor: background,

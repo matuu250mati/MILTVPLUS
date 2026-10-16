@@ -571,7 +571,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Limpiá imágenes guardadas en memoria. Esta acción no borra tus canales, perfil ni PIN de seguridad.',
-                style: TextStyle(color: AppTheme.muted, height: 1.5),
+                style: TextStyle(
+                  color: AppTheme.muted,
+                  fontSize: 14,
+                  height: 1.5,
+                  decoration: TextDecoration.none,
+                ),
               ),
               const SizedBox(height: 14),
               SizedBox(

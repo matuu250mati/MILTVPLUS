@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -8,19 +9,24 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1450),
+    duration: const Duration(milliseconds: 1700),
   )..forward();
 
   late final Animation<double> _opacity = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0, .72, curve: Curves.easeOut),
+    curve: const Interval(0, .78, curve: Curves.easeOutCubic),
   );
 
-  late final Animation<double> _scale = Tween<double>(begin: .78, end: 1).animate(
+  late final Animation<double> _scale = Tween<double>(begin: .82, end: 1).animate(
     CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+  );
+
+  late final Animation<double> _glow = Tween<double>(begin: .35, end: 1).animate(
+    CurvedAnimation(parent: _controller, curve: const Interval(.08, .9, curve: Curves.easeOut)),
   );
 
   @override
@@ -31,73 +37,191 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        backgroundColor: AppTheme.background,
         body: Container(
           width: double.infinity,
           decoration: const BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment(0, -.2),
-              radius: 1.15,
-              colors: [Color(0xFF252B49), Color(0xFF0B0D15), AppTheme.background],
-              stops: [0, .58, 1],
+              center: Alignment(0, -.18),
+              radius: 1.12,
+              colors: [
+                Color(0xFF172D35),
+                Color(0xFF101725),
+                Color(0xFF070B12),
+              ],
+              stops: [0, .55, 1],
             ),
           ),
-          child: Center(
-            child: FadeTransition(
-              opacity: _opacity,
-              child: ScaleTransition(
-                scale: _scale,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 94,
-                      height: 94,
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.accent.withValues(alpha: .28),
-                            blurRadius: 42,
-                            spreadRadius: 2,
-                          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Soft brand-color halos add depth without relying on raster assets.
+              AnimatedBuilder(
+                animation: _glow,
+                builder: (context, child) => Opacity(
+                  opacity: _glow.value * .34,
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppTheme.accent.withValues(alpha: .23),
+                          const Color(0x0038D9FF),
                         ],
                       ),
-                      child: const Icon(Icons.play_arrow_rounded, size: 70, color: Colors.black),
                     ),
-                    const SizedBox(height: 25),
-                    const Text(
-                      'MILTVPLUS',
-                      style: TextStyle(
-                        fontSize: 27,
-                        letterSpacing: 5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'ENTRETENIMIENTO ARGENTINO',
-                      style: TextStyle(
-                        color: AppTheme.muted,
-                        fontSize: 9,
-                        letterSpacing: 2.4,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 35),
-                    const SizedBox(
-                      width: 88,
-                      child: LinearProgressIndicator(
-                        minHeight: 2,
-                        backgroundColor: Colors.white12,
-                        valueColor: AlwaysStoppedAnimation(AppTheme.accent),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              FadeTransition(
+                opacity: _opacity,
+                child: ScaleTransition(
+                  scale: _scale,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _glow,
+                        builder: (context, child) => Container(
+                          width: 154,
+                          height: 154,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(42),
+                            color: const Color(0xFF091522),
+                            border: Border.all(
+                              color: AppTheme.accent.withValues(
+                                alpha: .48 + (_glow.value * .42),
+                              ),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.accent.withValues(
+                                  alpha: .12 + (_glow.value * .24),
+                                ),
+                                blurRadius: 44,
+                                spreadRadius: 1,
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF38D9FF).withValues(
+                                  alpha: .08 + (_glow.value * .12),
+                                ),
+                                blurRadius: 58,
+                                spreadRadius: -6,
+                              ),
+                            ],
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(18),
+                            child: CustomPaint(painter: _NeonTelevisionPainter()),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Text(
+                        'MILTVPLUS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 29,
+                          letterSpacing: 5.5,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(color: Color(0x6658F5A8), blurRadius: 20),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 11),
+                      const Text(
+                        'ENTRETENIMIENTO ARGENTINO',
+                        style: TextStyle(
+                          color: Color(0xFF9AAAB8),
+                          fontSize: 10,
+                          letterSpacing: 2.1,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 42),
+                      SizedBox(
+                        width: 112,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: const LinearProgressIndicator(
+                            minHeight: 3,
+                            backgroundColor: Color(0xFF26323D),
+                            valueColor: AlwaysStoppedAnimation(AppTheme.accent),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
+}
+
+class _NeonTelevisionPainter extends CustomPainter {
+  const _NeonTelevisionPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 100;
+    canvas.save();
+    canvas.scale(scale);
+
+    final glowPaint = Paint()
+      ..color = const Color(0x6638D9FF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    final outlinePaint = Paint()
+      ..color = AppTheme.accent
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fillPaint = Paint()..color = const Color(0xFF071426);
+    final antennaPaint = Paint()
+      ..color = const Color(0xFF38D9FF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    final screen = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(12, 29, 76, 51),
+      const Radius.circular(10),
+    );
+
+    canvas.drawLine(const Offset(39, 25), const Offset(27, 12), antennaPaint);
+    canvas.drawLine(const Offset(61, 25), const Offset(73, 12), antennaPaint);
+    canvas.drawRRect(screen, glowPaint);
+    canvas.drawRRect(screen, fillPaint);
+    canvas.drawRRect(screen, outlinePaint);
+
+    final play = Path()
+      ..moveTo(43, 40)
+      ..quadraticBezierTo(41, 38, 41, 43)
+      ..lineTo(41, 66)
+      ..quadraticBezierTo(41, 70, 45, 67)
+      ..lineTo(65, 56)
+      ..quadraticBezierTo(69, 54, 65, 51)
+      ..close();
+    canvas.drawPath(
+      play,
+      Paint()
+        ..color = AppTheme.accent
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    canvas.drawPath(play, Paint()..color = Colors.white);
+    canvas.drawLine(const Offset(42, 85), const Offset(58, 85), outlinePaint);
+    canvas.drawLine(const Offset(50, 81), const Offset(50, 85), outlinePaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

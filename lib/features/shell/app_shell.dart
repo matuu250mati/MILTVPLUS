@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/supabase_config.dart';
@@ -43,6 +44,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Timer? _updateTimer;
   DateTime? _lastUpdateCheck;
   bool _updateDialogShowing = false;
+  DateTime? _lastBackPressAt;
 
   @override
   void initState() {
@@ -480,17 +482,41 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return PopScope<Object?>(
-      // Back from any section returns to the dashboard instead of closing the
-      // application. Back on the dashboard retains Android's normal exit behavior.
-      canPop: selected == 1,
+      // A first Back returns to the dashboard. On the dashboard, require a
+      // second Back within two seconds before leaving the app accidentally.
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && selected != 1 && mounted) {
+        if (didPop || !mounted) return;
+        if (selected != 1) {
+          _lastBackPressAt = null;
           setState(() => selected = 1);
+          return;
         }
+
+        final now = DateTime.now();
+        final lastPress = _lastBackPressAt;
+        if (lastPress != null &&
+            now.difference(lastPress) <= const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+          return;
+        }
+
+        _lastBackPressAt = now;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Presioná Atrás otra vez para salir de MILTVPLUS.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
       },
-      child: Scaffold(
+      child: FocusTraversalGroup(
+        policy: ReadingOrderTraversalPolicy(),
+        child: Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: (selected == 10 || selected == 0 || selected == 5) ? AppBar(
+      // Inicio already renders its own header inside the scrollable dashboard.
+      appBar: selected == 1 ? null : ((selected == 10 || selected == 0 || selected == 5) ? AppBar(
         backgroundColor: const Color(0xFF080A10),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
@@ -518,7 +544,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             ),
           ],
         ),
-      ),
+      )),
       drawer: _buildDrawer(),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -563,6 +589,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           );
         },
       ),
+        ),
       ),
     );
   }

@@ -85,6 +85,7 @@ class ChannelModel {
   final String category;
   final String? logo;
   final String urlStream;
+  final List<String> streamUrls;
   final String streamFormat;
   final String countryCode;
   final int sortOrder;
@@ -93,7 +94,7 @@ class ChannelModel {
   const ChannelModel({
     required this.id, required this.title, this.synopsis,
     required this.category, this.logo, required this.urlStream,
-    required this.streamFormat, required this.countryCode,
+    this.streamUrls = const [], required this.streamFormat, required this.countryCode,
     required this.sortOrder, required this.isPublished,
   });
 
@@ -103,7 +104,8 @@ class ChannelModel {
     synopsis: _nullableString(json, 'synopsis'),
     category: _stringValue(json, 'category', 'General'),
     logo: _nullableString(json, 'logo'),
-    urlStream: _stringValue(json, 'url_stream'),
+    urlStream: _firstStreamUrl(json),
+    streamUrls: _streamUrlList(json, _firstStreamUrl(json)),
     streamFormat: _stringValue(json, 'stream_format', 'hls'),
     countryCode: _stringValue(json, 'country_code', 'AR'),
     sortOrder: _intValue(json, 'sort_order'),

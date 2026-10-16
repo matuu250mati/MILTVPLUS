@@ -9,6 +9,7 @@ create table if not exists public.channels (
   category text not null default 'Argentina',
   logo text,
   url_stream text not null,
+  stream_urls jsonb not null default '[]'::jsonb check (jsonb_typeof(stream_urls) = 'array'),
   stream_format text not null default 'hls' check (stream_format in ('hls', 'm3u8')),
   country_code text not null default 'AR',
   sort_order integer not null default 0,

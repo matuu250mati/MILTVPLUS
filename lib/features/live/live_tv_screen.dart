@@ -110,23 +110,21 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           merged[key] = channel;
           return;
         }
-        if ((existing.groupTitle == null && channel.groupTitle != null) ||
-            (existing.country == null && channel.country != null) ||
-            (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null) ||
-            (existing.logoUrl == null && channel.logoUrl != null) ||
-            (existing.tvgId == null && channel.tvgId != null)) {
-          merged[key] = TvChannel(
-            name: existing.name,
-            streamUrl: existing.streamUrl,
-            groupTitle: existing.groupTitle ?? channel.groupTitle,
-            country: existing.country ?? channel.country,
-            language: existing.language ?? channel.language,
-            category: existing.category ?? channel.category,
-            logoUrl: existing.logoUrl ?? channel.logoUrl,
-            tvgId: existing.tvgId ?? channel.tvgId,
-          );
-        }
+        final backupUrls = <String>{
+          ...existing.backupStreamUrls,
+          ...channel.streamUrls.where((url) => url != existing.streamUrl),
+        }.where((url) => url != existing.streamUrl).toList(growable: false);
+        merged[key] = TvChannel(
+          name: existing.name,
+          streamUrl: existing.streamUrl,
+          groupTitle: existing.groupTitle ?? channel.groupTitle,
+          country: existing.country ?? channel.country,
+          language: existing.language ?? channel.language,
+          category: channel.category ?? existing.category,
+          logoUrl: existing.logoUrl ?? channel.logoUrl,
+          tvgId: existing.tvgId ?? channel.tvgId,
+          backupStreamUrls: backupUrls,
+        );
       }
 
       for (final channel in saved) {
@@ -143,6 +141,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             streamUrl: channel.urlStream,
             category: channel.category,
             country: channel.countryCode,
+            backupStreamUrls: channel.streamUrls
+                .where((url) => url != channel.urlStream)
+                .toList(growable: false),
           );
           if (_matchesCategoryFilter(mappedChannel)) {
             addUnique(mappedChannel);
@@ -169,66 +170,63 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         // Continue with Supabase and cached channels when GitHub Raw is offline.
       }
 
-      // Deportes merges the global sports list with Argentina's country catalog.
-      // Only channels identified as sports are shown in the Deportes section.
-      final isSportsScreen = (widget.categoryFilter ?? const <String>[])
-          .any((value) => value.trim().toLowerCase() == 'deportes');
-      if (isSportsScreen) {
-        for (final sourceId in const ['sports', 'argentina']) {
-          for (final item in _publicPlaylistSources.where((source) => source.id == sourceId)) {
-            try {
-              final additionalChannels = await m3uPlaylistService.importFromUrl(item.url);
-              for (final channel in additionalChannels) {
-                if (_matchesCategoryFilter(channel)) addUnique(channel);
-              }
-            } catch (_) {
-              // Keep local and remote channels if a public source is unavailable.
-            }
-          }
+      // Cada sección importa sus propias listas públicas de canales lineales.
+      // Estas fuentes NO se mezclan con el catálogo VOD de películas, series o anime.
+      final requested = (widget.categoryFilter ?? const <String>[])
+          .map((value) => value.trim().toLowerCase())
+          .toSet();
+      final sourceIds = <String>{};
+      if (requested.isNotEmpty) {
+        if (requested.any((value) => ['deportes', 'sports', 'sport'].contains(value))) {
+          sourceIds.addAll(['sports', 'argentina']);
+        }
+        if (requested.any((value) => ['noticias', 'news'].contains(value))) {
+          sourceIds.add('news');
+        }
+        if (requested.any((value) => ['tv argentina', 'argentina'].contains(value))) {
+          sourceIds.add('argentina');
+        }
+        if (requested.any((value) => ['cultura/documentales', 'culture', 'documentary'].contains(value))) {
+          sourceIds.addAll(['culture', 'documentary', 'science', 'education', 'travel']);
+        }
+        if (requested.any((value) => ['hbo/cine', 'movies', 'cinema'].contains(value))) {
+          sourceIds.add('movies');
+        }
+        if (requested.any((value) => ['series en vivo', 'series'].contains(value))) {
+          sourceIds.add('series');
+        }
+        if (requested.any((value) => ['entretenimiento y general', 'entertainment', 'general'].contains(value))) {
+          sourceIds.addAll(['entertainment', 'general', 'comedy', 'cooking', 'classic', 'auto', 'business', 'weather']);
+        }
+        if (requested.any((value) => ['infantiles', 'kids'].contains(value))) {
+          sourceIds.addAll(['kids', 'animation']);
+        }
+        if (requested.any((value) => ['música', 'musica', 'music'].contains(value))) {
+          sourceIds.add('music');
         }
       }
 
-      // If the primary playlist is unavailable or contains no channels for the
-      // selected genre, try a smaller, genre-specific public playlist.
-      if (merged.isEmpty) {
-        final requested = (widget.categoryFilter ?? const <String>[])
-            .map((value) => value.trim().toLowerCase())
-            .toSet();
-        final sourceId = requested.contains('deportes')
-            ? 'sports'
-            : requested.contains('noticias')
-                ? 'news'
-                : requested.contains('tv argentina')
-                    ? 'argentina'
-                    : requested.contains('cultura/documentales')
-                        ? 'culture'
-                        : requested.contains('hbo/cine')
-                            ? 'movies'
-                            : null;
-        final sourceUrls = <String>[
-          if (sourceId != null)
-            ..._publicPlaylistSources
-                .where((source) => source.id == sourceId)
-                .map((source) => source.url),
-          if (sourceId == null && (widget.categoryFilter == null || widget.categoryFilter!.isEmpty))
-            _curatedFreePlaylist,
-        ];
-        for (final sourceUrl in sourceUrls) {
-          try {
-            final publicChannels = await m3uPlaylistService.importFromUrl(sourceUrl);
-            for (final channel in publicChannels) {
-              if (_matchesCategoryFilter(channel)) addUnique(channel);
-            }
-            if (merged.isNotEmpty) {
-              publicFallbackLoaded = true;
-              if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
-                await channelStorage.save(merged.values.toList(growable: false));
-              }
-              break;
-            }
-          } catch (_) {
-            // Continue to the next safe public source.
+      for (final item in _publicPlaylistSources.where((source) => sourceIds.contains(source.id))) {
+        try {
+          final additionalChannels = await m3uPlaylistService.importFromUrl(item.url);
+          final sourceCategory = _sourceCategory(item.id);
+          for (final channel in additionalChannels) {
+            final categorizedChannel = TvChannel(
+              name: channel.name,
+              streamUrl: channel.streamUrl,
+              groupTitle: channel.groupTitle,
+              country: channel.country,
+              language: channel.language,
+              category: sourceCategory ?? channel.category,
+              logoUrl: channel.logoUrl,
+              tvgId: channel.tvgId,
+              backupStreamUrls: channel.backupStreamUrls,
+            );
+            if (_matchesCategoryFilter(categorizedChannel)) addUnique(categorizedChannel);
           }
+          publicFallbackLoaded = publicFallbackLoaded || additionalChannels.isNotEmpty;
+        } catch (_) {
+          // Una lista pública puede estar caída o geobloqueada; conservamos las demás fuentes.
         }
       }
 
@@ -267,8 +265,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   static const _repositoryPlaylist =
       'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT';
-  static const _curatedFreePlaylist =
-      'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
 
   static const _publicPlaylistSources = <({String id, String title, String subtitle, String url})>[
     (
@@ -342,6 +338,66 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       title: 'Canales generales',
       subtitle: 'IPTV-org · señales generalistas en vivo',
       url: 'https://iptv-org.github.io/iptv/categories/general.m3u',
+    ),
+    (
+      id: 'animation',
+      title: 'Animación',
+      subtitle: 'IPTV-org · canales de animación; no equivale a catálogo anime',
+      url: 'https://iptv-org.github.io/iptv/categories/animation.m3u',
+    ),
+    (
+      id: 'comedy',
+      title: 'Comedia',
+      subtitle: 'IPTV-org · canales de comedia en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/comedy.m3u',
+    ),
+    (
+      id: 'cooking',
+      title: 'Cocina',
+      subtitle: 'IPTV-org · canales de cocina en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/cooking.m3u',
+    ),
+    (
+      id: 'travel',
+      title: 'Viajes',
+      subtitle: 'IPTV-org · canales de viajes en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/travel.m3u',
+    ),
+    (
+      id: 'science',
+      title: 'Ciencia',
+      subtitle: 'IPTV-org · canales de ciencia en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/science.m3u',
+    ),
+    (
+      id: 'education',
+      title: 'Educación',
+      subtitle: 'IPTV-org · canales educativos en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/education.m3u',
+    ),
+    (
+      id: 'business',
+      title: 'Negocios',
+      subtitle: 'IPTV-org · canales de negocios en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/business.m3u',
+    ),
+    (
+      id: 'weather',
+      title: 'Clima',
+      subtitle: 'IPTV-org · canales meteorológicos en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/weather.m3u',
+    ),
+    (
+      id: 'classic',
+      title: 'TV clásica',
+      subtitle: 'IPTV-org · canales de televisión clásica en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/classic.m3u',
+    ),
+    (
+      id: 'auto',
+      title: 'Autos y motorización',
+      subtitle: 'IPTV-org · canales de automoción en vivo',
+      url: 'https://iptv-org.github.io/iptv/categories/auto.m3u',
     ),
   ];
 
@@ -427,6 +483,41 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
 }
 
+
+String? _sourceCategory(String id) {
+  switch (id) {
+    case 'sports':
+      return 'Deportes';
+    case 'news':
+      return 'Noticias';
+    case 'movies':
+      return 'HBO/Cine';
+    case 'series':
+      return 'Series en vivo';
+    case 'documentary':
+    case 'culture':
+    case 'science':
+    case 'education':
+    case 'travel':
+      return 'Cultura/Documentales';
+    case 'kids':
+    case 'animation':
+      return 'Infantiles';
+    case 'music':
+      return 'Música';
+    case 'entertainment':
+    case 'general':
+    case 'comedy':
+    case 'cooking':
+    case 'classic':
+    case 'auto':
+    case 'business':
+    case 'weather':
+      return 'Entretenimiento y general';
+    default:
+      return null;
+  }
+}
 
 String _countryFlag(String value) {
   final code = value.trim().toUpperCase();

@@ -47,9 +47,9 @@ jobs:
       - name: Add OTA installation permissions to Android manifest
         run: bash tool/patch_ota_manifest.sh
 
-      # PR builds use a separate package so QA installation cannot replace production MILTVPLUS.
+      # Every PR build uses a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser' }}
+        if: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -270,7 +270,7 @@ jobs:
             version="build-${GITHUB_SHA::7}"
           fi
           apk="build/MILTVPLUS-${version}-android.apk"
-          latest_apk="build/MILTVPLUS-android.apk"
+          latest_apk="build/MILTVPLUS.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "$apk"
           cp "$apk" "$latest_apk"
           (cd build && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
@@ -289,15 +289,15 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/adult-fullscreen-browser' }}
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: MILTVPLUS-qa-apk
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
-            build/MILTVPLUS-android.apk
-            build/MILTVPLUS-android.apk.sha256
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -309,8 +309,8 @@ jobs:
           path: |
             build/MILTVPLUS-*-android.apk
             build/MILTVPLUS-*-android.apk.sha256
-            build/MILTVPLUS-android.apk
-            build/MILTVPLUS-android.apk.sha256
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -350,5 +350,7 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: true
           files: |
+            build/MILTVPLUS.apk
+            build/MILTVPLUS.apk.sha256
             build/app-release.apk
             build/app-release.apk.sha256

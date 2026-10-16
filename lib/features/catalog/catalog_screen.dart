@@ -103,10 +103,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final query = _searchController.text.trim().toLowerCase();
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        if (notification is ScrollUpdateNotification && notification.scrollDelta != null) {
-          final scrollingDown = notification.scrollDelta! > 0;
-          if (scrollingDown != !_headerVisible) {
-            setState(() => _headerVisible = !scrollingDown);
+        // Only the catalog's vertical viewport controls the header. Nested
+        // horizontal poster rails must not hide it while the user browses sideways.
+        if (notification is ScrollUpdateNotification &&
+            notification.metrics.axis == Axis.vertical &&
+            notification.depth == 0 &&
+            notification.scrollDelta != null) {
+          final delta = notification.scrollDelta!;
+          // Ignore tiny layout/ballistic noise to avoid flicker on TV remotes.
+          if (delta.abs() >= 1.5) {
+            final scrollingDown = delta > 0;
+            if (scrollingDown != !_headerVisible) {
+              setState(() => _headerVisible = !scrollingDown);
+            }
           }
         }
         return false;
