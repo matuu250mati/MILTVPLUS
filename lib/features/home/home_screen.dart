@@ -94,9 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   _DashboardHeader(compact: compact, onNavigate: widget.onNavigate),
                   SizedBox(height: compact ? 14 : 20),
                   _HeroBanner(
-                    movie: data.movies.isEmpty ? null : data.movies.first,
                     compact: compact,
-                    onPlay: () => _openFeatured(data),
+                    onPlay: () => widget.onNavigate(5),
                   ),
                   SizedBox(height: compact ? 16 : 20),
                   _CategoryStrip(
@@ -108,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Canales en vivo',
                     icon: Icons.live_tv_rounded,
+                    color: const Color(0xFF18F17B),
                     onSeeAll: () => widget.onNavigate(0),
                   ),
                   const SizedBox(height: 10),
@@ -127,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Películas populares',
                     icon: Icons.local_movies_rounded,
+                    color: const Color(0xFF18F17B),
                     onSeeAll: () => widget.onNavigate(2),
                   ),
                   const SizedBox(height: 10),
@@ -152,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Series destacadas',
                     icon: Icons.video_library_rounded,
+                    color: const Color(0xFFCA5BFF),
                     onSeeAll: () => widget.onNavigate(3),
                   ),
                   const SizedBox(height: 10),
@@ -197,14 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
       await next;
     } catch (_) {
       // The section-level empty/error states remain visible and retryable.
-    }
-  }
-
-  void _openFeatured(_HomeData data) {
-    if (data.movies.isNotEmpty) {
-      _openMovie(data.movies.first);
-    } else {
-      widget.onNavigate(0);
     }
   }
 
@@ -305,23 +299,13 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({
-    required this.movie,
-    required this.compact,
-    required this.onPlay,
-  });
+  const _HeroBanner({required this.compact, required this.onPlay});
 
-  final MovieModel? movie;
   final bool compact;
   final VoidCallback onPlay;
 
   @override
   Widget build(BuildContext context) {
-    final title = movie?.title ?? 'Tu próximo favorito te espera';
-    final synopsis = movie?.synopsis?.trim().isNotEmpty == true
-        ? movie!.synopsis!.trim()
-        : 'Películas, series y televisión en una experiencia hecha para vos.';
-    final image = movie?.backdropUrl ?? movie?.logo;
     return Container(
       height: compact ? 218 : 300,
       clipBehavior: Clip.antiAlias,
@@ -329,7 +313,7 @@ class _HeroBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF17608B).withValues(alpha: .75)),
         gradient: const LinearGradient(
-          colors: [Color(0xFF09294B), Color(0xFF07101E), Color(0xFF030812)],
+          colors: [Color(0xFF102D4D), Color(0xFF07101E), Color(0xFF030812)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -337,13 +321,15 @@ class _HeroBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (image != null && image.trim().isNotEmpty)
-            CachedNetworkImage(
-              imageUrl: image,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+          Positioned(
+            right: compact ? -20 : 10,
+            top: compact ? 8 : 4,
+            child: Icon(
+              Icons.sports_soccer_rounded,
+              size: compact ? 190 : 285,
+              color: const Color(0xFFB8FF35).withValues(alpha: .16),
             ),
+          ),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -359,15 +345,6 @@ class _HeroBanner extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            right: compact ? -15 : 14,
-            bottom: compact ? -12 : -20,
-            child: Icon(
-              Icons.movie_filter_rounded,
-              size: compact ? 140 : 210,
-              color: Colors.white.withValues(alpha: .10),
-            ),
-          ),
           Padding(
             padding: EdgeInsets.all(compact ? 16 : 26),
             child: ConstrainedBox(
@@ -376,14 +353,14 @@ class _HeroBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const _LivePill(label: 'RECOMENDADO'),
+                  const _LivePill(label: 'FÚTBOL · EN VIVO'),
                   const SizedBox(height: 10),
                   Text(
-                    title,
-                    maxLines: compact ? 2 : 3,
+                    'COPA LIBERTADORES',
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: compact ? 24 : 34,
+                      fontSize: compact ? 25 : 38,
                       height: 1.03,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -.7,
@@ -391,7 +368,7 @@ class _HeroBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 7),
                   Text(
-                    synopsis,
+                    'Explorá las señales deportivas disponibles en MILTVPLUS.',
                     maxLines: compact ? 2 : 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -465,14 +442,13 @@ class _CategoryStrip extends StatelessWidget {
     _CategoryInfo('Películas', 'Estrenos y clásicos', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
     _CategoryInfo('Series', 'Tus favoritas', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
     _CategoryInfo('Anime', 'Subtituladas y dobladas', Icons.animation_rounded, Color(0xFFFF674F), 4),
-    _CategoryInfo('Infantil / Kids', 'Para toda la familia', Icons.child_care_rounded, Color(0xFFFFC14A), 6),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = compact ? 142.0 : width >= 1200 ? 164.0 : 150.0;
+    final cardWidth = compact ? 88.0 : width >= 1200 ? 108.0 : 98.0;
     return SizedBox(
-      height: compact ? 122 : 142,
+      height: compact ? 104 : 116,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _categories.length,
@@ -482,39 +458,29 @@ class _CategoryStrip extends StatelessWidget {
           return SizedBox(
             width: cardWidth,
             child: Material(
-              color: item.color.withValues(alpha: .075),
-              borderRadius: BorderRadius.circular(17),
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(15),
               child: InkWell(
-                borderRadius: BorderRadius.circular(17),
+                borderRadius: BorderRadius.circular(15),
                 onTap: () => onNavigate(item.route),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: item.color, width: 1.15),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [item.color.withValues(alpha: .12), const Color(0xFF050B16)],
-                    ),
+                    color: const Color(0xFF08111D).withValues(alpha: .35),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: item.color.withValues(alpha: .65), width: 1.1),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(item.icon, color: item.color, size: compact ? 30 : 36),
-                      const SizedBox(height: 7),
+                      Icon(item.icon, color: item.color, size: compact ? 31 : 36),
+                      const SizedBox(height: 8),
                       Text(
                         item.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppTheme.muted, fontSize: 9),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5),
                       ),
                     ],
                   ),
@@ -541,11 +507,13 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     required this.icon,
+    required this.color,
     required this.onSeeAll,
   });
 
   final String title;
   final IconData icon;
+  final Color color;
   final VoidCallback onSeeAll;
 
   @override
