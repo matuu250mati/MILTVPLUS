@@ -54,7 +54,7 @@ jobs:
             label: macOS desktop
             runner: macos-latest
             artifact_path: build/macos/Build/Products/Release/**
-            command: flutter build macos --release --no-codesign --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
+            command: env CODE_SIGNING_ALLOWED=NO flutter build macos --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
           - platform: ios
             label: iOS compile (unsigned)
             runner: macos-latest
