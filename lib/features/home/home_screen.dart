@@ -91,7 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(side, 8, side, compact ? 24 : 28),
                 children: [
-                  _DashboardHeader(compact: compact, onNavigate: widget.onNavigate),
+                  _DashboardHeader(
+                    compact: compact,
+                    onNavigate: widget.onNavigate,
+                    onMenu: () => Scaffold.of(context).openDrawer(),
+                  ),
                   SizedBox(height: compact ? 14 : 20),
                   _HeroBanner(
                     compact: compact,
@@ -236,15 +240,26 @@ class _HomeData {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.compact, required this.onNavigate});
+  const _DashboardHeader({
+    required this.compact,
+    required this.onNavigate,
+    required this.onMenu,
+  });
 
   final bool compact;
   final ValueChanged<int> onNavigate;
+  final VoidCallback onMenu;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
+        IconButton(
+          tooltip: 'Abrir menú',
+          onPressed: onMenu,
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.menu_rounded),
+        ),
         Container(
           width: compact ? 38 : 46,
           height: compact ? 38 : 46,
@@ -437,22 +452,24 @@ class _CategoryStrip extends StatelessWidget {
   final ValueChanged<int> onNavigate;
 
   static const _categories = <_CategoryInfo>[
-    _CategoryInfo('TV en vivo', 'Más de tus canales', Icons.live_tv_rounded, Color(0xFF18CFFF), 0),
-    _CategoryInfo('Deportes', 'Toda la acción', Icons.sports_soccer_rounded, Color(0xFF18F17B), 5),
-    _CategoryInfo('Películas', 'Estrenos y clásicos', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
-    _CategoryInfo('Series', 'Tus favoritas', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
-    _CategoryInfo('Anime', 'Subtituladas y dobladas', Icons.animation_rounded, Color(0xFFFF674F), 4),
+    _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF18CFFF), 0),
+    _CategoryInfo('Deportes', Icons.sports_soccer_rounded, Color(0xFF18F17B), 5),
+    _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
+    _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
+    _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF674F), 4),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = compact ? 88.0 : width >= 1200 ? 108.0 : 98.0;
+    final cardWidth = compact
+        ? ((width - 50) / 5).clamp(58.0, 78.0)
+        : width >= 1200 ? 108.0 : 98.0;
     return SizedBox(
-      height: compact ? 104 : 116,
+      height: compact ? 92 : 116,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => SizedBox(width: compact ? 6 : 10),
         itemBuilder: (context, index) {
           final item = _categories[index];
           return SizedBox(
@@ -473,14 +490,14 @@ class _CategoryStrip extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(item.icon, color: item.color, size: compact ? 31 : 36),
+                      Icon(item.icon, color: item.color, size: compact ? 26 : 36),
                       const SizedBox(height: 8),
                       Text(
                         item.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5),
+                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: compact ? 9.5 : 10.5),
                       ),
                     ],
                   ),
@@ -495,9 +512,8 @@ class _CategoryStrip extends StatelessWidget {
 }
 
 class _CategoryInfo {
-  const _CategoryInfo(this.title, this.subtitle, this.icon, this.color, this.route);
+  const _CategoryInfo(this.title, this.icon, this.color, this.route);
   final String title;
-  final String subtitle;
   final IconData icon;
   final Color color;
   final int route;
