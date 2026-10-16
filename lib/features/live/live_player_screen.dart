@@ -21,6 +21,8 @@ class LivePlayerScreen extends StatefulWidget {
   State<LivePlayerScreen> createState() => _LivePlayerScreenState();
 }
 
+enum _LiveAspectMode { original, stretch, zoom, widescreen }
+
 class _LivePlayerScreenState extends State<LivePlayerScreen> {
   final _variantService = HlsVariantService();
   VideoPlayerController? _controller;
@@ -33,6 +35,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
   bool _variantsLoading = false;
   bool _recovering = false;
   int _activeStreamIndex = 0;
+  _LiveAspectMode _aspectMode = _LiveAspectMode.original;
   Timer? _hideControlsTimer;
 
   TvChannel get _channel => widget.channels.isEmpty
@@ -226,6 +229,81 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     await _openChannel(_index, streamOverride: variant.url);
   }
 
+
+  void _handleSettingsSelection(String selection) {
+    if (selection.startsWith('aspect:')) {
+      final modeName = selection.substring('aspect:'.length);
+      final mode = _LiveAspectMode.values.where((value) => value.name == modeName);
+      if (mode.isNotEmpty && mounted) {
+        setState(() => _aspectMode = mode.first);
+        _showControls();
+      }
+      return;
+    }
+
+    if (selection == 'quality:auto') {
+      _openChannel(_index);
+      return;
+    }
+
+    if (selection.startsWith('quality:')) {
+      final url = selection.substring('quality:'.length);
+      for (final variant in _variants) {
+        if (variant.url == url) {
+          _chooseQuality(variant);
+          return;
+        }
+      }
+    }
+  }
+
+  Widget _buildVideo(VideoPlayerController controller) {
+    final ratio = controller.value.aspectRatio > 0
+        ? controller.value.aspectRatio
+        : 16 / 9;
+    final source = SizedBox(
+      width: 1080,
+      height: 1080 / ratio,
+      child: VideoPlayer(controller),
+    );
+
+    switch (_aspectMode) {
+      case _LiveAspectMode.original:
+        return Center(
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: source,
+          ),
+        );
+      case _LiveAspectMode.stretch:
+        return SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: source,
+          ),
+        );
+      case _LiveAspectMode.zoom:
+        return SizedBox.expand(
+          child: ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: source,
+            ),
+          ),
+        );
+      case _LiveAspectMode.widescreen:
+        return Center(
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: source,
+            ),
+          ),
+        );
+    }
+  }
+
   Future<void> _togglePlayback() async {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
@@ -284,15 +362,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (ready)
-                Center(
-                  child: AspectRatio(
-                    aspectRatio: controller!.value.aspectRatio > 0
-                        ? controller.value.aspectRatio
-                        : 16 / 9,
-                    child: VideoPlayer(controller),
-                  ),
-                )
+              if (ready) _buildVideo(controller!)
               else if (!_loading && _error == null)
                 const Center(child: Icon(Icons.live_tv, size: 76, color: Colors.white24)),
               if (_loading)
@@ -377,25 +447,49 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                           padding: EdgeInsets.symmetric(horizontal: 10),
                           child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                         ),
-                      PopupMenuButton<HlsVariant>(
-                        tooltip: 'Configurar calidad de imagen',
-                        onSelected: _chooseQuality,
+                      PopupMenuButton<String>(
+                        tooltip: 'Configuración de reproducción',
+                        onSelected: _handleSettingsSelection,
                         color: const Color(0xFF17191F),
                         itemBuilder: (context) => [
-                          const PopupMenuItem<HlsVariant>(
-                            value: HlsVariant(url: '', label: 'Auto'),
+                          const PopupMenuItem<String>(
+                            enabled: false,
+                            child: Text('RELACIÓN DE ASPECTO', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'aspect:original',
+                            child: Text(_aspectMode == _LiveAspectMode.original ? '✓ Original / Fit' : 'Original / Fit', style: const TextStyle(color: Colors.white)),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'aspect:stretch',
+                            child: Text(_aspectMode == _LiveAspectMode.stretch ? '✓ Estirar / Fill' : 'Estirar / Fill', style: const TextStyle(color: Colors.white)),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'aspect:zoom',
+                            child: Text(_aspectMode == _LiveAspectMode.zoom ? '✓ Zoom / Crop' : 'Zoom / Crop', style: const TextStyle(color: Colors.white)),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'aspect:widescreen',
+                            child: Text(_aspectMode == _LiveAspectMode.widescreen ? '✓ 16:9' : '16:9', style: const TextStyle(color: Colors.white)),
+                          ),
+                          const PopupMenuItem<String>(
+                            enabled: false,
+                            child: Text('CALIDAD HLS', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'quality:auto',
                             child: Text('Automática (adaptativa)', style: TextStyle(color: Colors.white)),
                           ),
                           if (_variants.isEmpty)
-                            const PopupMenuItem<HlsVariant>(
+                            const PopupMenuItem<String>(
                               enabled: false,
                               child: Text(
                                 'El proveedor no publica calidades manuales',
                                 style: TextStyle(color: Colors.white54),
                               ),
                             ),
-                          ..._variants.map((variant) => PopupMenuItem<HlsVariant>(
-                            value: variant,
+                          ..._variants.map((variant) => PopupMenuItem<String>(
+                            value: 'quality:${variant.url}',
                             child: Text(variant.label, style: const TextStyle(color: Colors.white)),
                           )),
                         ],
