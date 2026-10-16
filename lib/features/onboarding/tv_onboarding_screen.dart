@@ -22,6 +22,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
   int _step = 0; // 0 syncing, 1 complete, 2 terms
   bool _busy = true;
   bool _accepted = false;
+  bool _syncSuccessful = false;
   String? _error;
   String _deviceLabel = 'Dispositivo compatible';
   String _installationId = '';
@@ -37,6 +38,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _syncSuccessful = false;
     });
     try {
       final preferences = await SharedPreferences.getInstance();
@@ -58,20 +60,26 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
           case TargetPlatform.android:
             final info = await deviceInfo.androidInfo;
             label = 'Android · ${info.manufacturer} ${info.model} · Android ${info.version.release}';
+            break;
           case TargetPlatform.iOS:
             final info = await deviceInfo.iosInfo;
             label = 'iOS · ${info.model} · ${info.systemVersion}';
+            break;
           case TargetPlatform.macOS:
             final info = await deviceInfo.macOsInfo;
             label = 'macOS · ${info.model} · ${info.osRelease}';
+            break;
           case TargetPlatform.windows:
             final info = await deviceInfo.windowsInfo;
             label = 'Windows · ${info.productName}';
+            break;
           case TargetPlatform.linux:
             final info = await deviceInfo.linuxInfo;
             label = 'Linux · ${info.prettyName}';
+            break;
           case TargetPlatform.fuchsia:
             label = 'Fuchsia';
+            break;
         }
       }
 
@@ -81,12 +89,14 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
         _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
         _deviceLabel = label;
         _busy = false;
+        _syncSuccessful = true;
         _step = 0;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _busy = false;
+        _syncSuccessful = false;
         _error = 'No pudimos completar la comprobación del dispositivo. Revisá los permisos y volvé a intentar.';
       });
     }
