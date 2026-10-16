@@ -110,23 +110,21 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           merged[key] = channel;
           return;
         }
-        if ((existing.groupTitle == null && channel.groupTitle != null) ||
-            (existing.country == null && channel.country != null) ||
-            (existing.language == null && channel.language != null) ||
-            (existing.category == null && channel.category != null) ||
-            (existing.logoUrl == null && channel.logoUrl != null) ||
-            (existing.tvgId == null && channel.tvgId != null)) {
-          merged[key] = TvChannel(
-            name: existing.name,
-            streamUrl: existing.streamUrl,
-            groupTitle: existing.groupTitle ?? channel.groupTitle,
-            country: existing.country ?? channel.country,
-            language: existing.language ?? channel.language,
-            category: existing.category ?? channel.category,
-            logoUrl: existing.logoUrl ?? channel.logoUrl,
-            tvgId: existing.tvgId ?? channel.tvgId,
-          );
-        }
+        final backupUrls = <String>{
+          ...existing.backupStreamUrls,
+          ...channel.streamUrls.where((url) => url != existing.streamUrl),
+        }.where((url) => url != existing.streamUrl).toList(growable: false);
+        merged[key] = TvChannel(
+          name: existing.name,
+          streamUrl: existing.streamUrl,
+          groupTitle: existing.groupTitle ?? channel.groupTitle,
+          country: existing.country ?? channel.country,
+          language: existing.language ?? channel.language,
+          category: existing.category ?? channel.category,
+          logoUrl: existing.logoUrl ?? channel.logoUrl,
+          tvgId: existing.tvgId ?? channel.tvgId,
+          backupStreamUrls: backupUrls,
+        );
       }
 
       for (final channel in saved) {
@@ -143,6 +141,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             streamUrl: channel.urlStream,
             category: channel.category,
             country: channel.countryCode,
+            backupStreamUrls: channel.streamUrls
+                .where((url) => url != channel.urlStream)
+                .toList(growable: false),
           );
           if (_matchesCategoryFilter(mappedChannel)) {
             addUnique(mappedChannel);
