@@ -490,7 +490,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       },
       child: Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: (selected == 10 || selected == 0 || selected == 5) ? AppBar(
+      // Inicio already renders its own header inside the scrollable dashboard.
+      appBar: selected == 1 ? null : ((selected == 10 || selected == 0 || selected == 5) ? AppBar(
         backgroundColor: const Color(0xFF080A10),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
@@ -518,7 +519,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             ),
           ],
         ),
-      ),
+      )),
       drawer: _buildDrawer(),
       body: LayoutBuilder(
         builder: (context, constraints) {
