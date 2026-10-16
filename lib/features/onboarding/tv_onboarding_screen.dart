@@ -249,7 +249,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                             onPressed: () => setState(() => _step = 2),
                             child: const Text('CONTINUAR'),
                           ),
-                        ] else ...[
+                        ] else if (_step == 2) ...[
                           const Text(
                             'TÉRMINOS Y CONDICIONES DE USO',
                             style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
