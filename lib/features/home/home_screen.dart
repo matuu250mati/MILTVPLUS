@@ -462,7 +462,7 @@ class _CategoryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardWidth = compact
-        ? ((width - 50) / 5).clamp(58.0, 78.0)
+        ? ((width - 50) / 5).clamp(58.0, 78.0).toDouble()
         : width >= 1200 ? 108.0 : 98.0;
     return SizedBox(
       height: compact ? 92 : 116,
