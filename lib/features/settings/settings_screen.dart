@@ -60,7 +60,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _phoneController.text = preferences.getString(_profilePhoneKey) ?? '';
       _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
-      _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
+      _textScale = (preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0)
+          .clamp(1.0, 1.2)
+          .toDouble();
+      AppAccessibilitySettings.textScale.value = _textScale;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -229,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final allSections = <Widget>[
         const Text('PERFIL Y CONFIGURACIÓN',
-            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text('Administrá tu perfil y las conexiones de este dispositivo.',
             style: TextStyle(color: AppTheme.muted)),
@@ -858,7 +861,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 titles[section] ?? 'Configuración',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
               ),
             ),
           ],
