@@ -150,43 +150,43 @@ jobs:
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          [[ -n "${ANDROID_KEYSTORE_BASE64//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret."; exit 1; }
-          [[ -n "${ANDROID_KEYSTORE_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret."; exit 1; }
-          [[ -n "${ANDROID_KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_ALIAS secret."; exit 1; }
-          [[ -n "${ANDROID_KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD secret."; exit 1; }
+          [[ -n "${KEYSTORE_BASE64//[[:space:]]/}" ]] || { echo "::error::Missing KEYSTORE_BASE64 secret."; exit 1; }
+          [[ -n "${KEYSTORE_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing KEYSTORE_PASSWORD secret."; exit 1; }
+          [[ -n "${KEY_ALIAS//[[:space:]]/}" ]] || { echo "::error::Missing KEY_ALIAS secret."; exit 1; }
+          [[ -n "${KEY_PASSWORD//[[:space:]]/}" ]] || { echo "::error::Missing KEY_PASSWORD secret."; exit 1; }
           # Normalize whitespace introduced by mobile copy/paste before decoding.
-          normalized_base64="$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')"
+          normalized_base64="$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')"
           if [[ ! "$normalized_base64" =~ ^[A-Za-z0-9+/]+={0,2}$ ]]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 contains characters that are not valid Base64. Re-encode the original .jks file and replace this repository secret."
+            echo "::error::KEYSTORE_BASE64 contains characters that are not valid Base64. Re-encode the original .jks file and replace this repository secret."
             exit 1
           fi
           if ! printf '%s' "$normalized_base64" | base64 --decode > android/upload-keystore.jks; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 could not be decoded. The secret is truncated or malformed; replace it with a fresh Base64 encoding of the original .jks file."
+            echo "::error::KEYSTORE_BASE64 could not be decoded. The secret is truncated or malformed; replace it with a fresh Base64 encoding of the original .jks file."
             exit 1
           fi
           if [[ ! -s android/upload-keystore.jks ]]; then
-            echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."
+            echo "::error::Decoded keystore is empty. Check KEYSTORE_BASE64."
             exit 1
           fi
-          printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > android/key.properties
+          printf 'storeFile=upload-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
           # Check store password/type independently so failures identify the actual cause.
-          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
-            echo "::error::Keystore decoded, but keytool could not open it as JKS with ANDROID_KEYSTORE_PASSWORD. The file may be corrupt or the store password is incorrect."
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::Keystore decoded, but keytool could not open it as JKS with KEYSTORE_PASSWORD. The file may be corrupt or the store password is incorrect."
             exit 1
           fi
           # Validate alias separately; do not print secrets or key material.
-          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error::Keystore and store password are valid, but ANDROID_KEY_ALIAS was not found or could not be accessed."
+          if ! keytool -list -keystore android/upload-keystore.jks -storetype JKS -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Keystore and store password are valid, but KEY_ALIAS was not found or could not be accessed."
             exit 1
           fi
-          if ! keytool_output="$(keytool -list -v -keystore android/upload-keystore.jks -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" 2>/dev/null)"; then
+          if ! keytool_output="$(keytool -list -v -keystore android/upload-keystore.jks -storetype JKS -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null)"; then
             echo "::error::The configured key alias exists, but keytool could not inspect its certificate. Check the keystore and key credentials."
             exit 1
           fi
