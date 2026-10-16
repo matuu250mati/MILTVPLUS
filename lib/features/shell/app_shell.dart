@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../adult/adult_gate_screen.dart';
@@ -43,6 +44,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Timer? _updateTimer;
   DateTime? _lastUpdateCheck;
   bool _updateDialogShowing = false;
+  bool _appBarVisible = true;
 
   @override
   void initState() {
@@ -490,7 +492,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       },
       child: Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: (selected == 10 || selected == 0 || selected == 5) ? AppBar(
+      appBar: _appBarVisible ? ((selected == 10 || selected == 0 || selected == 5) ? AppBar(
         backgroundColor: const Color(0xFF080A10),
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
@@ -518,9 +520,18 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             ),
           ],
         ),
-      ),
+      )) : null,
       drawer: _buildDrawer(),
-      body: LayoutBuilder(
+      bottomNavigationBar: _buildStatusFooter(),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollUpdateNotification && notification.metrics.axis == Axis.vertical && notification.scrollDelta != null && notification.scrollDelta!.abs() > 2) {
+            final shouldShow = notification.scrollDelta! < 0;
+            if (shouldShow != _appBarVisible && mounted) setState(() => _appBarVisible = shouldShow);
+          }
+          return false;
+        },
+        child: LayoutBuilder(
         builder: (context, constraints) {
           final wideLayout = constraints.maxWidth >= 1000;
           if (wideLayout) {
@@ -564,6 +575,31 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         },
       ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildStatusFooter() {
+    final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final version = snapshot.data?.version ?? '3.10.3';
+        final profile = user?.email?.split('@').first ?? 'Invitado';
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: const BoxDecoration(color: Color(0xFF080A10), border: Border(top: BorderSide(color: Color(0xFF17304A)))),
+          child: SafeArea(top: false, child: Row(children: [
+            Expanded(child: Text('MILTVPLUS v$version', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.muted, fontSize: 10))),
+            const SizedBox(width: 8),
+            Flexible(child: Text('Usuario: $profile', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.muted, fontSize: 10))),
+            const SizedBox(width: 8),
+            const Icon(Icons.circle, color: Color(0xFF5BE58B), size: 7),
+            const SizedBox(width: 4),
+            const Text('ARG', style: TextStyle(color: AppTheme.accent, fontSize: 10, fontWeight: FontWeight.w800)),
+          ])),
+        );
+      },
     );
   }
 }
