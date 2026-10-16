@@ -9,8 +9,10 @@ import 'core/navigation/legacy_route_registry.dart';
 import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/auth_screen.dart';
+import 'features/onboarding/tv_onboarding_screen.dart';
 import 'features/shell/app_shell.dart';
 import 'features/splash/splash_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MiltvPlusApp extends StatelessWidget {
   const MiltvPlusApp({super.key});
@@ -99,8 +101,53 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
         if (auth.currentSession == null) {
           return const AuthScreen();
         }
-        return const AppShell();
+        return const _AuthenticatedGate();
       },
     );
+  }
+}
+
+
+class _AuthenticatedGate extends StatefulWidget {
+  const _AuthenticatedGate();
+
+  @override
+  State<_AuthenticatedGate> createState() => _AuthenticatedGateState();
+}
+
+class _AuthenticatedGateState extends State<_AuthenticatedGate> {
+  bool? _termsAccepted;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAcceptance();
+  }
+
+  Future<void> _loadAcceptance() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _termsAccepted = preferences.getBool('miltv_terms_accepted_v1') ?? false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _termsAccepted = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_termsAccepted == null) {
+      return const Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(
+          child: CircularProgressIndicator(color: AppTheme.accent),
+        ),
+      );
+    }
+    if (!_termsAccepted!) return const TvOnboardingScreen();
+    return const AppShell();
   }
 }
