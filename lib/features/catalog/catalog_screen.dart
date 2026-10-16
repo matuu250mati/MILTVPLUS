@@ -19,6 +19,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final _searchController = TextEditingController();
   final _catalogService = CatalogService();
   late Future<List<_CatalogEntry>> _entriesFuture;
+  bool _headerVisible = true;
 
   @override
   void initState() {
@@ -100,11 +101,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim().toLowerCase();
-    return Padding(
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification && notification.scrollDelta != null) {
+          final scrollingDown = notification.scrollDelta! > 0;
+          if (scrollingDown != !_headerVisible) {
+            setState(() => _headerVisible = !scrollingDown);
+          }
+        }
+        return false;
+      },
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _headerVisible ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           Row(
             children: [
               Text(_catalogCategoryIcon(widget.category),
@@ -143,6 +161,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
           const SizedBox(height: 16),
+              ],
+            ) : const SizedBox.shrink(),
+          ),
           Expanded(
             child: FutureBuilder<List<_CatalogEntry>>(
               future: _entriesFuture,
@@ -206,6 +227,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
