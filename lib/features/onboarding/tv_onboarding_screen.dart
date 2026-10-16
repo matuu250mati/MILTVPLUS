@@ -282,7 +282,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                                     (position.pixels + step).clamp(
                                       position.minScrollExtent,
                                       position.maxScrollExtent,
-                                    ),
+                                    ).toDouble(),
                                     duration: const Duration(milliseconds: 100),
                                     curve: Curves.easeOut,
                                   );
@@ -294,7 +294,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                                     (position.pixels - step).clamp(
                                       position.minScrollExtent,
                                       position.maxScrollExtent,
-                                    ),
+                                    ).toDouble(),
                                     duration: const Duration(milliseconds: 100),
                                     curve: Curves.easeOut,
                                   );
@@ -306,7 +306,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                                     (position.pixels + position.viewportDimension).clamp(
                                       position.minScrollExtent,
                                       position.maxScrollExtent,
-                                    ),
+                                    ).toDouble(),
                                     duration: const Duration(milliseconds: 120),
                                     curve: Curves.easeOut,
                                   );
@@ -318,7 +318,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                                     (position.pixels - position.viewportDimension).clamp(
                                       position.minScrollExtent,
                                       position.maxScrollExtent,
-                                    ),
+                                    ).toDouble(),
                                     duration: const Duration(milliseconds: 120),
                                     curve: Curves.easeOut,
                                   );
