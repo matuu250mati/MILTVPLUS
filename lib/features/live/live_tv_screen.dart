@@ -120,7 +120,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           groupTitle: existing.groupTitle ?? channel.groupTitle,
           country: existing.country ?? channel.country,
           language: existing.language ?? channel.language,
-          category: existing.category ?? channel.category,
+          category: channel.category ?? existing.category,
           logoUrl: existing.logoUrl ?? channel.logoUrl,
           tvgId: existing.tvgId ?? channel.tvgId,
           backupStreamUrls: backupUrls,
@@ -503,12 +503,12 @@ String? _sourceCategory(String id) {
     case 'travel':
       return 'Cultura/Documentales';
     case 'kids':
+    case 'animation':
       return 'Infantiles';
     case 'music':
       return 'Música';
     case 'entertainment':
     case 'general':
-    case 'animation':
     case 'comedy':
     case 'cooking':
     case 'classic':
