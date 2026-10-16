@@ -269,7 +269,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
 
     switch (_aspectMode) {
       case _LiveAspectMode.original:
-        return Center(
+        return SizedBox.expand(
           child: FittedBox(
             fit: BoxFit.contain,
             child: source,
@@ -500,7 +500,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                             children: [
                               Icon(Icons.settings_rounded, color: Colors.white),
                               SizedBox(width: 6),
-                              Text('CALIDAD', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                              Text('AJUSTES', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                             ],
                           ),
                         ),
