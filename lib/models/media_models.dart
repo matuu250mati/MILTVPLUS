@@ -48,12 +48,27 @@ List<String> _stringList(Map<String, dynamic> json, String key) {
       .where((value) => value.isNotEmpty));
 }
 
+String _firstStreamUrl(Map<String, dynamic> json) {
+  for (final key in const ['url_stream', 'stream_url', 'video_url', 'm3u8_url', 'url']) {
+    final value = json[key];
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+  }
+  return '';
+}
+
 List<String> _streamUrlList(Map<String, dynamic> json, String fallback) {
   final urls = <String>[];
   final raw = json['stream_urls'];
   if (raw is List) {
     for (final value in raw) {
       if (value is! String) continue;
+      final url = value.trim();
+      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+    }
+  }
+  for (final key in const ['url_stream', 'stream_url', 'video_url', 'm3u8_url', 'url']) {
+    final value = json[key];
+    if (value is String) {
       final url = value.trim();
       if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
     }
@@ -127,8 +142,8 @@ class MovieModel {
     genres: _stringList(json, 'genres'),
     logo: _nullableString(json, 'logo'),
     backdropUrl: _nullableString(json, 'backdrop_url'),
-    urlStream: _stringValue(json, 'url_stream'),
-    streamUrls: _streamUrlList(json, _stringValue(json, 'url_stream')),
+    urlStream: _firstStreamUrl(json),
+    streamUrls: _streamUrlList(json, _firstStreamUrl(json)),
     releaseYear: _nullableInt(json, 'release_year'),
     durationSeconds: _nullableInt(json, 'duration_seconds'),
     countryCode: _stringValue(json, 'country_code', 'AR'),
@@ -203,8 +218,8 @@ class EpisodeModel {
         synopsis: _nullableString(json, 'synopsis'),
         seasonNumber: _intValue(json, 'season_number', 1),
         episodeNumber: _intValue(json, 'episode_number', 1),
-        urlStream: _stringValue(json, 'url_stream'),
-        streamUrls: _streamUrlList(json, _stringValue(json, 'url_stream')),
+        urlStream: _firstStreamUrl(json),
+        streamUrls: _streamUrlList(json, _firstStreamUrl(json)),
         durationSeconds: _nullableInt(json, 'duration_seconds'),
         isPublished: _boolValue(json, 'is_published'),
       );
