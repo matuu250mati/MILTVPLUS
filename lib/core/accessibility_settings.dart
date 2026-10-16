@@ -21,7 +21,7 @@ abstract final class AppAccessibilitySettings {
 
   static double _normalize(double value) {
     if (value < 1.0) return 1.0;
-    if (value > 1.35) return 1.35;
+    if (value > 1.2) return 1.2;
     return value;
   }
 }
