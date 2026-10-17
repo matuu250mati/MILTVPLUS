@@ -38,7 +38,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: AppTheme.background,
-        body: Container(
+        body: SafeArea(
+          child: Container(
           width: double.infinity,
           decoration: const BoxDecoration(
             gradient: RadialGradient(
@@ -79,8 +80,10 @@ class _SplashScreenState extends State<SplashScreen>
                 opacity: _opacity,
                 child: ScaleTransition(
                   scale: _scale,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedBuilder(
                         animation: _glow,
@@ -155,10 +158,12 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ],
+                    ),
                   ),
                 ),
               ),
             ],
+          ),
           ),
         ),
       );
