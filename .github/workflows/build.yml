@@ -151,20 +151,20 @@ jobs:
                   https://api.supabase.com/v1/projects 2>/dev/null || true)"
                 if [[ -n "$diagnostic_projects" ]]; then
                   candidate_lines="$(printf '%s' "$diagnostic_projects" | python3 -c '
-import json, re, sys
-try:
-    projects = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
-if isinstance(projects, list):
-    for project in projects:
-        if not isinstance(project, dict):
-            continue
-        name = str(project.get("name", "")).strip()
-        ref = str(project.get("id", "")).strip()
-        if re.fullmatch(r"[a-z0-9]{20}", ref) and re.search(r"qa|miltvplus", name, re.I):
-            safe_name = name.replace("\\n", " ").replace("\\r", " ")[:80]
-            print(f"{safe_name} [{ref}]")
+          import json, re, sys
+          try:
+              projects = json.load(sys.stdin)
+          except Exception:
+              sys.exit(0)
+          if isinstance(projects, list):
+              for project in projects:
+                  if not isinstance(project, dict):
+                      continue
+                  name = str(project.get("name", "")).strip()
+                  ref = str(project.get("id", "")).strip()
+                  if re.fullmatch(r"[a-z0-9]{20}", ref) and re.search(r"qa|miltvplus", name, re.I):
+                      safe_name = name.replace("\\n", " ").replace("\\r", " ")[:80]
+                      print(f"{safe_name} [{ref}]")
 ' 2>/dev/null || true)"
                   if [[ -n "$candidate_lines" ]]; then
                     while IFS= read -r candidate_line; do
