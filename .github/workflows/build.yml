@@ -127,6 +127,7 @@ jobs:
             exit 1
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
         shell: bash
