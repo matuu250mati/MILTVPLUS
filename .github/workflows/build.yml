@@ -78,8 +78,8 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_URL || secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -122,7 +122,7 @@ jobs:
       - name: Verify required Supabase schema (diagnostic; APK build continues)
 
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -222,7 +222,7 @@ jobs:
 
       - name: Build release APK
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
