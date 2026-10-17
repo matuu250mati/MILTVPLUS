@@ -132,50 +132,60 @@ jobs:
             # Resolve the QA project's real reference from Supabase's read-only
             # project listing when a Management API token is available. This avoids
             # hardcoding a mistyped reference into every QA APK. Never print the token.
+            expected_ref=""
             if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
               projects_json="$(curl --fail --silent --show-error --max-time 20 \
                 --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-                https://api.supabase.com/v1/projects)" || {
-                  echo "::error::Could not query Supabase project metadata using SUPABASE_ACCESS_TOKEN."
-                  exit 1
-                }
-              expected_ref="$(printf '%s' "$projects_json" | python3 -c '
+                https://api.supabase.com/v1/projects 2>/dev/null || true)"
+              if [[ -n "$projects_json" ]]; then
+                expected_ref="$(printf '%s' "$projects_json" | python3 -c '
           import json, re, sys
-          projects = json.load(sys.stdin)
+          try:
+              projects = json.load(sys.stdin)
+          except Exception:
+              sys.exit(0)
           def normalized_name(value):
               return re.sub(r"[^a-z0-9]", "", str(value).casefold())
-          matches = [
-              p for p in projects
-              if normalized_name(p.get("name", "")) == "miltvplusqa"
+          matches = [p for p in projects if normalized_name(p.get("name", "")) == "miltvplusqa"]
+          if len(matches) == 1:
+              ref = str(matches[0].get("id", "")).strip()
+              if re.fullmatch(r"[a-z0-9]{20}", ref):
+                  print(ref)
+                  sys.exit(0)
+          candidates = [
+              {"name": p.get("name", ""), "ref": p.get("id", "")}
+              for p in projects
+              if "miltvplus" in normalized_name(p.get("name", "")) or "qa" in normalized_name(p.get("name", ""))
           ]
-          if len(matches) != 1:
-              candidates = [
-                  {"name": p.get("name", ""), "ref": p.get("id", "")}
-                  for p in projects
-                  if "miltvplus" in normalized_name(p.get("name", ""))
-                  or "qa" in normalized_name(p.get("name", ""))
-              ]
-              print("ERROR: expected exactly one normalized MILTVPLUS-QA project; found %d. Accessible QA/MILTVPLUS project candidates: %s" % (len(matches), json.dumps(candidates)), file=sys.stderr)
-              sys.exit(2)
-          ref = str(matches[0].get("id", "")).strip()
-          if not re.fullmatch(r"[a-z0-9]{20}", ref):
-              print("ERROR: Supabase returned a project reference that is not 20 lowercase alphanumeric characters.", file=sys.stderr)
-              sys.exit(3)
-          print(ref)
-          ')" || {
-                echo "::error::Could not safely resolve the real 20-character reference for the MILTVPLUS-QA project."
-                exit 1
-              }
-              SUPABASE_URL="https://$expected_ref.supabase.co"
-              echo "Resolved isolated QA Supabase project from project metadata."
-            else
-              SUPABASE_URL="$SUPABASE_QA_URL"
-              expected_ref="${SUPABASE_URL#https://}"
-              expected_ref="${expected_ref%.supabase.co}"
-              if [[ ! "$expected_ref" =~ ^[a-z0-9]{20}$ ]]; then
-                echo "::error::SUPABASE_QA_URL is malformed. Copy the 20-character Reference ID from Supabase Project Settings > General."
-                exit 1
+          print("QA project not resolved; accessible QA/MILTVPLUS project candidates: %s" % json.dumps(candidates), file=sys.stderr)
+          ' 2>/dev/null || true)"
               fi
+            else
+              candidate_ref="${SUPABASE_QA_URL#https://}"
+              candidate_ref="${candidate_ref%.supabase.co}"
+              if [[ "$candidate_ref" =~ ^[a-z0-9]{20}$ && "$SUPABASE_QA_URL" == "https://$candidate_ref.supabase.co" ]]; then
+                expected_ref="$candidate_ref"
+              fi
+            fi
+
+            if [[ -n "$expected_ref" ]]; then
+              SUPABASE_URL="https://$expected_ref.supabase.co"
+              QA_BACKEND_VALID=true
+              echo "Resolved isolated QA Supabase project."
+            elif [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+              # Keep CI compilation/tests useful without fabricating a distributable
+              # APK. The upload step is skipped until a real isolated QA project exists.
+              SUPABASE_URL="https://miltvplus-qa-placeholder.supabase.co"
+              SUPABASE_ANON_KEY="ci-placeholder-key-not-for-distribution"
+              QA_BACKEND_VALID=false
+              echo "::warning::No accessible, valid MILTVPLUS-QA project was found. This run is compile/test-only; no QA APK will be uploaded."
+              {
+                echo "### QA backend: not configured"
+                echo "No valid isolated QA project was resolved. Compile/tests may run, but the QA APK artifact is intentionally withheld."
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Production build cannot proceed through the QA configuration path."
+              exit 1
             fi
           else
             SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
