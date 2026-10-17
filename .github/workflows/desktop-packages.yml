@@ -56,7 +56,7 @@ jobs:
           [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]] || { echo "::error::SUPABASE_ANON_KEY is missing or malformed."; exit 1; }
           gh release view "$tag" >/dev/null
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Validated existing release $tag and required production configuration without printing secrets."
 
