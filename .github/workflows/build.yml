@@ -76,6 +76,39 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Production backend preflight (read-only diagnostic)
+        env:
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(printf '%s' "$SUPABASE_PRODUCTION_URL" | xargs)"
+          while [[ "$url" == */ ]]; do url="${url%/}"; done
+          if [[ -z "$url" || -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" || ! "$url" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
+            echo "::warning::Production backend preflight skipped: production URL/key configuration is missing or malformed."
+            exit 0
+          fi
+          failed=0
+          for table in channels movies series episodes content_submissions; do
+            status="$(curl --silent --show-error --max-time 8 \
+              --output /dev/null --write-out '%{http_code}' \
+              --header "apikey: $SUPABASE_PRODUCTION_ANON_KEY" \
+              "$url/rest/v1/$table?select=*&limit=0" || true)"
+            if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+              echo "Production backend preflight passed: $table (HTTP $status)."
+            else
+              echo "::warning::Production backend preflight could not verify $table (HTTP ${status:-no-response}); no data was changed."
+              failed=1
+            fi
+          done
+          if [[ "$failed" -ne 0 ]]; then
+            echo "### Production backend preflight: warnings" >> "$GITHUB_STEP_SUMMARY"
+            echo "At least one production API/schema check did not return HTTP 2xx. This diagnostic is read-only; production release gates remain enforced by the release workflow." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Production backend preflight: passed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Validate Supabase configuration
         env:
           SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
