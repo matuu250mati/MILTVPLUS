@@ -162,7 +162,7 @@ jobs:
             {
               echo "### Supabase schema validation: warnings"
               echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
+              echo 'See supabase/SETUP_ES.md and the job log for table-level details.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
