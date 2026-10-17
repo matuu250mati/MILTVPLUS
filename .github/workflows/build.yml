@@ -86,7 +86,10 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
-            SUPABASE_URL="$SUPABASE_QA_URL"
+            # A Supabase project URL is an identifier, not a secret. Pin QA to the
+            # explicitly approved project so a malformed repository URL secret cannot
+            # silently redirect or block builds. The publishable/anon key remains secret.
+            SUPABASE_URL="https://uqofvrynlyterjylpoj.supabase.co"
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
             expected_ref="uqofvrynlyterjylpoj"
           else
