@@ -86,8 +86,16 @@ jobs:
           set -euo pipefail
           url="$(printf '%s' "$SUPABASE_PRODUCTION_URL" | xargs)"
           while [[ "$url" == */ ]]; do url="${url%/}"; done
-          if [[ -z "$url" || -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" || ! "$url" =~ ^https://[a-z0-9]{20}[.]supabase[.]co$ ]]; then
-            echo "::warning::Production backend preflight skipped: production URL/key configuration is missing or malformed."
+          if [[ -z "$url" ]]; then
+            echo "::warning::Production backend preflight skipped: SUPABASE_URL is empty."
+            exit 0
+          fi
+          if [[ -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" ]]; then
+            echo "::warning::Production backend preflight skipped: SUPABASE_ANON_KEY is empty."
+            exit 0
+          fi
+          if [[ ! "$url" =~ ^https://[a-z0-9]{20}[.]supabase[.]co$ ]]; then
+            echo "::warning::Production SUPABASE_URL is malformed; expected exactly https://<20-character-project-ref>.supabase.co. The URL value is intentionally not printed."
             exit 0
           fi
           declare -A required_columns=(
