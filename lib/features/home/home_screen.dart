@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<ChannelModel>> _safeChannels() async {
     try {
-      return await _catalog.getChannels();
+      return await _catalog.getChannels(limit: 12);
     } catch (_) {
       return const [];
     }
@@ -59,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<MovieModel>> _safeMovies() async {
     try {
-      return await _catalog.getMovies();
+      return await _catalog.getMovies(limit: 12);
     } catch (_) {
       return const [];
     }
@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<SeriesModel>> _safeSeries() async {
     try {
-      return await _catalog.getSeries();
+      return await _catalog.getSeries(limit: 12);
     } catch (_) {
       return const [];
     }
