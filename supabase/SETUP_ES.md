@@ -114,3 +114,26 @@ Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitad
 8. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
 
 La compilación de GitHub Actions solo verifica el código y construye el APK; no confirma que esta configuración ya esté aplicada a la base de datos real.
+
+
+## 7. Sincronización de TV en vivo desde una lista autorizada
+
+La función `supabase/functions/sync-live-channels/index.ts` importa hasta 500 canales de una lista M3U configurada por el propietario del proyecto. Solo acepta la fuente M3U por HTTPS, importa entradas con URL HTTPS terminadas en `.m3u8`, elimina duplicados dentro de la lista y actualiza canales existentes por `url_stream`. No elimina filas que no estén en una ejecución de la lista, para evitar borrar el catálogo ante una fuente incompleta.
+
+Antes de desplegarla, configurá estos secretos en Supabase Edge Functions:
+
+- `CHANNELS_M3U_URL`: URL HTTPS de una lista M3U que tengas autorización para redistribuir.
+- `SYNC_SECRET`: secreto aleatorio largo para autorizar llamadas de sincronización.
+- `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`: variables estándar del entorno de Supabase Edge Functions.
+
+Desplegá desde un entorno autenticado con Supabase CLI:
+
+```bash
+supabase secrets set CHANNELS_M3U_URL="https://tu-dominio-autorizado/lista.m3u"
+supabase secrets set SYNC_SECRET="usa-un-secreto-aleatorio-largo"
+supabase functions deploy sync-live-channels --no-verify-jwt
+```
+
+La opción `--no-verify-jwt` permite que la función use el control explícito `x-sync-secret`; no la llames sin ese encabezado. En una terminal privada, probá la función con POST y el encabezado `x-sync-secret` usando el secreto guardado en Supabase. No pongas el secreto en el código, en el APK ni en el historial de Git.
+
+**Limitaciones:** el importador no valida licencias ni garantiza que los streams estén activos; eso debe comprobarse con el titular de la fuente y en un dispositivo real. Solo procesa HLS HTTPS; listas con URLs HTTP, MP4 o enlaces de página web se descartan deliberadamente. Revisá los canales antes de considerarlos aptos para distribución pública. El repositorio no puede desplegar esta función en tu proyecto Supabase ni cargar secretos del panel automáticamente.
