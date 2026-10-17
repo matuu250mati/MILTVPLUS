@@ -277,8 +277,6 @@ jobs:
 
       - name: Verify Supabase DNS resolution
         if: ${{ env.QA_BACKEND_VALID != 'false' }}
-        env:
-          SUPABASE_URL_NORMALIZED: ${{ env.SUPABASE_URL_NORMALIZED }}
         shell: bash
         run: |
           set -euo pipefail
