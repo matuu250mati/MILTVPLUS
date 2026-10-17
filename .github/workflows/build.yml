@@ -131,41 +131,48 @@ jobs:
           QA_BACKEND_VALID=true
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
-            # Resolve the QA project's real reference from Supabase's read-only
-            # project listing when a Management API token is available. This avoids
-            # hardcoding a mistyped reference into every QA APK. Never print the token.
+            # Resolve QA from the configured URL, then verify the exact project ID.
+            # Do not depend on a display name: Supabase project names are user-editable.
+            # If a Management API token is available, fail closed unless that exact ID
+            # appears in the account's accessible project list. Never print the token.
             expected_ref=""
-            if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
-              projects_json="$(curl --fail --silent --show-error --max-time 20 \
-                --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-                https://api.supabase.com/v1/projects 2>/dev/null || true)"
-              if [[ -n "$projects_json" ]]; then
-                expected_ref="$(printf '%s' "$projects_json" | python3 -c '
+            candidate_ref="${SUPABASE_QA_URL#https://}"
+            candidate_ref="${candidate_ref%.supabase.co}"
+            if [[ ! "$candidate_ref" =~ ^[a-z0-9]{20}$ || "$SUPABASE_QA_URL" != "https://$candidate_ref.supabase.co" ]]; then
+              echo "::warning::QA project URL is malformed; expected https://<20-character-project-ref>.supabase.co."
+            else
+              production_ref="${SUPABASE_PRODUCTION_URL#https://}"
+              production_ref="${production_ref%.supabase.co}"
+              if [[ "$SUPABASE_PRODUCTION_URL" == "https://$candidate_ref.supabase.co" || ( "$production_ref" =~ ^[a-z0-9]{20}$ && "$candidate_ref" == "$production_ref" ) ]]; then
+                echo "::error::QA backend points to the production Supabase project. Refusing to build a QA package against production."
+                exit 1
+              fi
+
+              if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
+                projects_json="$(curl --fail --silent --show-error --max-time 20 \
+                  --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                  https://api.supabase.com/v1/projects 2>/dev/null || true)"
+                if [[ -n "$projects_json" ]]; then
+                  expected_ref="$(printf '%s' "$projects_json" | python3 -c '
           import json, re, sys
+          candidate = sys.argv[1]
           try:
               projects = json.load(sys.stdin)
           except Exception:
               sys.exit(0)
-          def normalized_name(value):
-              return re.sub(r"[^a-z0-9]", "", str(value).casefold())
-          matches = [p for p in projects if normalized_name(p.get("name", "")) == "miltvplusqa"]
-          if len(matches) == 1:
-              ref = str(matches[0].get("id", "")).strip()
-              if re.fullmatch(r"[a-z0-9]{20}", ref):
-                  print(ref)
-                  sys.exit(0)
-          candidates = [
-              {"name": p.get("name", ""), "ref": p.get("id", "")}
-              for p in projects
-              if "miltvplus" in normalized_name(p.get("name", "")) or "qa" in normalized_name(p.get("name", ""))
-          ]
-          print("QA project not resolved; accessible QA/MILTVPLUS project candidates: %s" % json.dumps(candidates), file=sys.stderr)
-          ' 2>/dev/null || true)"
-              fi
-            else
-              candidate_ref="${SUPABASE_QA_URL#https://}"
-              candidate_ref="${candidate_ref%.supabase.co}"
-              if [[ "$candidate_ref" =~ ^[a-z0-9]{20}$ && "$SUPABASE_QA_URL" == "https://$candidate_ref.supabase.co" ]]; then
+          if isinstance(projects, list):
+              matches = [p for p in projects if isinstance(p, dict) and str(p.get("id", "")).strip() == candidate]
+              if len(matches) == 1 and re.fullmatch(r"[a-z0-9]{20}", candidate):
+                  print(candidate)
+          ' "$candidate_ref" 2>/dev/null || true)"
+                fi
+                if [[ -z "$expected_ref" ]]; then
+                  echo "::warning::Configured QA project ID was not verified in the accessible Supabase project list. Check SUPABASE_ACCESS_TOKEN permissions and SUPABASE_QA_URL."
+                fi
+              else
+                # URL and anon-key schema smoke tests below still validate connectivity.
+                # A distinct, valid project ref is accepted when Management API access
+                # is intentionally not configured.
                 expected_ref="$candidate_ref"
               fi
             fi
