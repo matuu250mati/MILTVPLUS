@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; error?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
 
@@ -175,19 +175,33 @@ Deno.serve(async (req) => {
 
     for (const result of results) {
       let accepted = 0;
+      let duplicates = 0;
       for (const row of result.parsed) {
         const key = String(row.source_key ?? "");
         // Deduplicate within a category, while preserving cross-category memberships.
-        if (!key || seen.has(key)) continue;
+        if (!key) continue;
+        if (seen.has(key)) {
+          duplicates++;
+          continue;
+        }
         seen.add(key);
         selected.push(row);
         accepted++;
       }
+      const rejected = Math.max(0, result.fetched - result.parsed.length);
+      const sourceError = result.error ??
+        (result.fetched === 0
+          ? "La lista no contiene entradas #EXTINF."
+          : result.parsed.length === 0
+          ? "No contiene URLs HTTPS directas .m3u8 aceptables."
+          : undefined);
       sourceResults.push({
         source: result.source.name,
         fetched: result.fetched,
         accepted,
-        ...(result.error ? { error: result.error } : {}),
+        rejected,
+        duplicates,
+        ...(sourceError ? { error: sourceError } : {}),
       });
     }
   }
@@ -204,7 +218,10 @@ Deno.serve(async (req) => {
   let imported = 0;
   for (let start = 0; start < selected.length; start += BATCH_SIZE) {
     const batch = selected.slice(start, start + BATCH_SIZE);
-    const { error } = await supabase.from("channels").upsert(batch, { onConflict: "source_key" });
+    const { data, error } = await supabase
+      .from("channels")
+      .upsert(batch, { onConflict: "source_key" })
+      .select("source_key");
     if (error) {
       return json({
         ok: false,
@@ -214,13 +231,23 @@ Deno.serve(async (req) => {
         error: `Falló la importación por lotes: ${error.message}`,
       }, 502);
     }
-    imported += batch.length;
+    if (!data || data.length !== batch.length) {
+      return json({
+        ok: false,
+        imported,
+        attempted: selected.length,
+        sources: sourceResults,
+        error: `Verificación de escritura fallida: se esperaban ${batch.length} filas confirmadas y se recibieron ${data?.length ?? 0}.`,
+      }, 502);
+    }
+    imported += data.length;
   }
 
   const failedSources = sourceResults.filter((source) => Boolean(source.error));
+  const complete = failedSources.length === 0 && imported === selected.length;
   return json({
-    ok: failedSources.length === 0,
-    complete: failedSources.length === 0,
+    ok: complete,
+    complete,
     imported,
     failedSources: failedSources.length,
     sources: sourceResults,
