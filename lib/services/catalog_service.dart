@@ -124,17 +124,27 @@ class CatalogService {
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .where((movie) {
-          final url = movie.urlStream.trim();
-          final uri = Uri.tryParse(url);
+        .toList(growable: true);
 
-          return uri != null &&
-              (uri.scheme == 'http' || uri.scheme == 'https') &&
-              uri.host.isNotEmpty;
-        })
-        .toList(growable: false);
+    // Keep every published catalog entry visible. Older rows can use a
+    // legacy URL field (resolved by MovieModel) or have metadata without a
+    // playable stream yet; filtering them out made the home catalog look empty.
+    // Put entries with a syntactically valid HTTP(S) stream first.
+    bool hasValidStream(MovieModel movie) {
+      final uri = Uri.tryParse(movie.urlStream.trim());
+      return uri != null &&
+          (uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host.isNotEmpty;
+    }
 
-    return movies;
+    movies.sort((a, b) {
+      final aPlayable = hasValidStream(a);
+      final bPlayable = hasValidStream(b);
+      if (aPlayable != bPlayable) return aPlayable ? -1 : 1;
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+    });
+
+    return List<MovieModel>.unmodifiable(movies);
   }
 
   Future<List<SeriesModel>> getSeries() async {
