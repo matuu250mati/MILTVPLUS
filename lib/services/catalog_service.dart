@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase_config.dart';
 import '../models/media_models.dart';
+import 'paged_query.dart';
 
 /// Lecturas de catálogo publicadas. No usa service_role en el cliente.
 class CatalogService {
@@ -20,20 +21,26 @@ class CatalogService {
 
 
   /// User-submitted items become visible to everyone only after moderation approves them.
-  Future<List<Map<String, dynamic>>> getApprovedSubmissions(String mediaType) async {
-    final response = await _supabase
-        .from('content_submissions')
-        .select('title, description, stream_url, poster_url, duration_seconds, series_title, season_number, episode_number, media_type')
-        .eq('moderation_status', 'approved')
-        .eq('media_type', mediaType)
-        .order('created_at', ascending: false);
-
-    return (response as List<dynamic>)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList(growable: false);
+  Future<List<Map<String, dynamic>>> getApprovedSubmissions(
+    String mediaType, {
+    int? limit,
+  }) async {
+    return fetchAllPages<Map<String, dynamic>>(
+      limit: limit,
+      fetchPage: (from, to) async => await _supabase
+          .from('content_submissions')
+          .select('title, description, stream_url, poster_url, duration_seconds, series_title, season_number, episode_number, media_type')
+          .eq('moderation_status', 'approved')
+          .eq('media_type', mediaType)
+          .order('created_at', ascending: false)
+          .range(from, to),
+    );
   }
 
-  Future<List<ChannelModel>> getChannels({List<String>? categories}) async {
+  Future<List<ChannelModel>> getChannels({
+    List<String>? categories,
+    int? limit,
+  }) async {
     // Database category values are not always canonical: existing providers
     // use English labels, lowercase values, or broad categories such as
     // "General". Expand known aliases so the UI's canonical genre filter
@@ -95,35 +102,42 @@ class CatalogService {
       ]);
     }
 
-    final query = _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true);
-    final filteredQuery = expandedCategories.isEmpty
-        ? query
-        : query.inFilter('category', expandedCategories.toList(growable: false));
-    final response = await filteredQuery
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+    final categoryValues = expandedCategories.toList(growable: false);
+    final rows = await fetchAllPages<Map<String, dynamic>>(
+      limit: limit,
+      fetchPage: (from, to) async {
+        final query = _supabase
+            .from('channels')
+            .select()
+            .eq('is_published', true);
+        final filteredQuery = categoryValues.isEmpty
+            ? query
+            : query.inFilter('category', categoryValues);
+        return await filteredQuery
+            .order('sort_order', ascending: true)
+            .order('title', ascending: true)
+            .range(from, to);
+      },
+    );
 
-    return (response as List<dynamic>)
-        .map((item) => ChannelModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    return rows
+        .map(ChannelModel.fromJson)
         .toList(growable: false);
   }
 
-  Future<List<MovieModel>> getMovies() async {
-    final response = await _supabase
-        .from('movies')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
+  Future<List<MovieModel>> getMovies({int? limit}) async {
+    final rows = await fetchAllPages<Map<String, dynamic>>(
+      limit: limit,
+      fetchPage: (from, to) async => await _supabase
+          .from('movies')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .range(from, to),
+    );
 
-    final movies = (response as List<dynamic>)
-        .map((item) => MovieModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    final movies = rows
+        .map(MovieModel.fromJson)
         .where((movie) {
           final url = movie.urlStream.trim();
           final uri = Uri.tryParse(url);
@@ -137,33 +151,32 @@ class CatalogService {
     return movies;
   }
 
-  Future<List<SeriesModel>> getSeries() async {
-    final response = await _supabase
-        .from('series')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
+  Future<List<SeriesModel>> getSeries({int? limit}) async {
+    final rows = await fetchAllPages<Map<String, dynamic>>(
+      limit: limit,
+      fetchPage: (from, to) async => await _supabase
+          .from('series')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .range(from, to),
+    );
 
-    return (response as List<dynamic>)
-        .map((item) => SeriesModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
-        .toList(growable: false);
+    return rows.map(SeriesModel.fromJson).toList(growable: false);
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
-    final response = await _supabase
-        .from('episodes')
-        .select()
-        .eq('series_id', seriesId)
-        .eq('is_published', true)
-        .order('season_number', ascending: true)
-        .order('episode_number', ascending: true);
+    final rows = await fetchAllPages<Map<String, dynamic>>(
+      fetchPage: (from, to) async => await _supabase
+          .from('episodes')
+          .select()
+          .eq('series_id', seriesId)
+          .eq('is_published', true)
+          .order('season_number', ascending: true)
+          .order('episode_number', ascending: true)
+          .range(from, to),
+    );
 
-    return (response as List<dynamic>)
-        .map((item) => EpisodeModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
-        .toList(growable: false);
+    return rows.map(EpisodeModel.fromJson).toList(growable: false);
   }
 }
