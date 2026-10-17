@@ -21,6 +21,8 @@ void main() {
       expect(isValidSupabaseUrl('https://user:pass@project-ref.supabase.co'), isFalse);
       expect(isValidSupabaseUrl('https://project-ref.supabase.co:8443'), isFalse);
       expect(isValidSupabaseUrl('https://project_ref.supabase.co'), isFalse);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.supabase.co'), isFalse);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrstu.supabase.co'), isFalse);
     });
   });
 }
