@@ -129,7 +129,9 @@ jobs:
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
 
-      - name: Verify required Supabase schema (diagnostic; APK build continues)
+      - name: Verify required Supabase schema (QA diagnostic; production is blocked on failure)
+        env:
+          VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -160,10 +162,16 @@ jobs:
           done
           if [[ "$failed" -ne 0 ]]; then
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
+              echo "### Supabase schema validation: BLOCKED"
+              echo "One or more required tables could not be reached or did not match the app schema."
+              echo "Do not publish this build as a production release until every required table passes and the app's backend is reachable."
               echo 'See supabase/SETUP_ES.md and the job log for table-level details.'
             } >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || ( "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ) ]]; then
+              echo "::error::Production release blocked: required Supabase schema/network checks failed."
+              exit 1
+            fi
+            echo "::warning::QA APK only: Supabase backend checks failed; database-backed functionality is not certified."
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
