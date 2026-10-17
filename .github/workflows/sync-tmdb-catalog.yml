@@ -24,32 +24,55 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$SYNC_SECRET" ]; then
-            echo "::warning::Catalog sync skipped. Configure SUPABASE_URL, SUPABASE_ANON_KEY, and MILTVPLUS_CATALOG_SYNC_SECRET repository secrets."
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          missing=0
+          for name in SUPABASE_URL SUPABASE_ANON_KEY SYNC_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required GitHub secret is missing: $name (SYNC_SECRET comes from MILTVPLUS_CATALOG_SYNC_SECRET)."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Configure the missing repository secrets under Settings → Secrets and variables → Actions."
+            exit 1
           fi
-          echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: Sync movies and series metadata
-        if: steps.config.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
           REQUESTED_PAGES: ${{ inputs.pages || '2' }}
         run: |
+          set -euo pipefail
           pages="$REQUESTED_PAGES"
           case "$pages" in
             1|2|3|4|5) ;;
-            *) echo "pages must be between 1 and 5"; exit 2 ;;
+            *) echo "::error::pages must be between 1 and 5"; exit 2 ;;
           esac
-          response="$(curl --fail-with-body --silent --show-error \
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          http_code="$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
             --request POST "$SUPABASE_URL/functions/v1/sync-tmdb-catalog" \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
             --header "x-sync-secret: $SYNC_SECRET" \
             --data "{\"pages\":$pages,\"includeMovies\":true,\"includeSeries\":true}")"
-          echo "$response"
-          echo "$response" | grep -q '"ok":true' || { echo "Catalog sync did not report success"; exit 1; }
+
+          echo "HTTP status: $http_code"
+          echo "Response body:"
+          cat "$response_file"
+          echo
+
+          if [ "$http_code" = "401" ]; then
+            echo "::error::HTTP 401. If the body says 'Unauthorized catalog sync request', GitHub's MILTVPLUS_CATALOG_SYNC_SECRET does not match Supabase SYNC_SECRET. If it says 'Invalid JWT' or similar, the Supabase Edge Function gateway is rejecting the bearer token before the function runs; redeploy with --no-verify-jwt because this function validates x-sync-secret itself."
+            exit 1
+          fi
+          case "$http_code" in
+            2*) ;;
+            *) echo "::error::Catalog sync request failed with HTTP $http_code"; exit 1 ;;
+          esac
+          grep -q '"ok":true' "$response_file" || { echo "::error::Catalog sync did not report success"; exit 1; }
