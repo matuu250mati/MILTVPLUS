@@ -11,7 +11,7 @@ production_project_ref_from_url() {
   local url="${1:-}"
   url="$(printf '%s' "$url" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   # Production may include a trailing slash, path, query or fragment; identity is its exact host ref.
-  [[ "$url" =~ ^https?://([a-z0-9]{19,20})[.]supabase[.]co([/:?#].*)?$ ]] || return 1
+  [[ "$url" =~ ^https?://([a-z0-9]{20})[.]supabase[.]co([/:?#].*)?$ ]] || return 1
   printf '%s\n' "${BASH_REMATCH[1]}"
 }
 
