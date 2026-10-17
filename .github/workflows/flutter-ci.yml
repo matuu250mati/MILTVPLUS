@@ -90,7 +90,7 @@ jobs:
         # Pin the native Linux player SDK to a checksum-verified upstream release.
         env:
           FVP_DEPS_URL: ${{ matrix.platform == 'linux' && 'https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0' || '' }}
-          FVP_DEPS_SHA256: ${{ matrix.platform == 'linux' && '9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c24e2db8a7b9' || '' }}
+          FVP_DEPS_SHA256: ${{ matrix.platform == 'linux' && '9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c69b8a23d3e' || '' }}
         shell: bash
         run: ${{ matrix.command }}
 
