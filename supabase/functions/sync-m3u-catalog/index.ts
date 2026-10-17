@@ -40,7 +40,6 @@ const SOURCES: Source[] = [
   { name: "Free-TV lista general", url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", category: "TV en Vivo" },
 ];
 
-const MAX_IMPORT_ROWS = 5000;
 const BATCH_SIZE = 100;
 const clean = (value: string | undefined) => (value ?? "").trim();
 
@@ -103,7 +102,12 @@ async function parsePlaylist(source: Source, body: string) {
       })();
     const groupTitle = attribute(meta, "group-title") || source.category;
     const countryCode = source.countryCode || attribute(meta, "tvg-country").split(/[;,]/)[0]?.trim().toUpperCase() || null;
-    const sourceKey = tvgId ? `m3u:${tvgId}` : `m3u:url:${await stableHash(streamUrl)}`;
+    // A channel may belong to several genre/country playlists. Scope the stable key
+    // to the category so an upsert in one playlist cannot erase its other category row.
+    const categoryKey = source.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const sourceKey = tvgId
+      ? `m3u:${tvgId}:category:${categoryKey}`
+      : `m3u:url:${await stableHash(streamUrl)}:category:${categoryKey}`;
 
     entries.push({
       source_key: sourceKey,
@@ -173,12 +177,11 @@ Deno.serve(async (req) => {
       let accepted = 0;
       for (const row of result.parsed) {
         const key = String(row.source_key ?? "");
-        // Source order is intentional: genre-specific lists take priority over country/general lists.
+        // Deduplicate within a category, while preserving cross-category memberships.
         if (!key || seen.has(key)) continue;
         seen.add(key);
         selected.push(row);
         accepted++;
-        if (selected.length >= MAX_IMPORT_ROWS) break;
       }
       sourceResults.push({
         source: result.source.name,
@@ -186,7 +189,6 @@ Deno.serve(async (req) => {
         accepted,
         ...(result.error ? { error: result.error } : {}),
       });
-      if (selected.length >= MAX_IMPORT_ROWS) break;
     }
     if (selected.length >= MAX_IMPORT_ROWS) break;
   }
@@ -219,8 +221,7 @@ Deno.serve(async (req) => {
   return json({
     ok: true,
     imported,
-    limit: MAX_IMPORT_ROWS,
     sources: sourceResults,
-    note: "Se importaron solo canales en vivo con URL HTTPS .m3u8. Las fuentes M3U de películas/series quedan en channels como canales temáticos; no se insertaron registros falsos en movies/series. La importación no garantiza que cada emisión siga activa ni que cada proveedor autorice su redistribución.",
+    note: "Se importaron canales en vivo con URL HTTPS .m3u8 por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
   });
 });
