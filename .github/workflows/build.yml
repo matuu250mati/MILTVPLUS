@@ -2,10 +2,10 @@ name: Build MILTVPLUS Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'qa/**']
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'qa/**']
   workflow_dispatch:
     inputs:
       verify_production_signing:
@@ -78,11 +78,22 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+            SUPABASE_URL="$SUPABASE_QA_URL"
+            SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
+            expected_ref="uqofvrynlyterjylpoj"
+          else
+            SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
+            SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
+            expected_ref=""
+          fi
           if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
@@ -99,16 +110,26 @@ jobs:
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
+
+          # Never print the URL or credentials. QA must match its isolated project exactly.
+          if [[ -n "$expected_ref" ]]; then
+            actual_ref="${SUPABASE_URL#https://}"
+            actual_ref="${actual_ref%.supabase.co}"
+            if [[ "$actual_ref" != "$expected_ref" ]]; then
+              echo "::error::QA build refused: Supabase project is not the approved isolated QA project."
+              exit 1
+            fi
+            echo "Supabase destination verified for isolated QA."
+          fi
+
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
             exit 1
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
-
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -207,8 +228,6 @@ jobs:
           fi
 
       - name: Build release APK
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail

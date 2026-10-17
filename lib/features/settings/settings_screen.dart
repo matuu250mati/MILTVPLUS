@@ -60,7 +60,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _phoneController.text = preferences.getString(_profilePhoneKey) ?? '';
       _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
-      _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
+      _textScale = (preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0)
+          .clamp(1.0, 1.2)
+          .toDouble();
+      AppAccessibilitySettings.textScale.value = _textScale;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -226,16 +229,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalInset = screenWidth < 360 ? 10.0 : screenWidth < 600 ? 14.0 : 24.0;
+    final cardInset = screenWidth < 360 ? 12.0 : screenWidth < 600 ? 16.0 : 20.0;
 
     final allSections = <Widget>[
         const Text('PERFIL Y CONFIGURACIÓN',
-            style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text('Administrá tu perfil y las conexiones de este dispositivo.',
             style: TextStyle(color: AppTheme.muted)),
         const SizedBox(height: 22),
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(cardInset),
           decoration: BoxDecoration(
             color: AppTheme.panel,
             borderRadius: BorderRadius.circular(18),
@@ -284,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 14),
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(cardInset),
           decoration: BoxDecoration(
             color: AppTheme.panel,
             borderRadius: BorderRadius.circular(20),
@@ -785,7 +791,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final section = widget.section;
     if (section == null) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+        padding: EdgeInsets.fromLTRB(horizontalInset, 14, horizontalInset, 28),
         children: [
           const Text('PERFIL Y CONFIGURACIÓN',
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
@@ -858,7 +864,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 titles[section] ?? 'Configuración',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -901,7 +907,10 @@ class _SettingsMenuTile extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: .08)),
         ),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 360 ? 10 : 14,
+            vertical: 10,
+          ),
           leading: Container(
             width: 44,
             height: 44,
@@ -911,10 +920,10 @@ class _SettingsMenuTile extends StatelessWidget {
             ),
             child: Icon(icon, color: AppTheme.accent),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(title, maxLines: 2, softWrap: true, style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(subtitle, style: const TextStyle(color: AppTheme.muted)),
+            child: Text(subtitle, softWrap: true, style: const TextStyle(color: AppTheme.muted)),
           ),
           trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.accent),
           onTap: onTap,
