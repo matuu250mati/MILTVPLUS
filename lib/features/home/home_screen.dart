@@ -8,7 +8,6 @@ import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_player_screen.dart';
 import '../notifications/notification_center.dart';
-import 'startup_status_banner.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -25,24 +24,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final CatalogService _catalog = CatalogService();
   late Future<_HomeData> _dataFuture;
-  bool _showStartupBanner = false;
-  Timer? _startupBannerTimer;
 
   @override
   void initState() {
     super.initState();
     _dataFuture = _loadData();
-    if (StartupStatusBanner.claimForSession()) {
-      _showStartupBanner = true;
-      _startupBannerTimer = Timer(const Duration(seconds: 15), () {
-        if (mounted) setState(() => _showStartupBanner = false);
-      });
-    }
   }
 
   @override
   void dispose() {
-    _startupBannerTimer?.cancel();
     super.dispose();
   }
 
@@ -117,10 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     onVoiceSearch: widget.onVoiceSearch ?? () => widget.onNavigate(8),
                     onNotifications: () => NotificationCenter.show(context),
                   ),
-                  if (_showStartupBanner) ...[
-                    const SizedBox(height: 10),
-                    const StartupStatusBanner(),
-                  ],
                   const SizedBox(height: 8),
                   const _DateTimeLine(),
                   SizedBox(height: compact ? 14 : 20),
