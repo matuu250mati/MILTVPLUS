@@ -10,6 +10,7 @@ import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/owner_publishing_screen.dart';
 import '../home/home_screen.dart';
+import '../notifications/notification_center.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
@@ -45,6 +46,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   DateTime? _lastUpdateCheck;
   bool _updateDialogShowing = false;
   DateTime? _lastBackPressAt;
+  bool _voiceSearchRequested = false;
 
   @override
   void initState() {
@@ -185,12 +187,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return role == 'admin' || role == 'owner';
   }
 
+  void _requestVoiceSearch() {
+    setState(() {
+      selected = 8;
+      _voiceSearchRequested = true;
+    });
+  }
+
   Widget page() {
     switch (selected) {
       case 0:
         return LiveTvScreen(onBack: () => setState(() => selected = 1));
       case 1:
-        return HomeScreen(onNavigate: (index) => setState(() => selected = index));
+        return HomeScreen(
+          onNavigate: (index) => setState(() => selected = index),
+          onVoiceSearch: _requestVoiceSearch,
+        );
       case 2:
         return const CatalogScreen(category: 'PELÍCULAS');
       case 3:
@@ -204,7 +216,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       case 7:
         return const CatalogScreen(category: 'GRATIS');
       case 8:
-        return const CatalogScreen(category: 'EXPLORAR');
+        return CatalogScreen(
+          category: 'EXPLORAR',
+          startVoiceSearch: _voiceSearchRequested,
+          onVoiceSearchConsumed: () {
+            if (mounted && _voiceSearchRequested) {
+              setState(() => _voiceSearchRequested = false);
+            }
+          },
+        );
       case 9:
         return const OwnerPublishingScreen();
       case 10:
