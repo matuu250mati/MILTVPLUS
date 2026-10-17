@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+
+import '../../services/playback_progress_service.dart';
 
 /// Reproduce una fuente autorizada del catálogo en una vista inmersiva.
 /// La selección manual de calidad requiere que el proveedor publique variantes
@@ -24,6 +28,9 @@ class CatalogPlayerScreen extends StatefulWidget {
 
 class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   VideoPlayerController? _controller;
+  final _progressService = const PlaybackProgressService();
+  String? _progressKey;
+  int _lastSavedPositionSeconds = 0;
   String? _error;
   bool _loading = true;
   bool _showControls = true;
@@ -31,6 +38,10 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    _progressKey = PlaybackProgressService.keyFor(
+      title: widget.title,
+      streamUrl: widget.streamUrl,
+    );
     _enterImmersiveMode();
     _initialize();
   }
@@ -79,16 +90,35 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
           await candidate.dispose();
           return;
         }
+        final progressKey = _progressKey;
+        if (progressKey != null) {
+          try {
+            final savedPosition = await _progressService.load(
+              key: progressKey,
+              duration: candidate.value.duration,
+            );
+            if (savedPosition != null) {
+              await candidate.seekTo(savedPosition);
+              _lastSavedPositionSeconds = savedPosition.inSeconds;
+            }
+          } catch (_) {
+            // Playback must still work if local progress storage is unavailable.
+          }
+        }
         await candidate.play();
         if (!mounted) {
           await candidate.dispose();
           return;
         }
+        final initializedController = candidate;
         setState(() {
-          _controller = candidate;
+          _controller = initializedController;
           _loading = false;
           _error = null;
         });
+        initializedController.addListener(
+          () => _handlePlaybackProgress(initializedController),
+        );
         return;
       } catch (_) {
         await candidate?.dispose();
@@ -105,7 +135,45 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     });
   }
 
+  void _handlePlaybackProgress(VideoPlayerController controller) {
+    if (!mounted ||
+        !identical(_controller, controller) ||
+        _progressKey == null ||
+        !controller.value.isInitialized ||
+        controller.value.duration <= Duration.zero) {
+      return;
+    }
+
+    final value = controller.value;
+    if (value.isCompleted) {
+      _lastSavedPositionSeconds = 0;
+      unawaited(_progressService.clear(_progressKey!).catchError((_) {}));
+      return;
+    }
+
+    final seconds = value.position.inSeconds;
+    if ((seconds - _lastSavedPositionSeconds).abs() < 5) return;
+    _lastSavedPositionSeconds = seconds;
+    unawaited(_persistPlaybackProgress(controller));
+  }
+
+  Future<void> _persistPlaybackProgress(VideoPlayerController controller) async {
+    final key = _progressKey;
+    final value = controller.value;
+    if (key == null || !value.isInitialized) return;
+    try {
+      await _progressService.save(
+        key: key,
+        position: value.position,
+        duration: value.duration,
+      );
+    } catch (_) {
+      // Progress persistence is best-effort and must never interrupt playback.
+    }
+  }
+
   void _retry() {
+    _lastSavedPositionSeconds = 0;
     setState(() {
       _loading = true;
       _error = null;
@@ -114,12 +182,16 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   }
 
   Future<void> _closePlayer() async {
+    final current = _controller;
+    if (current != null) await _persistPlaybackProgress(current);
     await _restoreSystemUi();
     if (mounted) Navigator.of(context).maybePop();
   }
 
   @override
   void dispose() {
+    final current = _controller;
+    if (current != null) unawaited(_persistPlaybackProgress(current));
     _controller?.dispose();
     _restoreSystemUi();
     super.dispose();
