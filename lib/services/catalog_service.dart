@@ -33,6 +33,7 @@ class CatalogService {
           .eq('moderation_status', 'approved')
           .eq('media_type', mediaType)
           .order('created_at', ascending: false)
+          .order('id', ascending: true)
           .range(from, to),
     );
   }
@@ -116,6 +117,7 @@ class CatalogService {
         return await filteredQuery
             .order('sort_order', ascending: true)
             .order('title', ascending: true)
+            .order('id', ascending: true)
             .range(from, to);
       },
     );
@@ -133,6 +135,7 @@ class CatalogService {
           .select()
           .eq('is_published', true)
           .order('title', ascending: true)
+          .order('id', ascending: true)
           .range(from, to),
     );
 
@@ -159,6 +162,7 @@ class CatalogService {
           .select()
           .eq('is_published', true)
           .order('title', ascending: true)
+          .order('id', ascending: true)
           .range(from, to),
     );
 
@@ -174,6 +178,7 @@ class CatalogService {
           .eq('is_published', true)
           .order('season_number', ascending: true)
           .order('episode_number', ascending: true)
+          .order('id', ascending: true)
           .range(from, to),
     );
 
