@@ -217,9 +217,12 @@ Deno.serve(async (req) => {
     imported += batch.length;
   }
 
+  const failedSources = sourceResults.filter((source) => Boolean(source.error));
   return json({
-    ok: true,
+    ok: failedSources.length === 0,
+    complete: failedSources.length === 0,
     imported,
+    failedSources: failedSources.length,
     sources: sourceResults,
     note: "Se importaron canales en vivo con URL HTTPS .m3u8 por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
   });
