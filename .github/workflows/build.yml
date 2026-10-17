@@ -2,7 +2,7 @@ name: Build MILTVPLUS Android APK
 
 on:
   push:
-    branches: [main, 'qa/**']
+    branches: [main, 'qa/**', 'feat/**']
     tags: ['v*']
   pull_request:
     branches: [main, 'qa/**']
