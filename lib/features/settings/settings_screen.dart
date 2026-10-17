@@ -226,6 +226,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = screenWidth < 420 ? 12.0 : screenWidth < 900 ? 18.0 : 28.0;
 
     final allSections = <Widget>[
         const Text('PERFIL Y CONFIGURACIÓN',
@@ -785,7 +787,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final section = widget.section;
     if (section == null) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 14, horizontalPadding, 28),
         children: [
           const Text('PERFIL Y CONFIGURACIÓN',
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
@@ -846,7 +848,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'help': 'Ayuda y soporte',
     };
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 14, horizontalPadding, 28),
       children: [
         Row(
           children: [
