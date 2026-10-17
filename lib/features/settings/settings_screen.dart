@@ -907,7 +907,10 @@ class _SettingsMenuTile extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: .08)),
         ),
         child: ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: screenWidth < 360 ? 10 : 14, vertical: 10),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 360 ? 10 : 14,
+            vertical: 10,
+          ),
           leading: Container(
             width: 44,
             height: 44,
