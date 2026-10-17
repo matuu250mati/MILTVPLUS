@@ -43,7 +43,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<void> _startVoiceSearch() async {
     final supported = kIsWeb || defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS;
+        defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows;
     if (!supported) {
       _showSearchMessage('La búsqueda por voz no está disponible en este sistema. Podés usar el teclado del control remoto.');
       return;
