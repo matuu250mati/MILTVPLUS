@@ -2,7 +2,7 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main, master, 'qa/**']
+    branches: [main, master, 'qa/**', 'feat/**']
   pull_request:
     branches: [main, master, 'qa/**']
   workflow_dispatch:
