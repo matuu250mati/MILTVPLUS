@@ -2,20 +2,28 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'qa/**', 'feat/**']
   pull_request:
-    branches: [main, master]
+    branches: [main, master, 'qa/**']
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# Keep only the newest validation run for each branch; stale matrix builds
+# otherwise consume runners while a newer fix is waiting in the queue.
+concurrency:
+  group: miltvplus-flutter-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+      - name: Test QA Supabase isolation guard
+        run: bash tool/test_qa_supabase_guard.sh
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -65,7 +73,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -87,11 +95,15 @@ jobs:
         run: flutter pub get
 
       - name: Compile target
+        # Pin the native Linux player SDK to a checksum-verified upstream release.
+        env:
+          FVP_DEPS_URL: ${{ matrix.platform == 'linux' && 'https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0' || '' }}
+          FVP_DEPS_SHA256: ${{ matrix.platform == 'linux' && '9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c69b8a23d3e' || '' }}
         shell: bash
         run: ${{ matrix.command }}
 
       - name: Upload build output for QA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-${{ matrix.platform }}-qa
           path: ${{ matrix.artifact_path }}

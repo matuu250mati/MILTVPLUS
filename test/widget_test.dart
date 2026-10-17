@@ -5,14 +5,14 @@ import 'package:miltv_plus/core/supabase_config.dart';
 
 void main() {
   test('Supabase URL validation accepts only the canonical project URL', () {
-    expect(isValidSupabaseUrl('https://project-ref.supabase.co'), isTrue);
-    expect(isValidSupabaseUrl('https://project-ref.supabase.co/'), isTrue);
-    expect(isValidSupabaseUrl(' https://project-ref.supabase.co/// '), isTrue);
+    expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co'), isTrue);
+    expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co/'), isTrue);
+    expect(isValidSupabaseUrl(' https://abcdefghijklmnopqrst.supabase.co/// '), isTrue);
 
-    expect(isValidSupabaseUrl('http://project-ref.supabase.co'), isFalse);
-    expect(isValidSupabaseUrl('https://project-ref.supabase.co/rest/v1'), isFalse);
-    expect(isValidSupabaseUrl('https://supabase.com/dashboard/project/project-ref'), isFalse);
-    expect(isValidSupabaseUrl('https://project-ref.supabase.co?apikey=test'), isFalse);
+    expect(isValidSupabaseUrl('http://abcdefghijklmnopqrst.supabase.co'), isFalse);
+    expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co/rest/v1'), isFalse);
+    expect(isValidSupabaseUrl('https://supabase.com/dashboard/project/abcdefghijklmnopqrst'), isFalse);
+    expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co?apikey=test'), isFalse);
   });
 
   testWidgets('MILTVPLUS requires Supabase configuration and authentication before opening the catalog', (tester) async {

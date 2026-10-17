@@ -27,7 +27,9 @@ bool isValidSupabaseUrl(String value) {
   }
 
   final projectRef = uri.host.substring(0, uri.host.length - '.supabase.co'.length);
-  return RegExp(r'^[a-z0-9-]+$').hasMatch(projectRef);
+  // Supabase project refs are exactly 20 lowercase alphanumeric characters.
+  // Reject malformed refs before the client attempts network access.
+  return projectRef.length == 20 && RegExp(r'^[a-z0-9]{20}').hasMatch(projectRef);
 }
 
 String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
