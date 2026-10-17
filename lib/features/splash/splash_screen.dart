@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: ScaleTransition(
                   scale: _scale,
                   child: FittedBox(
-                    fit: BoxFit.contain,
+                    fit: BoxFit.contain, // Preserve the full composition on short or narrow TV viewports.
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                     children: [
