@@ -30,7 +30,7 @@ bool isValidSupabaseUrl(String value) {
   // Supabase project refs are exactly 20 lowercase alphanumeric characters.
   // Accepting shorter strings lets malformed refs pass validation and later
   // fail as DNS errors (curl error 6 / host not found).
-  return RegExp(r'^[a-z0-9]{20}
+  return projectRef.length == 20 && RegExp(r'^[a-z0-9]{20}').hasMatch(projectRef);
 }
 
 String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
