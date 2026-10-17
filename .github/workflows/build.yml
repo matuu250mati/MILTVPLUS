@@ -2,7 +2,7 @@ name: Build MILTVPLUS Android APK
 
 on:
   push:
-    branches: [main, 'qa/**']
+    branches: [main, 'qa/**', 'feat/**']
     tags: ['v*']
   pull_request:
     branches: [main, 'qa/**']
@@ -49,7 +49,7 @@ jobs:
 
       # Every PR build uses a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') || startsWith(github.ref, 'refs/heads/feat/') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -77,6 +77,7 @@ jobs:
         run: flutter test
 
       - name: Production backend preflight (read-only diagnostic)
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
         env:
           SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -128,7 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           QA_BACKEND_VALID=true
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
             # Resolve the QA project's real reference from Supabase's read-only
             # project listing when a Management API token is available. This avoids
@@ -173,7 +174,7 @@ jobs:
               SUPABASE_URL="https://$expected_ref.supabase.co"
               QA_BACKEND_VALID=true
               echo "Resolved isolated QA Supabase project."
-            elif [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+            elif [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
               # Keep CI compilation/tests useful without fabricating a distributable
               # APK. The upload step is skipped until a real isolated QA project exists.
               SUPABASE_URL="https://miltvplus-qa-placeholder.supabase.co"
@@ -337,6 +338,11 @@ jobs:
           fi
 
       - name: Build release APK
+        # Pin FVP's native Android SDK to an immutable upstream release. The
+        # default SourceForge nightly endpoint intermittently returns HTTP errors.
+        env:
+          FVP_DEPS_URL: https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0
+          FVP_DEPS_SHA256: ac9ee8a4d24bb8a3d8294ff60fada7244145b8469fc1abbff8a9d45458b4de6a
         shell: bash
         run: |
           set -euo pipefail
@@ -417,7 +423,7 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' && env.QA_BACKEND_VALID != 'false' }}
+        if: ${{ env.QA_BACKEND_VALID != 'false' && (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') || startsWith(github.ref, 'refs/heads/feat/')) }}
         uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-qa-apk

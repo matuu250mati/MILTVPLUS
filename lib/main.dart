@@ -92,8 +92,17 @@ class _StartupGateState extends State<_StartupGate> {
           _failed = false;
         });
       }, onError: (Object error, StackTrace stack) {
-        // The error is presented by the retry screen; avoid an unhandled
-        // asynchronous error from the background observer.
+        // If initialization fails after the UI timeout, clear the cached
+        // failed future so the next retry starts a fresh initialization.
+        if (!mounted) {
+          _supabaseInitialization = null;
+          return;
+        }
+        setState(() {
+          _supabaseInitialization = null;
+          _retrying = false;
+          _failed = true;
+        });
       }));
     } catch (_) {
       if (!mounted) return;

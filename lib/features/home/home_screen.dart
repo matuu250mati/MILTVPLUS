@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -5,13 +7,15 @@ import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_player_screen.dart';
+import '../notifications/notification_center.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onNavigate});
+  const HomeScreen({super.key, required this.onNavigate, this.onVoiceSearch});
 
   final ValueChanged<int> onNavigate;
+  final VoidCallback? onVoiceSearch;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,6 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _dataFuture = _loadData();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<_HomeData> _loadData() async {
@@ -42,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<ChannelModel>> _safeChannels() async {
     try {
-      return await _catalog.getChannels();
+      return await _catalog.getChannels(limit: 12);
     } catch (_) {
       return const [];
     }
@@ -50,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<MovieModel>> _safeMovies() async {
     try {
-      return await _catalog.getMovies();
+      return await _catalog.getMovies(limit: 12);
     } catch (_) {
       return const [];
     }
@@ -58,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<SeriesModel>> _safeSeries() async {
     try {
-      return await _catalog.getSeries();
+      return await _catalog.getSeries(limit: 12);
     } catch (_) {
       return const [];
     }
@@ -95,7 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     compact: compact,
                     onNavigate: widget.onNavigate,
                     onMenu: () => Scaffold.of(context).openDrawer(),
+                    onVoiceSearch: widget.onVoiceSearch ?? () => widget.onNavigate(8),
+                    onNotifications: () => NotificationCenter.show(context),
                   ),
+                  const SizedBox(height: 8),
+                  const _DateTimeLine(),
                   SizedBox(height: compact ? 14 : 20),
                   _HeroBanner(
                     compact: compact,
@@ -239,16 +252,73 @@ class _HomeData {
   final List<SeriesModel> series;
 }
 
+class _DateTimeLine extends StatefulWidget {
+  const _DateTimeLine();
+
+  @override
+  State<_DateTimeLine> createState() => _DateTimeLineState();
+}
+
+class _DateTimeLineState extends State<_DateTimeLine> {
+  late DateTime _now;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    final date = '${weekdays[_now.weekday - 1]}, ${_now.day} de ${months[_now.month - 1]} de ${_now.year}';
+    final time = '${_now.hour.toString().padLeft(2, '0')}:${_now.minute.toString().padLeft(2, '0')}';
+    return Row(
+      children: [
+        const Icon(Icons.calendar_month_rounded, size: 15, color: AppTheme.muted),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            date,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Icon(Icons.schedule_rounded, size: 15, color: AppTheme.accent),
+        const SizedBox(width: 5),
+        Text(time, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
+}
+
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader({
     required this.compact,
     required this.onNavigate,
     required this.onMenu,
+    required this.onVoiceSearch,
+    required this.onNotifications,
   });
 
   final bool compact;
   final ValueChanged<int> onNavigate;
   final VoidCallback onMenu;
+  final VoidCallback onVoiceSearch;
+  final VoidCallback onNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +328,9 @@ class _DashboardHeader extends StatelessWidget {
           tooltip: 'Abrir menú',
           onPressed: onMenu,
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.menu_rounded),
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: compact ? 32 : 42, height: compact ? 38 : 44),
+          icon: Icon(Icons.menu_rounded, size: compact ? 18 : 22),
         ),
         Container(
           width: compact ? 38 : 46,
@@ -300,13 +372,35 @@ class _DashboardHeader extends StatelessWidget {
         ),
         IconButton(
           tooltip: 'Buscar contenido',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: compact ? 32 : 42, height: compact ? 38 : 44),
           onPressed: () => onNavigate(8),
-          icon: const Icon(Icons.search_rounded),
+          icon: Icon(Icons.search_rounded, size: compact ? 18 : 22),
+        ),
+        IconButton(
+          tooltip: 'Buscar por voz',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: compact ? 32 : 42, height: compact ? 38 : 44),
+          onPressed: onVoiceSearch,
+          icon: Icon(Icons.mic_none_rounded, size: compact ? 18 : 22),
+        ),
+        IconButton(
+          tooltip: 'Novedades y notificaciones',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: compact ? 32 : 42, height: compact ? 38 : 44),
+          onPressed: onNotifications,
+          icon: Icon(Icons.notifications_none_rounded, size: compact ? 18 : 22),
         ),
         IconButton(
           tooltip: 'Configuración',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: compact ? 32 : 42, height: compact ? 38 : 44),
           onPressed: () => onNavigate(11),
-          icon: const Icon(Icons.settings_outlined),
+          icon: Icon(Icons.settings_outlined, size: compact ? 18 : 22),
         ),
       ],
     );

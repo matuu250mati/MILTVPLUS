@@ -10,6 +10,7 @@ import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/owner_publishing_screen.dart';
 import '../home/home_screen.dart';
+import '../home/startup_status_banner.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
@@ -45,11 +46,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   DateTime? _lastUpdateCheck;
   bool _updateDialogShowing = false;
   DateTime? _lastBackPressAt;
+  bool _voiceSearchRequested = false;
+  bool _showStartupStatus = true;
+  Timer? _startupStatusTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startupStatusTimer = Timer(const Duration(seconds: 15), () {
+      if (mounted) setState(() => _showStartupStatus = false);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _showWelcomeOnce();
       if (mounted) await _checkForUpdate();
@@ -63,6 +70,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _updateTimer?.cancel();
+    _startupStatusTimer?.cancel();
     super.dispose();
   }
 
@@ -185,12 +193,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return role == 'admin' || role == 'owner';
   }
 
+  void _requestVoiceSearch() {
+    setState(() {
+      selected = 8;
+      _voiceSearchRequested = true;
+    });
+  }
+
   Widget page() {
     switch (selected) {
       case 0:
         return LiveTvScreen(onBack: () => setState(() => selected = 1));
       case 1:
-        return HomeScreen(onNavigate: (index) => setState(() => selected = index));
+        return HomeScreen(
+          onNavigate: (index) => setState(() => selected = index),
+          onVoiceSearch: _requestVoiceSearch,
+        );
       case 2:
         return const CatalogScreen(category: 'PELÍCULAS');
       case 3:
@@ -204,7 +222,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       case 7:
         return const CatalogScreen(category: 'GRATIS');
       case 8:
-        return const CatalogScreen(category: 'EXPLORAR');
+        return CatalogScreen(
+          category: 'EXPLORAR',
+          startVoiceSearch: _voiceSearchRequested,
+          onVoiceSearchConsumed: () {
+            if (mounted && _voiceSearchRequested) {
+              setState(() => _voiceSearchRequested = false);
+            }
+          },
+        );
       case 9:
         return const OwnerPublishingScreen();
       case 10:
@@ -546,8 +572,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ),
       )),
       drawer: _buildDrawer(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+      body: Column(
+        children: [
+          if (_showStartupStatus && selected == 1)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: StartupStatusBanner(),
+            ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
           final wideLayout = constraints.maxWidth >= 1000;
           if (wideLayout) {
             return Row(
@@ -587,7 +621,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               ),
             ],
           );
-        },
+              },
+            ),
+          ),
+        ],
       ),
         ),
       ),

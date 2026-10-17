@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -7,9 +11,11 @@ import '../../services/catalog_service.dart';
 import 'catalog_player_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key, required this.category});
+  const CatalogScreen({super.key, required this.category, this.startVoiceSearch = false, this.onVoiceSearchConsumed});
 
   final String category;
+  final bool startVoiceSearch;
+  final VoidCallback? onVoiceSearchConsumed;
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -20,11 +26,79 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final _catalogService = CatalogService();
   late Future<List<_CatalogEntry>> _entriesFuture;
   bool _headerVisible = true;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _listening = false;
 
   @override
   void initState() {
     super.initState();
     _entriesFuture = _loadEntries();
+    if (widget.startVoiceSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startVoiceSearch());
+        widget.onVoiceSearchConsumed?.call();
+      });
+    }
+  }
+
+  Future<void> _startVoiceSearch() async {
+    final supported = kIsWeb || defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.windows;
+    if (!supported) {
+      _showSearchMessage('La búsqueda por voz no está disponible en este sistema. Podés usar el teclado del control remoto.');
+      return;
+    }
+    try {
+      final available = await _speech.initialize(
+        onStatus: (status) {
+          if (!mounted) return;
+          setState(() => _listening = status == 'listening');
+        },
+        onError: (error) {
+          if (!mounted) return;
+          setState(() => _listening = false);
+          _showSearchMessage('No se pudo reconocer la voz. Revisá el permiso del micrófono e intentá otra vez.');
+        },
+      );
+      if (!mounted) return;
+      if (!available) {
+        _showSearchMessage('El reconocimiento de voz no está disponible. Revisá el permiso del micrófono o usá el teclado del control remoto.');
+        return;
+      }
+      setState(() => _listening = true);
+      await _speech.listen(
+        listenOptions: stt.SpeechListenOptions(
+          localeId: 'es_AR',
+          listenFor: const Duration(seconds: 12),
+          pauseFor: const Duration(seconds: 3),
+        ),
+        onResult: (result) {
+          if (!mounted) return;
+          final words = result.recognizedWords.trim();
+          if (words.isNotEmpty) {
+            _searchController.value = TextEditingValue(
+              text: words,
+              selection: TextSelection.collapsed(offset: words.length),
+            );
+            setState(() {});
+          }
+          if (result.finalResult) {
+            setState(() => _listening = false);
+            unawaited(_speech.stop());
+          }
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _listening = false);
+        _showSearchMessage('No se pudo iniciar el micrófono. Usá el teclado del control remoto.');
+      }
+    }
+  }
+
+  void _showSearchMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 4)));
   }
 
   @override
@@ -37,6 +111,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   void dispose() {
+    unawaited(_speech.stop());
     _searchController.dispose();
     super.dispose();
   }
@@ -152,14 +227,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
           const SizedBox(height: 16),
           TextField(
+            autofocus: widget.category == 'EXPLORAR' && !widget.startVoiceSearch,
             controller: _searchController,
+            textInputAction: TextInputAction.search,
+            keyboardType: TextInputType.text,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: 'Buscar título, categoría o género',
               prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: query.isEmpty
-                  ? null
-                  : IconButton(
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: _listening ? 'Escuchando…' : 'Buscar por voz',
+                    onPressed: _listening ? () => unawaited(_speech.stop()) : () => unawaited(_startVoiceSearch()),
+                    icon: Icon(_listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                        color: _listening ? AppTheme.accent : null),
+                  ),
+                  if (query.isNotEmpty)
+                    IconButton(
                       tooltip: 'Borrar búsqueda',
                       onPressed: () {
                         _searchController.clear();
@@ -167,6 +253,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       },
                       icon: const Icon(Icons.close_rounded),
                     ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
