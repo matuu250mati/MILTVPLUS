@@ -40,8 +40,32 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$tmp_dir/miltv-scaffold"
 mkdir -p "$root_dir/android"
-# -n evita sobrescribir cualquier archivo nativo que ya exista.
-cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+# Copiar solo los archivos ausentes sin sobrescribir los recursos nativos existentes.
+# Se usa Python en vez de cp -Rn para evitar su advertencia de portabilidad entre coreutils.
+python3 - "$tmp_dir/miltv-scaffold/android" "$root_dir/android" <<'PY_COPY_MISSING'
+import os
+import pathlib
+import shutil
+import sys
+
+source = pathlib.Path(sys.argv[1])
+destination = pathlib.Path(sys.argv[2])
+destination.mkdir(parents=True, exist_ok=True)
+
+for current, directories, files in os.walk(source):
+    current_path = pathlib.Path(current)
+    relative = current_path.relative_to(source)
+    target_dir = destination / relative
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for directory in directories:
+        (target_dir / directory).mkdir(parents=True, exist_ok=True)
+    for filename in files:
+        src = current_path / filename
+        dst = target_dir / filename
+        if not dst.exists():
+            shutil.copy2(src, dst)
+        # Existing destination files are deliberately preserved.
+PY_COPY_MISSING
 ensure_min_android_sdk
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
