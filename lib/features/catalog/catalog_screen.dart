@@ -67,9 +67,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
       }
       setState(() => _listening = true);
       await _speech.listen(
-        localeId: 'es_AR',
-        listenFor: const Duration(seconds: 12),
-        pauseFor: const Duration(seconds: 3),
+        listenOptions: stt.SpeechListenOptions(
+          localeId: 'es_AR',
+          listenFor: const Duration(seconds: 12),
+          pauseFor: const Duration(seconds: 3),
+        ),
         onResult: (result) {
           if (!mounted) return;
           final words = result.recognizedWords.trim();
