@@ -10,6 +10,7 @@ import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/owner_publishing_screen.dart';
 import '../home/home_screen.dart';
+import '../home/startup_status_banner.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
@@ -46,11 +47,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _updateDialogShowing = false;
   DateTime? _lastBackPressAt;
   bool _voiceSearchRequested = false;
+  bool _showStartupStatus = true;
+  Timer? _startupStatusTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startupStatusTimer = Timer(const Duration(seconds: 15), () {
+      if (mounted) setState(() => _showStartupStatus = false);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _showWelcomeOnce();
       if (mounted) await _checkForUpdate();
@@ -64,6 +70,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _updateTimer?.cancel();
+    _startupStatusTimer?.cancel();
     super.dispose();
   }
 
@@ -565,8 +572,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ),
       )),
       drawer: _buildDrawer(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+      body: Column(
+        children: [
+          if (_showStartupStatus && selected == 1)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: StartupStatusBanner(),
+            ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
           final wideLayout = constraints.maxWidth >= 1000;
           if (wideLayout) {
             return Row(
@@ -606,7 +621,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               ),
             ],
           );
-        },
+              },
+            ),
+          ),
+        ],
       ),
         ),
       ),
