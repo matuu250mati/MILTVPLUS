@@ -94,7 +94,7 @@ class _StartupStatusBannerState extends State<StartupStatusBanner> {
   Widget build(BuildContext context) {
     final user = _user;
     final connected = user != null;
-    final verified = user?.emailConfirmedAt != null;
+    final verified = user?.emailConfirmedAt != null || user?.phoneConfirmedAt != null;
     final internetLabel = _internetAvailable == null
         ? 'Comprobando internet…'
         : _internetAvailable!
