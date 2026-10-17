@@ -49,6 +49,18 @@ El workflow `.github/workflows/build.yml` se ejecuta en cada push a `main` o man
 - **Formatos de reproducción previstos:** HLS (.m3u8) y MP4 cuando el códec sea compatible con el dispositivo; subtítulos y pistas de audio dependen del formato y del reproductor.
 - **Catálogo:** conectar únicamente fuentes propias o licenciadas. No se incluyen películas, canales ni enlaces de terceros sin autorización.
 
+## Instaladores nativos de escritorio
+
+MILTVPLUS no se distribuye como APK en Windows o Linux: cada sistema necesita su propio paquete nativo.
+
+- **Android / Android TV / TV Box:** APK de Android, firmado y verificado por el workflow Android antes de una publicación oficial.
+- **Windows x64:** instalador `.exe` creado con Inno Setup. Instala el ejecutable Flutter, sus DLL y los recursos necesarios, crea accesos directos y permite desinstalar desde Configuración de Windows.
+- **Linux x86_64 (Debian/Ubuntu y derivados compatibles):** paquete instalable `.deb`, con lanzador de aplicación y entrada de menú. Requiere las bibliotecas GTK 3 y dependencias declaradas en el paquete.
+
+El workflow `.github/workflows/desktop-packages.yml` está preparado para generar los instaladores de escritorio cuando termina correctamente la publicación Android y también permite ejecutarse manualmente contra una Release existente. Los adjunta a esa misma GitHub Release junto con archivos SHA-256 para comprobar integridad.
+
+**Limitaciones de distribución:** el instalador Windows aún no lleva firma Authenticode de Microsoft; hasta configurar un certificado de firma de código, Windows puede mostrar una advertencia de SmartScreen. El paquete Linux de esta fase es para arquitectura x86_64 y distribuciones Debian/Ubuntu compatibles; no es un instalador universal para todas las distribuciones. macOS/iOS requieren un flujo de distribución distinto y no se declaran instalables desde este workflow. La creación del paquete no sustituye las pruebas reales de inicio de sesión, catálogo, reproducción y dispositivos.
+
 ## Propuestas de contenido
 
 La opción PUBLICAR permite a usuarios autenticados proponer películas o episodios con título, descripción, duración y URL de reproducción. Cada envío queda pendiente y no se publica automáticamente. Aplicá `supabase/migrations/20261013090200_user_content_submissions.sql` en el SQL Editor de Supabase. Un moderador debe verificar los derechos y la seguridad del enlace antes de publicar el contenido en el catálogo.
