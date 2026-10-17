@@ -230,6 +230,7 @@ jobs:
           echo "QA_BACKEND_VALID=$QA_BACKEND_VALID" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (QA diagnostic; production is blocked on failure)
+        if: ${{ env.QA_BACKEND_VALID != 'false' }}
         env:
           VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
