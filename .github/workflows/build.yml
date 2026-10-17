@@ -99,6 +99,20 @@ jobs:
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
+
+          # Fail closed for every QA pull-request build and every push to a QA branch.
+          # Never print SUPABASE_URL or any credential to the logs.
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+            expected_ref="uqofvrynlyterjylpoj"
+            actual_ref="${SUPABASE_URL#https://}"
+            actual_ref="${actual_ref%.supabase.co}"
+            if [[ "$actual_ref" != "$expected_ref" ]]; then
+              echo "::error::QA build refused: Supabase project is not the approved isolated QA project."
+              exit 1
+            fi
+            echo "Supabase destination verified for isolated QA."
+          fi
+
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
             exit 1
