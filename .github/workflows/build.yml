@@ -165,7 +165,9 @@ jobs:
                   ref = str(project.get("id", "")).strip()
                   if re.fullmatch(r"[a-z0-9]{20}", ref):
                       safe_name = name.replace("\\n", " ").replace("\\r", " ")[:80]
-                      print(f"{safe_name or '(unnamed project)'} [{ref}]")
+                      if not safe_name:
+                          safe_name = "unnamed project"
+                      print(f"{safe_name} [{ref}]")
           ' 2>/dev/null || true)"
                   if [[ -n "$candidate_lines" ]]; then
                     while IFS= read -r candidate_line; do
