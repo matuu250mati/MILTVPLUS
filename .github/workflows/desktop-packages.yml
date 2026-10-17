@@ -154,9 +154,13 @@ jobs:
         run: flutter pub get
 
       - name: Build native Linux application
+        # Use an immutable upstream SDK archive and verify its SHA-256 instead
+        # of relying on the mutable SourceForge nightly endpoint.
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FVP_DEPS_URL: https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0
+          FVP_DEPS_SHA256: 9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c24e2db8a7b9
         shell: bash
         run: |
           set -euo pipefail
