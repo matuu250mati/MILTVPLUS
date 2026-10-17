@@ -163,16 +163,16 @@ jobs:
                       continue
                   name = str(project.get("name", "")).strip()
                   ref = str(project.get("id", "")).strip()
-                  if re.fullmatch(r"[a-z0-9]{20}", ref) and re.search(r"qa|miltvplus", name, re.I):
+                  if re.fullmatch(r"[a-z0-9]{20}", ref):
                       safe_name = name.replace("\\n", " ").replace("\\r", " ")[:80]
-                      print(f"{safe_name} [{ref}]")
+                      print(f"{safe_name or '(unnamed project)'} [{ref}]")
           ' 2>/dev/null || true)"
                   if [[ -n "$candidate_lines" ]]; then
                     while IFS= read -r candidate_line; do
                       [[ -n "$candidate_line" ]] && echo "::notice::Accessible Supabase candidate (diagnostic only): $candidate_line"
                     done <<< "$candidate_lines"
                   else
-                    echo "::notice::Supabase Management API responded, but no accessible project name matched QA/MILTVPLUS. No project was selected."
+                    echo "::notice::Supabase Management API returned no valid project references. No project was selected."
                   fi
                 else
                   echo "::warning::Could not query Supabase Management API. Check token permissions; no project was selected."
@@ -222,7 +222,7 @@ jobs:
             elif [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
               # Keep CI compilation/tests useful without fabricating a distributable
               # APK. The upload step is skipped until a real isolated QA project exists.
-              SUPABASE_URL="https://miltvplus-qa-placeholder.supabase.co"
+              SUPABASE_URL="https://miltvplusqa000000000.supabase.co"
               SUPABASE_ANON_KEY="ci-placeholder-key-not-for-distribution"
               QA_BACKEND_VALID=false
               echo "::warning::No accessible, valid MILTVPLUS-QA project was found. This run is compile/test-only; no QA APK will be uploaded."
