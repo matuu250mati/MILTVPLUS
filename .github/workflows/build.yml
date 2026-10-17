@@ -27,10 +27,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -76,19 +76,118 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Production backend preflight (read-only diagnostic)
+        env:
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(printf '%s' "$SUPABASE_PRODUCTION_URL" | xargs)"
+          while [[ "$url" == */ ]]; do url="${url%/}"; done
+          if [[ -z "$url" || -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" || ! "$url" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
+            echo "::warning::Production backend preflight skipped: production URL/key configuration is missing or malformed."
+            exit 0
+          fi
+          declare -A required_columns=(
+            [channels]="title,url_stream,is_published,sort_order,logo"
+            [movies]="title,url_stream,is_published,created_at"
+            [series]="title,is_published"
+            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
+          )
+          failed=0
+          for table in channels movies series episodes content_submissions; do
+            query="select=${required_columns[$table]}&limit=0"
+            status="$(curl --silent --show-error --max-time 8 \
+              --output /dev/null --write-out '%{http_code}' \
+              --header "apikey: $SUPABASE_PRODUCTION_ANON_KEY" \
+              "$url/rest/v1/$table?$query" || true)"
+            if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+              echo "Production backend preflight passed: $table (HTTP $status)."
+            else
+              echo "::warning::Production backend preflight could not verify $table (HTTP ${status:-no-response}); no data was changed."
+              failed=1
+            fi
+          done
+          if [[ "$failed" -ne 0 ]]; then
+            echo "### Production backend preflight: warnings" >> "$GITHUB_STEP_SUMMARY"
+            echo "At least one production API/schema check did not return HTTP 2xx. This diagnostic is read-only; production release gates remain enforced by the release workflow." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Production backend preflight: passed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Validate Supabase configuration
         env:
           SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+          QA_BACKEND_VALID=true
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
-            SUPABASE_URL="$SUPABASE_QA_URL"
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
-            expected_ref="uqofvrynlyterjylpoj"
+            # Resolve the QA project's real reference from Supabase's read-only
+            # project listing when a Management API token is available. This avoids
+            # hardcoding a mistyped reference into every QA APK. Never print the token.
+            expected_ref=""
+            if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
+              projects_json="$(curl --fail --silent --show-error --max-time 20 \
+                --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                https://api.supabase.com/v1/projects 2>/dev/null || true)"
+              if [[ -n "$projects_json" ]]; then
+                expected_ref="$(printf '%s' "$projects_json" | python3 -c '
+          import json, re, sys
+          try:
+              projects = json.load(sys.stdin)
+          except Exception:
+              sys.exit(0)
+          def normalized_name(value):
+              return re.sub(r"[^a-z0-9]", "", str(value).casefold())
+          matches = [p for p in projects if normalized_name(p.get("name", "")) == "miltvplusqa"]
+          if len(matches) == 1:
+              ref = str(matches[0].get("id", "")).strip()
+              if re.fullmatch(r"[a-z0-9]{20}", ref):
+                  print(ref)
+                  sys.exit(0)
+          candidates = [
+              {"name": p.get("name", ""), "ref": p.get("id", "")}
+              for p in projects
+              if "miltvplus" in normalized_name(p.get("name", "")) or "qa" in normalized_name(p.get("name", ""))
+          ]
+          print("QA project not resolved; accessible QA/MILTVPLUS project candidates: %s" % json.dumps(candidates), file=sys.stderr)
+          ' 2>/dev/null || true)"
+              fi
+            else
+              candidate_ref="${SUPABASE_QA_URL#https://}"
+              candidate_ref="${candidate_ref%.supabase.co}"
+              if [[ "$candidate_ref" =~ ^[a-z0-9]{20}$ && "$SUPABASE_QA_URL" == "https://$candidate_ref.supabase.co" ]]; then
+                expected_ref="$candidate_ref"
+              fi
+            fi
+
+            if [[ -n "$expected_ref" ]]; then
+              SUPABASE_URL="https://$expected_ref.supabase.co"
+              QA_BACKEND_VALID=true
+              echo "Resolved isolated QA Supabase project."
+            elif [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+              # Keep CI compilation/tests useful without fabricating a distributable
+              # APK. The upload step is skipped until a real isolated QA project exists.
+              SUPABASE_URL="https://miltvplus-qa-placeholder.supabase.co"
+              SUPABASE_ANON_KEY="ci-placeholder-key-not-for-distribution"
+              QA_BACKEND_VALID=false
+              echo "::warning::No accessible, valid MILTVPLUS-QA project was found. This run is compile/test-only; no QA APK will be uploaded."
+              {
+                echo "### QA backend: not configured"
+                echo "No valid isolated QA project was resolved. Compile/tests may run, but the QA APK artifact is intentionally withheld."
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Production build cannot proceed through the QA configuration path."
+              exit 1
+            fi
           else
             SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
             SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
@@ -128,8 +227,12 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "QA_BACKEND_VALID=$QA_BACKEND_VALID" >> "$GITHUB_ENV"
 
-      - name: Verify required Supabase schema (diagnostic; APK build continues)
+      - name: Verify required Supabase schema (QA diagnostic; production is blocked on failure)
+        if: ${{ env.QA_BACKEND_VALID != 'false' }}
+        env:
+          VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -160,10 +263,16 @@ jobs:
           done
           if [[ "$failed" -ne 0 ]]; then
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
+              echo "### Supabase schema validation: BLOCKED"
+              echo "One or more required tables could not be reached or did not match the app schema."
+              echo "Do not publish this build as a production release until every required table passes and the app's backend is reachable."
+              echo 'See supabase/SETUP_ES.md and the job log for table-level details.'
             } >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || ( "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ) ]]; then
+              echo "::error::Production release blocked: required Supabase schema/network checks failed."
+              exit 1
+            fi
+            echo "::warning::QA APK only: Supabase backend checks failed; database-backed functionality is not certified."
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -235,7 +344,7 @@ jobs:
             --dart-define="SUPABASE_URL=$SUPABASE_URL_NORMALIZED" \
             --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
-      - name: Verify release APK signature
+      - name: Verify APK signature and production certificate
         env:
           VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
@@ -243,19 +352,19 @@ jobs:
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
-          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
-            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
-            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
-            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
-            verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
-              printf '%s\n' "$verification_output"
-              echo "::error::The release APK signature is invalid."
-              exit 1
-            }
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the APK signature."; exit 1; }
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the APK signature."; exit 1; }
+          verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
             printf '%s\n' "$verification_output"
-            # Parse SHA-256 without relying on exact signer numbering, capitalization,
-            # colon formatting, or whitespace used by different build-tools versions.
+            echo "::error::The APK signature is invalid."
+            exit 1
+          }
+          printf '%s\n' "$verification_output"
+          echo "APK signature verified cryptographically."
+
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
             actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
               tolower($0) ~ /certificate sha-256 digest:/ {
                 line = tolower($0)
@@ -274,9 +383,9 @@ jobs:
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
             }
-            echo "Production APK signature is valid and matches the configured keystore certificate."
+            echo "Production APK signature matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing verification was not requested."
+            echo "QA APK signature is valid; this artifact is CI-signed and is not the production-signed release."
           fi
 
       - name: Name APK and generate SHA-256 checksum
@@ -308,8 +417,8 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' && env.QA_BACKEND_VALID != 'false' }}
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-qa-apk
           path: |
@@ -322,7 +431,7 @@ jobs:
 
       - name: Upload verified production APK and checksum as workflow artifacts
         if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-release-apk
           path: |
