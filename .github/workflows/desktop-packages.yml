@@ -1,0 +1,213 @@
+name: Native desktop installers
+
+on:
+  workflow_run:
+    workflows: ["Build MILTVPLUS Android APK"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing verified GitHub Release tag, for example v3.10.8"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: miltvplus-desktop-release-${{ github.event.workflow_run.head_branch || inputs.release_tag || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           startsWith(github.event.workflow_run.head_branch, 'v') &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      sha: ${{ steps.meta.outputs.sha }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Check out the exact Android release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.release_tag }}
+
+      - name: Validate release tag, production backend and existing Android release
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          EVENT_TAG: ${{ github.event.workflow_run.head_branch }}
+          MANUAL_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then tag="$MANUAL_TAG"; else tag="$EVENT_TAG"; fi
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Expected a version tag such as v3.10.8."; exit 1; }
+          version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
+          [[ -n "$version" && "$tag" == "v$version" ]] || { echo "::error::Release tag and pubspec.yaml version do not match."; exit 1; }
+          [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] || { echo "::error::SUPABASE_URL is missing or malformed; refusing to package a nonfunctional desktop build."; exit 1; }
+          [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]] || { echo "::error::SUPABASE_ANON_KEY is missing or malformed."; exit 1; }
+          gh release view "$tag" >/dev/null
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Validated existing release $tag and required production configuration without printing secrets."
+
+  windows-installer:
+    needs: prepare
+    if: ${{ needs.prepare.result == 'success' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Windows runner
+        shell: pwsh
+        run: flutter create --platforms=windows --project-name miltv_plus --org com.miltvplus .
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build native Windows application
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) { throw "Production backend configuration is required." }
+          flutter analyze
+          flutter test
+          flutter build windows --release "--dart-define=SUPABASE_URL=$env:SUPABASE_URL" "--dart-define=SUPABASE_ANON_KEY=$env:SUPABASE_ANON_KEY"
+          if (-not (Test-Path "build/windows/x64/runner/Release/miltv_plus.exe")) { throw "Windows executable missing after build." }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Create Windows setup installer and checksum
+        env:
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $source = (Resolve-Path "build/windows/x64/runner/Release").Path
+          $output = (Resolve-Path "dist").Path
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/windows/MILTVPLUS.iss" "/DAppVersion=$env:APP_VERSION" "/DSourceDir=$source" "/DOutputDir=$output"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          $installer = Get-ChildItem dist -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not created." }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content "$($installer.FullName).sha256" -Encoding ascii
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v5
+        with:
+          name: MILTVPLUS-Windows-x64-installer
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  linux-deb:
+    needs: prepare
+    if: ${{ needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev dpkg-dev
+
+      - name: Generate Linux runner
+        run: flutter create --platforms=linux --project-name miltv_plus --org com.miltvplus .
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build native Linux application
+        # Use an immutable upstream SDK archive and verify its SHA-256 instead
+        # of relying on the mutable SourceForge nightly endpoint.
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FVP_DEPS_URL: https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0
+          FVP_DEPS_SHA256: 9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c69b8a23d3e
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$SUPABASE_URL" && -n "$SUPABASE_ANON_KEY" ]] || { echo "::error::Production backend configuration is required."; exit 1; }
+          flutter analyze
+          flutter test
+          flutter build linux --release \
+            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
+            --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+          test -x build/linux/x64/release/bundle/miltv_plus
+
+      - name: Package Debian installer and checksum
+        env:
+          APP_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          bash installer/linux/build-deb.sh "$APP_VERSION" build/linux/x64/release/bundle dist
+          (cd dist && sha256sum "MILTVPLUS-$APP_VERSION-Linux-amd64.deb" > "MILTVPLUS-$APP_VERSION-Linux-amd64.deb.sha256")
+
+      - name: Upload Linux installer
+        uses: actions/upload-artifact@v5
+        with:
+          name: MILTVPLUS-Linux-amd64-deb
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-desktop-installers:
+    needs: [prepare, windows-installer, linux-deb]
+    if: ${{ needs.prepare.result == 'success' && needs.windows-installer.result == 'success' && needs.linux-deb.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download native installers
+        uses: actions/download-artifact@v5
+        with:
+          pattern: MILTVPLUS-*
+          path: dist
+          merge-multiple: true
+
+      - name: Attach installers to the existing verified GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_TAG"
+          test -n "$(find dist -maxdepth 1 -type f | head -n 1)"
+          gh release upload "$RELEASE_TAG" dist/* --clobber
+          echo "Attached Windows and Linux native installers plus SHA-256 checksums to $RELEASE_TAG."

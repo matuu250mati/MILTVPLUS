@@ -2,9 +2,9 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main, master, 'qa/**']
+    branches: [main, master, 'qa/**', 'feat/**']
   pull_request:
-    branches: [main, master, 'qa/**']
+    branches: [main, master, 'qa/**', 'fix/apk-signature-and-ci-warnings-2026-10-17']
   workflow_dispatch:
 
 permissions:
@@ -87,8 +87,63 @@ jobs:
         run: flutter pub get
 
       - name: Compile target
+        # Pin the native Linux player SDK to a checksum-verified upstream release.
+        env:
+          FVP_DEPS_URL: ${{ matrix.platform == 'linux' && 'https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0' || '' }}
+          FVP_DEPS_SHA256: ${{ matrix.platform == 'linux' && '9ce29b1c29aa2d051e52f50af8a1578ab80f6d17955a2935514e1c69b8a23d3e' || '' }}
         shell: bash
         run: ${{ matrix.command }}
+
+      - name: Package and validate Windows installer
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+]+)\+').Matches[0].Groups[1].Value
+          if (-not $version) { throw "Could not read app version from pubspec.yaml." }
+          choco install innosetup --yes --no-progress
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $source = (Resolve-Path "build/windows/x64/runner/Release").Path
+          $output = (Resolve-Path "dist").Path
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/windows/MILTVPLUS.iss" "/DAppVersion=$version" "/DSourceDir=$source" "/DOutputDir=$output"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          $installer = Get-ChildItem dist -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer -or $installer.Length -le 0) { throw "Windows installer is missing or empty." }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content "$($installer.FullName).sha256" -Encoding ascii
+
+      - name: Package and validate Linux Debian installer
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
+          [[ -n "$version" ]] || { echo "::error::Could not read app version from pubspec.yaml."; exit 1; }
+          mkdir -p dist
+          bash installer/linux/build-deb.sh "$version" build/linux/x64/release/bundle dist
+          package="dist/MILTVPLUS-$version-Linux-amd64.deb"
+          test -s "$package"
+          dpkg-deb --info "$package"
+          (cd dist && sha256sum "MILTVPLUS-$version-Linux-amd64.deb" > "MILTVPLUS-$version-Linux-amd64.deb.sha256")
+          (cd dist && sha256sum --check "MILTVPLUS-$version-Linux-amd64.deb.sha256")
+
+      - name: Upload validated Windows installer for QA
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v5
+        with:
+          name: MILTVPLUS-Windows-x64-installer-qa
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload validated Linux installer for QA
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v5
+        with:
+          name: MILTVPLUS-Linux-amd64-deb-qa
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload build output for QA
         uses: actions/upload-artifact@v5
