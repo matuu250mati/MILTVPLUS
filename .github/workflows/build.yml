@@ -101,9 +101,20 @@ jobs:
               expected_ref="$(printf '%s' "$projects_json" | python3 -c '
           import json, re, sys
           projects = json.load(sys.stdin)
-          matches = [p for p in projects if str(p.get("name", "")).strip().casefold() == "miltvplus-qa"]
+          def normalized_name(value):
+              return re.sub(r"[^a-z0-9]", "", str(value).casefold())
+          matches = [
+              p for p in projects
+              if normalized_name(p.get("name", "")) == "miltvplusqa"
+          ]
           if len(matches) != 1:
-              print("ERROR: expected exactly one Supabase project named MILTVPLUS-QA; found %d" % len(matches), file=sys.stderr)
+              candidates = [
+                  {"name": p.get("name", ""), "ref": p.get("id", "")}
+                  for p in projects
+                  if "miltvplus" in normalized_name(p.get("name", ""))
+                  or "qa" in normalized_name(p.get("name", ""))
+              ]
+              print("ERROR: expected exactly one normalized MILTVPLUS-QA project; found %d. Accessible QA/MILTVPLUS project candidates: %s" % (len(matches), json.dumps(candidates)), file=sys.stderr)
               sys.exit(2)
           ref = str(matches[0].get("id", "")).strip()
           if not re.fullmatch(r"[a-z0-9]{20}", ref):
