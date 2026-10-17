@@ -834,11 +834,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // mapped to its own widgets; stale indices previously mixed account,
     // storage, accessibility and help content between sections.
     final sectionIndices = <String, List<int>>{
-      'account': [4, 5, 14],
-      'profile': [6, 7],
-      'content': [8, 9, 10, 11, 12],
-      'app': [16, 17, 20, 21, 26],
-      'help': [18, 19, 22, 23, 24, 25],
+      // Keep these indices aligned with the allSections entries above:
+      // account security (4), profile (6), provider (8), playlist import (10),
+      // account management (12), storage (14), info (16), guide (18),
+      // FAQ (20), and updates (22). Do not include spacer-only entries.
+      'account': [4, 12],
+      'profile': [6],
+      'content': [8, 10],
+      'app': [14, 16, 22],
+      'help': [18, 20],
     };
     final indices = sectionIndices[section] ?? const <int>[];
     final titles = <String, String>{
