@@ -12,15 +12,6 @@ import '../../core/theme/app_theme.dart';
 class StartupStatusBanner extends StatefulWidget {
   const StartupStatusBanner({super.key});
 
-  static bool _shownThisProcess = false;
-
-  /// Claims the single startup display for this app process.
-  static bool claimForSession() {
-    if (_shownThisProcess) return false;
-    _shownThisProcess = true;
-    return true;
-  }
-
   @override
   State<StartupStatusBanner> createState() => _StartupStatusBannerState();
 }
