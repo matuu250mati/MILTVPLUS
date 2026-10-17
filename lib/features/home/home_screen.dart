@@ -313,7 +313,7 @@ class _DateTimeLineState extends State<_DateTimeLine> {
         const SizedBox(width: 10),
         const Icon(Icons.schedule_rounded, size: 15, color: AppTheme.accent),
         const SizedBox(width: 5),
-        Text(time, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800, fontFeatures: [])),
+        Text(time, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
       ],
     );
   }
