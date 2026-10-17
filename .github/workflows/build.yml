@@ -142,6 +142,43 @@ jobs:
             candidate_ref="$(qa_project_ref_from_url "$SUPABASE_QA_URL" || true)"
             if [[ -z "$candidate_ref" ]]; then
               echo "::warning::QA project URL is malformed; expected https://<20-character-project-ref>.supabase.co."
+              # Diagnostic only: if the URL is bad, use the Management API (when
+              # authorized) to discover whether an accessible QA/MILTVPLUS project
+              # exists. Never select or publish against a discovered project automatically.
+              if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
+                diagnostic_projects="$(curl --fail --silent --show-error --max-time 20 \
+                  --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                  https://api.supabase.com/v1/projects 2>/dev/null || true)"
+                if [[ -n "$diagnostic_projects" ]]; then
+                  candidate_lines="$(printf '%s' "$diagnostic_projects" | python3 -c '
+import json, re, sys
+try:
+    projects = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+if isinstance(projects, list):
+    for project in projects:
+        if not isinstance(project, dict):
+            continue
+        name = str(project.get("name", "")).strip()
+        ref = str(project.get("id", "")).strip()
+        if re.fullmatch(r"[a-z0-9]{20}", ref) and re.search(r"qa|miltvplus", name, re.I):
+            safe_name = name.replace("\\n", " ").replace("\\r", " ")[:80]
+            print(f"{safe_name} [{ref}]")
+' 2>/dev/null || true)"
+                  if [[ -n "$candidate_lines" ]]; then
+                    while IFS= read -r candidate_line; do
+                      [[ -n "$candidate_line" ]] && echo "::notice::Accessible Supabase candidate (diagnostic only): $candidate_line"
+                    done <<< "$candidate_lines"
+                  else
+                    echo "::notice::Supabase Management API responded, but no accessible project name matched QA/MILTVPLUS. No project was selected."
+                  fi
+                else
+                  echo "::warning::Could not query Supabase Management API. Check token permissions; no project was selected."
+                fi
+              else
+                echo "::warning::SUPABASE_ACCESS_TOKEN is not configured, so CI cannot inspect the Supabase account for a project while the QA URL is malformed."
+              fi
             else
               if qa_url_points_to_production "$SUPABASE_QA_URL" "$SUPABASE_PRODUCTION_URL"; then
                 echo "::error::QA backend points to the production Supabase project. Refusing to build a QA package against production."
