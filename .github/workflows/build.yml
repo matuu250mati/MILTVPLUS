@@ -27,10 +27,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -235,7 +235,7 @@ jobs:
             --dart-define="SUPABASE_URL=$SUPABASE_URL_NORMALIZED" \
             --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
-      - name: Verify release APK signature
+      - name: Verify APK signature and production certificate
         env:
           VERIFY_PRODUCTION_SIGNING: ${{ inputs.verify_production_signing || false }}
         shell: bash
@@ -243,19 +243,19 @@ jobs:
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
-          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
-            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
-            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
-            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
-            verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
-              printf '%s\n' "$verification_output"
-              echo "::error::The release APK signature is invalid."
-              exit 1
-            }
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the APK signature."; exit 1; }
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the APK signature."; exit 1; }
+          verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
             printf '%s\n' "$verification_output"
-            # Parse SHA-256 without relying on exact signer numbering, capitalization,
-            # colon formatting, or whitespace used by different build-tools versions.
+            echo "::error::The APK signature is invalid."
+            exit 1
+          }
+          printf '%s\n' "$verification_output"
+          echo "APK signature verified cryptographically."
+
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
             actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
               tolower($0) ~ /certificate sha-256 digest:/ {
                 line = tolower($0)
@@ -274,9 +274,9 @@ jobs:
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
             }
-            echo "Production APK signature is valid and matches the configured keystore certificate."
+            echo "Production APK signature matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing verification was not requested."
+            echo "QA APK signature is valid; this artifact is CI-signed and is not the production-signed release."
           fi
 
       - name: Name APK and generate SHA-256 checksum
@@ -309,7 +309,7 @@ jobs:
 
       - name: Upload QA APK and checksum
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-qa-apk
           path: |
@@ -322,7 +322,7 @@ jobs:
 
       - name: Upload verified production APK and checksum as workflow artifacts
         if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-release-apk
           path: |
