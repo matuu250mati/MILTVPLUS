@@ -114,3 +114,22 @@ Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitad
 8. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
 
 La compilación de GitHub Actions solo verifica el código y construye el APK; no confirma que esta configuración ya esté aplicada a la base de datos real.
+
+## Diagnóstico actual de QA y DNS — 17/10/2026
+
+La ejecución de GitHub Actions `39057209226` comprobó el backend de producción mediante consultas de solo lectura: `channels`, `movies`, `series`, `episodes` y `content_submissions` respondieron HTTP 200. Esto confirma que esas cinco consultas resolvieron las columnas requeridas; no certifica por sí solo el inicio de sesión ni las políticas RLS de todos los flujos.
+
+La misma ejecución detectó que la URL de QA configurada no tiene una referencia válida de 20 caracteres. La API de administración de Supabase mostró el proyecto accesible `MILTV` con referencia `mkdubrwdgorpobbrxdzy`, pero no devolvió un proyecto QA accesible. La compilación utilizó deliberadamente una URL y una clave de marcador de posición, omitió la prueba DNS/schema y no subió el APK. Ese APK no debe instalarse como build QA funcional.
+
+### Pasos obligatorios para desbloquear QA
+
+1. En el panel de Supabase, crear un proyecto nuevo y separado llamado `MILTVPLUS-QA` dentro de la organización `MILTV`. No reutilizar el proyecto de producción ni elegirlo por el nombre solamente.
+2. Copiar la referencia real de 20 caracteres desde la configuración del proyecto QA recién creado. La URL raíz debe ser exactamente `https://<ref-real-de-20-caracteres>.supabase.co`.
+3. En GitHub, abrir **Settings → Secrets and variables → Actions → Repository secrets** y establecer `SUPABASE_QA_URL` y `SUPABASE_QA_ANON_KEY` con los valores del proyecto QA. Si se usa la verificación automática de identidad, comprobar también que `SUPABASE_ACCESS_TOKEN` tiene permiso de lectura sobre ese proyecto. No pegar secretos en el repositorio, en commits ni en el chat.
+4. Aplicar y revisar las migraciones únicamente en el proyecto QA, después de inspeccionar el estado inicial de su esquema. No ejecutar estas instrucciones en producción.
+5. Volver a ejecutar el workflow. La aceptación requiere que la validación de URL pase, la consulta DNS no esté omitida y las cinco comprobaciones de esquema devuelvan HTTP 2xx. Después debe generarse y subirse el artefacto `MILTVPLUS-qa-apk` con su checksum.
+6. Instalar ese APK QA en el teléfono y validar login y carga real del catálogo. Solo después de completar esa prueba se puede considerar el backend QA validado.
+
+### Protección de versiones y datos existentes
+
+No se deben borrar carpetas, migraciones, recursos de marca, historial de Git, ramas ni versiones anteriores basándose únicamente en su antigüedad. Antes de retirar cualquier elemento hay que demostrar que no lo referencia la versión actual, que no contiene datos necesarios y que no forma parte de un mecanismo de recuperación. Esta corrección no elimina ni sobrescribe datos de producción o recursos heredados.
