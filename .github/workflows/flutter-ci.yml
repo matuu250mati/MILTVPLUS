@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest validation run for each branch; stale matrix builds
+# otherwise consume runners while a newer fix is waiting in the queue.
+concurrency:
+  group: miltvplus-flutter-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
