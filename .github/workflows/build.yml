@@ -78,11 +78,22 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_URL || secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
+            SUPABASE_URL="$SUPABASE_QA_URL"
+            SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
+            expected_ref="uqofvrynlyterjylpoj"
+          else
+            SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
+            SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
+            expected_ref=""
+          fi
           if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
@@ -100,10 +111,8 @@ jobs:
             exit 1
           fi
 
-          # Fail closed for every QA pull-request build and every push to a QA branch.
-          # Never print SUPABASE_URL or any credential to the logs.
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
-            expected_ref="uqofvrynlyterjylpoj"
+          # Never print the URL or credentials. QA must match its isolated project exactly.
+          if [[ -n "$expected_ref" ]]; then
             actual_ref="${SUPABASE_URL#https://}"
             actual_ref="${actual_ref%.supabase.co}"
             if [[ "$actual_ref" != "$expected_ref" ]]; then
@@ -120,9 +129,6 @@ jobs:
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
-
-        env:
-          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -221,8 +227,6 @@ jobs:
           fi
 
       - name: Build release APK
-        env:
-          SUPABASE_ANON_KEY: ${{ (github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/')) && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
