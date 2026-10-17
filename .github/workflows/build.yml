@@ -142,9 +142,18 @@ jobs:
             if [[ ! "$candidate_ref" =~ ^[a-z0-9]{20}$ || "$SUPABASE_QA_URL" != "https://$candidate_ref.supabase.co" ]]; then
               echo "::warning::QA project URL is malformed; expected https://<20-character-project-ref>.supabase.co."
             else
-              production_ref="${SUPABASE_PRODUCTION_URL#https://}"
-              production_ref="${production_ref%.supabase.co}"
-              if [[ "$SUPABASE_PRODUCTION_URL" == "https://$candidate_ref.supabase.co" || ( "$production_ref" =~ ^[a-z0-9]{20}$ && "$candidate_ref" == "$production_ref" ) ]]; then
+              # Normalize the production URL before comparing project identity.
+              # A trailing slash or path must never bypass the QA/production separation check.
+              production_url_normalized="$(printf '%s' "$SUPABASE_PRODUCTION_URL" | xargs)"
+              production_host=""
+              if [[ "$production_url_normalized" =~ ^https?://([^/?#]+) ]]; then
+                production_host="${BASH_REMATCH[1]}"
+              fi
+              production_ref=""
+              if [[ "$production_host" =~ ^([a-z0-9]{20})[.]supabase[.]co$ ]]; then
+                production_ref="${BASH_REMATCH[1]}"
+              fi
+              if [[ "$candidate_ref" == "$production_ref" && -n "$production_ref" ]]; then
                 echo "::error::QA backend points to the production Supabase project. Refusing to build a QA package against production."
                 exit 1
               fi
