@@ -133,6 +133,7 @@ jobs:
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
             # Resolve QA from the configured URL, then verify the exact project ID.
             # Do not depend on a display name: Supabase project names are user-editable.
+            # Project identity is the immutable project ref, not its editable display name.
             # If a Management API token is available, fail closed unless that exact ID
             # appears in the account's accessible project list. Never print the token.
             expected_ref=""
