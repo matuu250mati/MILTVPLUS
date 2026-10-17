@@ -227,6 +227,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
           const SizedBox(height: 16),
           TextField(
+            autofocus: widget.category == 'EXPLORAR' && !widget.startVoiceSearch,
             controller: _searchController,
             textInputAction: TextInputAction.search,
             keyboardType: TextInputType.text,
