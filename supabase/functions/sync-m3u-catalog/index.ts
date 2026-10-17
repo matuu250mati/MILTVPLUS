@@ -190,7 +190,6 @@ Deno.serve(async (req) => {
         ...(result.error ? { error: result.error } : {}),
       });
     }
-    if (selected.length >= MAX_IMPORT_ROWS) break;
   }
 
   if (!selected.length) {
