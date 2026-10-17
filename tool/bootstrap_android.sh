@@ -41,7 +41,22 @@ trap 'rm -rf "$tmp_dir"' EXIT
 flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$tmp_dir/miltv-scaffold"
 mkdir -p "$root_dir/android"
 # -n evita sobrescribir cualquier archivo nativo que ya exista.
-cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+python3 - "$tmp_dir/miltv-scaffold/android" "$root_dir/android" <<'PY_COPY_MISSING'
+from pathlib import Path
+import shutil
+import sys
+
+source = Path(sys.argv[1])
+destination = Path(sys.argv[2])
+destination.mkdir(parents=True, exist_ok=True)
+for item in source.rglob("*"):
+    target = destination / item.relative_to(source)
+    if item.is_dir():
+        target.mkdir(parents=True, exist_ok=True)
+    elif not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, target)
+PY_COPY_MISSING
 ensure_min_android_sdk
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
