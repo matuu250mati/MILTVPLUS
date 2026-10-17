@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -153,7 +154,15 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
-    return Scaffold(
+    return PopScope<Object?>(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || !mounted) return;
+        setState(() {
+          if (_step > 0) _step--;
+        });
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.background,
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -266,13 +275,73 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                               border: Border.all(color: AppTheme.accent.withValues(alpha: .55)),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Scrollbar(
-                              controller: _termsScrollController,
-                              thumbVisibility: true,
-                              child: SingleChildScrollView(
+                            child: Focus(
+                              autofocus: _step == 2,
+                              onKeyEvent: (node, event) {
+                                if (event is! KeyDownEvent ||
+                                    !_termsScrollController.hasClients) {
+                                  return KeyEventResult.ignored;
+                                }
+                                final position = _termsScrollController.position;
+                                const step = 180.0;
+                                if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+                                    position.pixels < position.maxScrollExtent) {
+                                  _termsScrollController.animateTo(
+                                    (position.pixels + step).clamp(
+                                      position.minScrollExtent,
+                                      position.maxScrollExtent,
+                                    ).toDouble(),
+                                    duration: const Duration(milliseconds: 100),
+                                    curve: Curves.easeOut,
+                                  );
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.arrowUp &&
+                                    position.pixels > position.minScrollExtent) {
+                                  _termsScrollController.animateTo(
+                                    (position.pixels - step).clamp(
+                                      position.minScrollExtent,
+                                      position.maxScrollExtent,
+                                    ).toDouble(),
+                                    duration: const Duration(milliseconds: 100),
+                                    curve: Curves.easeOut,
+                                  );
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.pageDown &&
+                                    position.pixels < position.maxScrollExtent) {
+                                  _termsScrollController.animateTo(
+                                    (position.pixels + position.viewportDimension).clamp(
+                                      position.minScrollExtent,
+                                      position.maxScrollExtent,
+                                    ).toDouble(),
+                                    duration: const Duration(milliseconds: 120),
+                                    curve: Curves.easeOut,
+                                  );
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey == LogicalKeyboardKey.pageUp &&
+                                    position.pixels > position.minScrollExtent) {
+                                  _termsScrollController.animateTo(
+                                    (position.pixels - position.viewportDimension).clamp(
+                                      position.minScrollExtent,
+                                      position.maxScrollExtent,
+                                    ).toDouble(),
+                                    duration: const Duration(milliseconds: 120),
+                                    curve: Curves.easeOut,
+                                  );
+                                  return KeyEventResult.handled;
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: Scrollbar(
                                 controller: _termsScrollController,
-                                padding: const EdgeInsets.all(16),
-                                child: const Text(_termsDocument, style: TextStyle(color: AppTheme.muted, height: 1.55)),
+                                thumbVisibility: true,
+                                child: SingleChildScrollView(
+                                  controller: _termsScrollController,
+                                  padding: const EdgeInsets.all(16),
+                                  child: const Text(_termsDocument, style: TextStyle(color: AppTheme.muted, height: 1.55)),
+                                ),
                               ),
                             ),
                           ),
@@ -296,7 +365,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                           ],
                           const SizedBox(height: 14),
                           FilledButton(
-                            autofocus: true,
+                            autofocus: false,
                             onPressed: _accepted && _termsReachedEnd && !_busy ? _acceptTerms : null,
                             child: _busy
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -333,6 +402,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
