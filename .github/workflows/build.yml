@@ -262,11 +262,11 @@ jobs:
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
-  url_ref_pattern='^https://[a-z0-9]{19,20}[.]supabase[.]co$'
-else
-  url_ref_pattern='^https://[a-z0-9]{20}[.]supabase[.]co$'
-fi
-if [[ ! "$SUPABASE_URL" =~ $url_ref_pattern ]]; then
+            url_ref_pattern='^https://[a-z0-9]{19,20}[.]supabase[.]co$'
+          else
+            url_ref_pattern='^https://[a-z0-9]{20}[.]supabase[.]co$'
+          fi
+          if [[ ! "$SUPABASE_URL" =~ $url_ref_pattern ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
@@ -296,12 +296,7 @@ if [[ ! "$SUPABASE_URL" =~ $url_ref_pattern ]]; then
         run: |
           set -euo pipefail
           host="${SUPABASE_URL_NORMALIZED#https://}"
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
-  host_ref_pattern='^[a-z0-9]{19,20}[.]supabase[.]co$'
-else
-  host_ref_pattern='^[a-z0-9]{20}[.]supabase[.]co$'
-fi
-if [[ ! "$host" =~ $host_ref_pattern ]]; then
+          if [[ ! "$host" =~ ^[a-z0-9]{19,20}[.]supabase[.]co$ ]]; then
             echo "::error::Supabase host failed the project-ref check before DNS lookup."
             exit 1
           fi
