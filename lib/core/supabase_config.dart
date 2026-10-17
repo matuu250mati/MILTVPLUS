@@ -27,7 +27,29 @@ bool isValidSupabaseUrl(String value) {
   }
 
   final projectRef = uri.host.substring(0, uri.host.length - '.supabase.co'.length);
-  return RegExp(r'^[a-z0-9-]+$').hasMatch(projectRef);
+  // Supabase project refs are exactly 20 lowercase alphanumeric characters.
+  // Accepting shorter strings lets malformed refs pass validation and later
+  // fail as DNS errors (curl error 6 / host not found).
+  return RegExp(r'^[a-z0-9]{20}
+}
+
+String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
+
+String? get supabaseConfigurationError {
+  if (supabaseUrl.trim().isEmpty) {
+    return 'Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.';
+  }
+  if (!isValidSupabaseUrl(supabaseUrl)) {
+    return 'SUPABASE_URL no es válida. Usá https://<project-ref>.supabase.co, sin /rest/v1, rutas, parámetros ni URL del panel de Supabase.';
+  }
+  if (supabaseAnonKey.trim().isEmpty) {
+    return 'Falta SUPABASE_ANON_KEY. Configurá la clave publishable/anon del proyecto; nunca uses service_role en la app.';
+  }
+  return null;
+}
+
+bool get isSupabaseConfigured => supabaseConfigurationError == null;
+).hasMatch(projectRef);
 }
 
 String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
