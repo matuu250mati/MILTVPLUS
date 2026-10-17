@@ -161,19 +161,6 @@ class _StartupGateState extends State<_StartupGate> {
                         onPressed: _retrying ? null : _start,
                         child: const Text('Reintentar'),
                       ),
-                      if (_supabaseInitialization != null) ...[
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {
-                            if (!mounted) return;
-                            setState(() {
-                              _ready = true;
-                              _failed = false;
-                            });
-                          },
-                          child: const Text('Continuar sin conexión'),
-                        ),
-                      ],
                     ],
                   ],
                 ),
