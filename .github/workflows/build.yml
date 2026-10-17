@@ -127,6 +127,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          QA_BACKEND_VALID=true
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
             # Resolve the QA project's real reference from Supabase's read-only
@@ -226,6 +227,7 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "QA_BACKEND_VALID=$QA_BACKEND_VALID" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (QA diagnostic; production is blocked on failure)
         env:
@@ -414,7 +416,7 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && env.QA_BACKEND_VALID != 'false' }}
         uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-qa-apk
