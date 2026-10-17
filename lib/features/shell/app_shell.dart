@@ -10,7 +10,6 @@ import '../adult/adult_gate_screen.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/owner_publishing_screen.dart';
 import '../home/home_screen.dart';
-import '../notifications/notification_center.dart';
 import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
