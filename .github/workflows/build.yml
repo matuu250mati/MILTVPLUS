@@ -337,6 +337,11 @@ jobs:
           fi
 
       - name: Build release APK
+        # Pin FVP's native Android SDK to an immutable upstream release. The
+        # default SourceForge nightly endpoint intermittently returns HTTP errors.
+        env:
+          FVP_DEPS_URL: https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0
+          FVP_DEPS_SHA256: ac9ee8a4d24bb8a3d8294ff60fada7244145b8469fc1abbff8a9d45458b4de6a
         shell: bash
         run: |
           set -euo pipefail
