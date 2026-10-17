@@ -82,16 +82,49 @@ jobs:
           SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
-            # A Supabase project URL is an identifier, not a secret. Pin QA to the
-            # explicitly approved project so a malformed repository URL secret cannot
-            # silently redirect or block builds. The publishable/anon key remains secret.
-            SUPABASE_URL="https://uqofvrynlyterjylpoj.supabase.co"
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
-            expected_ref="uqofvrynlyterjylpoj"
+            # Resolve the QA project's real reference from Supabase's read-only
+            # project listing when a Management API token is available. This avoids
+            # hardcoding a mistyped reference into every QA APK. Never print the token.
+            if [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]]; then
+              projects_json="$(curl --fail --silent --show-error --max-time 20 \
+                --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                https://api.supabase.com/v1/projects)" || {
+                  echo "::error::Could not query Supabase project metadata using SUPABASE_ACCESS_TOKEN."
+                  exit 1
+                }
+              expected_ref="$(printf '%s' "$projects_json" | python3 -c '
+          import json, re, sys
+          projects = json.load(sys.stdin)
+          matches = [p for p in projects if str(p.get("name", "")).strip().casefold() == "miltvplus-qa"]
+          if len(matches) != 1:
+              print("ERROR: expected exactly one Supabase project named MILTVPLUS-QA; found %d" % len(matches), file=sys.stderr)
+              sys.exit(2)
+          ref = str(matches[0].get("id", "")).strip()
+          if not re.fullmatch(r"[a-z0-9]{20}", ref):
+              print("ERROR: Supabase returned a project reference that is not 20 lowercase alphanumeric characters.", file=sys.stderr)
+              sys.exit(3)
+          print(ref)
+          ')" || {
+                echo "::error::Could not safely resolve the real 20-character reference for the MILTVPLUS-QA project."
+                exit 1
+              }
+              SUPABASE_URL="https://$expected_ref.supabase.co"
+              echo "Resolved isolated QA Supabase project from project metadata."
+            else
+              SUPABASE_URL="$SUPABASE_QA_URL"
+              expected_ref="${SUPABASE_URL#https://}"
+              expected_ref="${expected_ref%.supabase.co}"
+              if [[ ! "$expected_ref" =~ ^[a-z0-9]{20}$ ]]; then
+                echo "::error::SUPABASE_QA_URL is malformed. Copy the 20-character Reference ID from Supabase Project Settings > General."
+                exit 1
+              fi
+            fi
           else
             SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
             SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
