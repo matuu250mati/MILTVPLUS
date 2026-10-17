@@ -38,7 +38,7 @@ if 'android.speech.RecognitionService' not in text:
     marker = '<application'
     if marker not in text:
         raise SystemExit("No se encontró <application para agregar la consulta de reconocimiento de voz.")
-    text = text.replace(marker, queries + "\\n\\n    " + marker, 1)
+    text = text.replace(marker, queries + "\n\n    " + marker, 1)
 
 path.write_text(text, encoding="utf-8")
 print("Permisos verificados: INTERNET, REQUEST_INSTALL_PACKAGES y RECORD_AUDIO; consulta de reconocimiento de voz verificada.")
