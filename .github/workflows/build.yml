@@ -150,7 +150,7 @@ jobs:
             source tool/qa_supabase_guard.sh
             candidate_ref="$(qa_project_ref_from_url "$SUPABASE_QA_URL" || true)"
             if [[ -z "$candidate_ref" ]]; then
-              echo "::warning::QA project URL is malformed; expected https://<20-character-project-ref>.supabase.co."
+              echo "::warning::QA project URL is malformed; expected https://<19- or 20-character-project-ref>.supabase.co."
               # Diagnostic only: if the URL is bad, use the Management API (when
               # authorized) to discover whether an accessible QA/MILTVPLUS project
               # exists. Never select or publish against a discovered project automatically.
@@ -210,7 +210,7 @@ jobs:
               sys.exit(0)
           if isinstance(projects, list):
               matches = [p for p in projects if isinstance(p, dict) and str(p.get("id", "")).strip() == candidate]
-              if len(matches) == 1 and re.fullmatch(r"[a-z0-9]{20}", candidate):
+              if len(matches) == 1 and re.fullmatch(r"[a-z0-9]{19,20}", candidate):
                   print(candidate)
           ' "$candidate_ref" 2>/dev/null || true)"
                 fi
@@ -261,7 +261,12 @@ jobs:
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
-          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9]{20}[.]supabase[.]co$ ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* || "$GITHUB_REF" == refs/heads/feat/* ]]; then
+            url_ref_pattern='^https://[a-z0-9]{19,20}[.]supabase[.]co$'
+          else
+            url_ref_pattern='^https://[a-z0-9]{20}[.]supabase[.]co$'
+          fi
+          if [[ ! "$SUPABASE_URL" =~ $url_ref_pattern ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
@@ -291,8 +296,8 @@ jobs:
         run: |
           set -euo pipefail
           host="${SUPABASE_URL_NORMALIZED#https://}"
-          if [[ ! "$host" =~ ^[a-z0-9]{20}[.]supabase[.]co$ ]]; then
-            echo "::error::Supabase host failed the 20-character project-ref check before DNS lookup."
+          if [[ ! "$host" =~ ^[a-z0-9]{19,20}[.]supabase[.]co$ ]]; then
+            echo "::error::Supabase host failed the project-ref check before DNS lookup."
             exit 1
           fi
           for attempt in 1 2 3; do

@@ -3,7 +3,7 @@
 
 qa_project_ref_from_url() {
   local url="${1:-}"
-  [[ "$url" =~ ^https://([a-z0-9]{20})[.]supabase[.]co$ ]] || return 1
+  [[ "$url" =~ ^https://([a-z0-9]{19,20})[.]supabase[.]co$ ]] || return 1
   printf '%s\n' "${BASH_REMATCH[1]}"
 }
 

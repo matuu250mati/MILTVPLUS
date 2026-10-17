@@ -9,10 +9,14 @@ qa_ref="$(qa_project_ref_from_url 'https://abcdefghijklmnopqrst.supabase.co')" |
 [[ "$qa_ref" == 'abcdefghijklmnopqrst' ]] || fail 'valid QA ref parsed incorrectly'
 pass 'valid 20-character QA project URL'
 
-if qa_project_ref_from_url 'https://abcdefghijklmnopqrs.supabase.co' >/dev/null; then
-  fail '19-character project ref accepted'
+qa_ref_19="$(qa_project_ref_from_url 'https://abcdefghijklmnopqrs.supabase.co')" || fail 'valid 19-character QA URL rejected'
+[[ "$qa_ref_19" == 'abcdefghijklmnopqrs' ]] || fail '19-character QA ref parsed incorrectly'
+pass 'valid 19-character QA project URL'
+
+if production_project_ref_from_url 'https://abcdefghijklmnopqrs.supabase.co' >/dev/null; then
+  fail '19-character production project ref accepted'
 fi
-pass 'reject 19-character project ref'
+pass 'production ref remains strict at 20 characters'
 
 if qa_project_ref_from_url 'https://abcdefghijklmnopqrst.supabase.co/rest/v1' >/dev/null; then
   fail 'QA URL with path accepted'
