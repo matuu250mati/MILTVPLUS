@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           url="$(printf '%s' "$SUPABASE_PRODUCTION_URL" | xargs)"
           while [[ "$url" == */ ]]; do url="${url%/}"; done
-          if [[ -z "$url" || -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" || ! "$url" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
+          if [[ -z "$url" || -z "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" || ! "$url" =~ ^https://[a-z0-9]{20}[.]supabase[.]co$ ]]; then
             echo "::warning::Production backend preflight skipped: production URL/key configuration is missing or malformed."
             exit 0
           fi
@@ -100,7 +100,8 @@ jobs:
           failed=0
           for table in channels movies series episodes content_submissions; do
             query="select=${required_columns[$table]}&limit=0"
-            status="$(curl --silent --show-error --max-time 8 \
+            status="$(curl --silent --show-error --retry 2 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 5 --max-time 20 \
               --output /dev/null --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_PRODUCTION_ANON_KEY" \
               "$url/rest/v1/$table?$query" || true)"
@@ -250,7 +251,7 @@ jobs:
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
-          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
+          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9]{20}[.]supabase[.]co$ ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
@@ -274,6 +275,31 @@ jobs:
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
           echo "QA_BACKEND_VALID=$QA_BACKEND_VALID" >> "$GITHUB_ENV"
 
+      - name: Verify Supabase DNS resolution
+        if: ${{ env.QA_BACKEND_VALID != 'false' }}
+        env:
+          SUPABASE_URL_NORMALIZED: ${{ env.SUPABASE_URL_NORMALIZED }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          host="${SUPABASE_URL_NORMALIZED#https://}"
+          if [[ ! "$host" =~ ^[a-z0-9]{20}[.]supabase[.]co$ ]]; then
+            echo "::error::Supabase host failed the 20-character project-ref check before DNS lookup."
+            exit 1
+          fi
+          for attempt in 1 2 3; do
+            if getent ahosts "$host" >/dev/null 2>&1; then
+              echo "Supabase DNS resolution passed for the configured project host."
+              exit 0
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "::warning::DNS lookup attempt $attempt/3 failed; retrying after a short delay."
+              sleep 2
+            fi
+          done
+          echo "::error::Supabase DNS lookup failed after 3 attempts. Verify that SUPABASE_URL names the real, active project; a correctly shaped but nonexistent project ref cannot be fixed by retrying DNS."
+          exit 1
+
       - name: Verify required Supabase schema (QA diagnostic; production is blocked on failure)
         if: ${{ env.QA_BACKEND_VALID != 'false' }}
         env:
@@ -293,7 +319,8 @@ jobs:
           failed=0
           for table in channels movies series episodes content_submissions; do
             query="select=${required_columns[$table]}&limit=0"
-            status="$(curl --silent --show-error --max-time 12 \
+            status="$(curl --silent --show-error --retry 2 --retry-all-errors --retry-delay 2 \
+              --connect-timeout 5 --max-time 20 \
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
