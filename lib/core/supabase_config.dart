@@ -68,3 +68,41 @@ String? get supabaseConfigurationError {
 }
 
 bool get isSupabaseConfigured => supabaseConfigurationError == null;
+).hasMatch(projectRef);
+}
+
+String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
+
+String? get supabaseConfigurationError {
+  if (supabaseUrl.trim().isEmpty) {
+    return 'Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.';
+  }
+  if (!isValidSupabaseUrl(supabaseUrl)) {
+    return 'SUPABASE_URL no es válida. Usá https://<project-ref>.supabase.co, sin /rest/v1, rutas, parámetros ni URL del panel de Supabase.';
+  }
+  if (supabaseAnonKey.trim().isEmpty) {
+    return 'Falta SUPABASE_ANON_KEY. Configurá la clave publishable/anon del proyecto; nunca uses service_role en la app.';
+  }
+  return null;
+}
+
+bool get isSupabaseConfigured => supabaseConfigurationError == null;
+).hasMatch(projectRef);
+}
+
+String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
+
+String? get supabaseConfigurationError {
+  if (supabaseUrl.trim().isEmpty) {
+    return 'Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.';
+  }
+  if (!isValidSupabaseUrl(supabaseUrl)) {
+    return 'SUPABASE_URL no es válida. Usá https://<project-ref>.supabase.co, sin /rest/v1, rutas, parámetros ni URL del panel de Supabase.';
+  }
+  if (supabaseAnonKey.trim().isEmpty) {
+    return 'Falta SUPABASE_ANON_KEY. Configurá la clave publishable/anon del proyecto; nunca uses service_role en la app.';
+  }
+  return null;
+}
+
+bool get isSupabaseConfigured => supabaseConfigurationError == null;
