@@ -154,7 +154,15 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
-    return Scaffold(
+    return PopScope<Object?>(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || !mounted) return;
+        setState(() {
+          if (_step > 0) _step--;
+        });
+      },
+      child: Scaffold(
       backgroundColor: AppTheme.background,
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -357,7 +365,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
                           ],
                           const SizedBox(height: 14),
                           FilledButton(
-                            autofocus: true,
+                            autofocus: false,
                             onPressed: _accepted && _termsReachedEnd && !_busy ? _acceptTerms : null,
                             child: _busy
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -394,6 +402,7 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
