@@ -9,7 +9,6 @@ class NotificationCenter {
   NotificationCenter._();
 
   static Future<void> show(BuildContext context) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
     final catalog = CatalogService();
     final preferences = await SharedPreferences.getInstance();
 
