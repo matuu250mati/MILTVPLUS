@@ -29,7 +29,7 @@ Solo se importan entradas con una URL HTTPS directa cuyo path termina en `.m3u8`
    ```
 
    `SUPABASE_URL` y `SYNC_SECRET` deben estar definidos en el entorno local. No subas un archivo `.env` con esos valores.
-6. Revisá el JSON de respuesta. Incluye el conteo por fuente, cantidad de entradas aceptadas y errores de descarga. La función limita una ejecución a 5.000 canales y procesa lotes de 100. Si una fuente falla, el resultado lo identifica; repetí la ejecución luego de resolverlo.
+6. Revisá el JSON de respuesta. Incluye el conteo por fuente (`fetched`, `accepted`, `rejected`, `duplicates`) y errores. La función procesa lotes de 100 y no tiene un límite fijo de 5.000 filas. `complete` solo será `true` si las 14 fuentes se descargaron sin errores, cada fuente produjo al menos una entrada elegible y todas las filas preparadas fueron confirmadas por la respuesta de escritura de Supabase. Si alguna fuente falla o no contiene URLs HLS elegibles, el resultado será incompleto; corregí la fuente y repetí la ejecución.
 
 ## Verificación de separación y duplicados
 
@@ -57,7 +57,7 @@ La última consulta debe devolver cero filas. Las filas importadas se mantienen 
 
 ## Límites importantes
 
-- La importación no prueba cada stream individual y no promete disponibilidad permanente.
+- La importación verifica las escrituras por lote y reporta entradas rechazadas/duplicadas, pero no prueba cada stream individual ni promete disponibilidad permanente.
 - Los proveedores de las listas pueden cambiar, limitar o retirar URLs.
 - El contenido se publica en la app al importarse con `is_published = true`; revisá las fuentes y sus permisos antes de distribuir una versión pública.
 - La sincronización requiere que la migración esté aplicada y la Edge Function desplegada en el mismo proyecto Supabase al que apunta MILTVPLUS. Un commit o un APK exitoso no ejecuta por sí mismo la importación.
