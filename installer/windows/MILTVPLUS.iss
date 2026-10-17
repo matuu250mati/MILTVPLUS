@@ -31,7 +31,7 @@ CloseApplications=yes
 RestartApplications=no
 
 [Languages]
-Name: "spanish"; MessagesFile: "compiler:Languages\\Spanish.isl"
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
