@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/supabase_config.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_player_screen.dart';
@@ -103,7 +104,10 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
             final data = snapshot.data ?? const _HomeData.empty();
-            return RefreshIndicator(
+            return Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
               color: AppTheme.accent,
               onRefresh: () async => _reloadAndWait(),
               child: ListView(
@@ -213,7 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ],
-              ),
+                  ),
+                ),
+                const _DashboardStatusFooter(),
+              ],
             );
           },
         );
@@ -248,6 +255,87 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+
+class _DashboardStatusFooter extends StatefulWidget {
+  const _DashboardStatusFooter();
+
+  @override
+  State<_DashboardStatusFooter> createState() => _DashboardStatusFooterState();
+}
+
+class _DashboardStatusFooterState extends State<_DashboardStatusFooter> {
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
+  @override
+  Widget build(BuildContext context) {
+    final countryCode = Localizations.localeOf(context).countryCode?.toUpperCase();
+    final countryFlag = countryCode != null && countryCode.length == 2
+        ? String.fromCharCodes(
+            countryCode.codeUnits.map((code) => 0x1F1E6 + code - 0x41),
+          )
+        : '🌐';
+
+    String userStatus = 'Sesión no disponible';
+    try {
+      userStatus = Supabase.instance.client.auth.currentUser == null
+          ? 'Invitado'
+          : 'Sesión activa';
+    } catch (_) {
+      userStatus = 'Sin sesión';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFF080A10),
+        border: Border(top: BorderSide(color: Color(0xFF17304A))),
+      ),
+      child: FutureBuilder<PackageInfo>(
+        future: _packageInfo,
+        builder: (context, snapshot) {
+          final version = snapshot.data?.version;
+          final items = <Widget>[
+            _statusItem(Icons.info_outline_rounded, version == null ? 'MILTVPLUS' : 'v$version'),
+            _statusItem(Icons.person_outline_rounded, 'Usuario: $userStatus'),
+            _statusItem(
+              isSupabaseConfigured ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+              isSupabaseConfigured ? 'Backend configurado' : 'Backend sin configurar',
+            ),
+            _statusItem(Icons.public_rounded, '$countryFlag ${countryCode ?? 'Región no definida'}'),
+          ];
+
+          return LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              alignment: constraints.maxWidth < 620
+                  ? WrapAlignment.start
+                  : WrapAlignment.spaceBetween,
+              runAlignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 4,
+              children: items,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _statusItem(IconData icon, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppTheme.accent),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+          ),
+        ],
+      );
 }
 
 class _HomeData {
