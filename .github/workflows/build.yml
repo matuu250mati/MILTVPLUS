@@ -381,7 +381,7 @@ jobs:
             count="${content_range##*/}"
             if [[ "$status" =~ ^2[0-9][0-9]$ && "$count" =~ ^[0-9]+$ ]]; then
               echo "Published $table rows visible to anon: $count"
-              echo "- `$table`: **$count** published rows visible to the app." >> "$GITHUB_STEP_SUMMARY"
+              echo "- \`$table\`: **$count** published rows visible to the app." >> "$GITHUB_STEP_SUMMARY"
             else
               echo "::warning::Could not determine published row count for '$table' (HTTP ${status:-no-response}; count header unavailable)."
               echo "- `$table`: count unavailable (HTTP ${status:-no-response})." >> "$GITHUB_STEP_SUMMARY"
