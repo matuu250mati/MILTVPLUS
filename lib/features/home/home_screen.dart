@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
@@ -20,6 +22,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final CatalogService _catalog = CatalogService();
   late Future<_HomeData> _dataFuture;
+  bool _channelsLoadFailed = false;
+  bool _moviesLoadFailed = false;
+  bool _seriesLoadFailed = false;
 
   @override
   void initState() {
@@ -43,7 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<ChannelModel>> _safeChannels() async {
     try {
       return await _catalog.getChannels();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _channelsLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar canales publicados: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
@@ -51,7 +59,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<MovieModel>> _safeMovies() async {
     try {
       return await _catalog.getMovies();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _moviesLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar películas publicadas: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
@@ -59,12 +70,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<SeriesModel>> _safeSeries() async {
     try {
       return await _catalog.getSeries();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _seriesLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar series publicadas: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
 
-  void _reload() => setState(() => _dataFuture = _loadData());
+  void _reload() => setState(() {
+        _channelsLoadFailed = false;
+        _moviesLoadFailed = false;
+        _seriesLoadFailed = false;
+        _dataFuture = _loadData();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -117,9 +136,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.channels.isEmpty)
                     _EmptyRow(
-                      message: 'Los canales publicados aparecerán acá.',
-                      actionLabel: 'Abrir TV en vivo',
-                      onAction: () => widget.onNavigate(0),
+                      message: _channelsLoadFailed
+                          ? 'No se pudieron consultar los canales. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay canales marcados como publicados.',
+                      actionLabel: _channelsLoadFailed ? 'Reintentar' : 'Abrir TV en vivo',
+                      onAction: _channelsLoadFailed ? _reload : () => widget.onNavigate(0),
                     )
                   else
                     _ChannelRail(
@@ -137,9 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.movies.isEmpty)
                     _EmptyRow(
-                      message: 'Todavía no hay películas publicadas.',
-                      actionLabel: 'Explorar catálogo',
-                      onAction: () => widget.onNavigate(8),
+                      message: _moviesLoadFailed
+                          ? 'No se pudieron consultar las películas. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay películas marcadas como publicadas con una URL válida.',
+                      actionLabel: _moviesLoadFailed ? 'Reintentar' : 'Explorar catálogo',
+                      onAction: _moviesLoadFailed ? _reload : () => widget.onNavigate(8),
                     )
                   else
                     _PosterRail<MovieModel>(
@@ -163,9 +186,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.series.isEmpty)
                     _EmptyRow(
-                      message: 'Las series publicadas aparecerán en esta fila.',
-                      actionLabel: 'Ver series',
-                      onAction: () => widget.onNavigate(3),
+                      message: _seriesLoadFailed
+                          ? 'No se pudieron consultar las series. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay series marcadas como publicadas.',
+                      actionLabel: _seriesLoadFailed ? 'Reintentar' : 'Ver series',
+                      onAction: _seriesLoadFailed ? _reload : () => widget.onNavigate(3),
                     )
                   else
                     _PosterRail<SeriesModel>(
@@ -197,6 +222,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _reloadAndWait() async {
+    _channelsLoadFailed = false;
+    _moviesLoadFailed = false;
+    _seriesLoadFailed = false;
     final next = _loadData();
     setState(() => _dataFuture = next);
     try {
@@ -302,6 +330,19 @@ class _DashboardHeader extends StatelessWidget {
           tooltip: 'Buscar contenido',
           onPressed: () => onNavigate(8),
           icon: const Icon(Icons.search_rounded),
+        ),
+        IconButton(
+          tooltip: 'Estado de notificaciones',
+          onPressed: () => ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(content: Text('No hay avisos nuevos en esta versión QA.')),
+            ),
+          icon: const Badge(
+            smallSize: 8,
+            backgroundColor: AppTheme.accent,
+            child: Icon(Icons.notifications_none_rounded),
+          ),
         ),
         IconButton(
           tooltip: 'Configuración',
