@@ -101,7 +101,8 @@ async function parsePlaylist(source: Source, body: string) {
         }
       })();
     const groupTitle = attribute(meta, "group-title") || source.category;
-    const countryCode = source.countryCode || attribute(meta, "tvg-country").split(/[;,]/)[0]?.trim().toUpperCase() || null;
+    // The channels.country_code column is NOT NULL; PostgreSQL defaults do not apply when an explicit null is sent.
+    const countryCode = source.countryCode || attribute(meta, "tvg-country").split(/[;,]/)[0]?.trim().toUpperCase() || "AR";
     // A channel may belong to several genre/country playlists. Scope the stable key
     // to the category so an upsert in one playlist cannot erase its other category row.
     const categoryKey = source.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
