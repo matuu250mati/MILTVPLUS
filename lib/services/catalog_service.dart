@@ -106,11 +106,24 @@ class CatalogService {
         .order('sort_order', ascending: true)
         .order('title', ascending: true);
 
-    return (response as List<dynamic>)
+    final channels = (response as List<dynamic>)
         .map((item) => ChannelModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
         .toList(growable: false);
+
+    // Category-specific reads retain category memberships. The unfiltered
+    // home rail deduplicates the same stream when it exists in multiple
+    // memberships (e.g. Deportes and TV Argentina).
+    if (categories == null || categories.isEmpty) {
+      final seen = <String>{};
+      return List<ChannelModel>.unmodifiable(channels.where((channel) {
+        final url = channel.urlStream.trim().toLowerCase();
+        final key = url.isNotEmpty ? url : channel.title.trim().toLowerCase();
+        return key.isNotEmpty && seen.add(key);
+      }));
+    }
+    return channels;
   }
 
   Future<List<MovieModel>> getMovies() async {
