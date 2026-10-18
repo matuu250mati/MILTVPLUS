@@ -60,7 +60,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _phoneController.text = preferences.getString(_profilePhoneKey) ?? '';
       _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
-      _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
+      _textScale = (preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0)
+          .clamp(1.0, 1.2);
+    } catch (error, stackTrace) {
+      // Keep Settings navigable if local storage is unavailable. Saving will
+      // report a clear action-specific error instead of crashing this screen.
+      debugPrint('MILTVPLUS: settings preferences could not be loaded: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _nameController.text = 'Usuario MILTVPLUS';
+      _phoneController.clear();
+      _avatarIndex = 0;
+      _urlController.clear();
+      _textScale = 1.0;
     } finally {
       if (mounted) setState(() => _loading = false);
     }

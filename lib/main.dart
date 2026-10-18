@@ -118,7 +118,17 @@ class _StartupGateState extends State<_StartupGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_ready) return const MiltvPlusApp();
+    if (_ready) return const MiltvPlusApp(supabaseReady: true);
+
+    // Keep the app's entry screen available if backend initialization is slow
+    // or fails. Authentication stays disabled until the client is ready, and
+    // the user can retry without being trapped on a connection-error screen.
+    if (_failed) {
+      return MiltvPlusApp(
+        supabaseReady: false,
+        onRetrySupabase: () => _start(),
+      );
+    }
 
     return MaterialApp(
       title: 'MILTVPLUS',

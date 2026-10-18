@@ -53,8 +53,15 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
   }
 
   Future<void> _openHome() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool('miltv_tv_tutorial_completed_v1', true);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool('miltv_tv_tutorial_completed_v1', true);
+    } catch (error, stackTrace) {
+      // Tutorial completion is optional state; it must not trap the user
+      // after accepting the terms and finishing onboarding.
+      debugPrint('MILTVPLUS: could not save tutorial completion: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const AppShell()),
