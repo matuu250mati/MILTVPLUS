@@ -23,6 +23,7 @@ void main() {
       expect(isValidSupabaseUrl('https://project_ref.supabase.co'), isFalse);
       expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.supabase.co'), isFalse);
       expect(isValidSupabaseUrl('https://abcdefghijklmnopqrstu.supabase.co'), isFalse);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.foo.supabase.co'), isFalse);
     });
   });
 }
