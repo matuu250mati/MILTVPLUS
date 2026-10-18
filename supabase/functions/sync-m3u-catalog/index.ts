@@ -68,7 +68,7 @@ const SOURCES: Source[] = [
   { name: "Free-TV lista general", url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", category: "TV en Vivo" },
 ];
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 500;
 const clean = (value: string | undefined) => (value ?? "").trim();
 
 // M3U country metadata is inconsistent: it may contain ISO-2 codes or full names.
@@ -204,13 +204,13 @@ Deno.serve(async (req) => {
   const seen = new Set<string>();
 
   // Keep network concurrency bounded so the public playlist hosts are not flooded.
-  for (let start = 0; start < SOURCES.length; start += 4) {
-    const group = SOURCES.slice(start, start + 4);
+  for (let start = 0; start < SOURCES.length; start += 6) {
+    const group = SOURCES.slice(start, start + 6);
     const results = await Promise.all(group.map(async (source) => {
       try {
         const response = await fetch(source.url, {
           headers: { Accept: "application/x-mpegURL, audio/x-mpegurl, text/plain, */*" },
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(10000),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
