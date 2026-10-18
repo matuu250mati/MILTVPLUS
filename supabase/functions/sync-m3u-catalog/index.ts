@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; error?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; parsed: number; accepted: number; deduplicated: number; rejected: number; error?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
 
@@ -183,10 +183,14 @@ Deno.serve(async (req) => {
         selected.push(row);
         accepted++;
       }
+      const parsed = result.parsed.length;
       sourceResults.push({
         source: result.source.name,
         fetched: result.fetched,
+        parsed,
         accepted,
+        deduplicated: Math.max(0, parsed - accepted),
+        rejected: Math.max(0, result.fetched - parsed),
         ...(result.error ? { error: result.error } : {}),
       });
     }
@@ -220,12 +224,17 @@ Deno.serve(async (req) => {
   const failedSources = sourceResults
     .filter((result) => result.error)
     .map((result) => result.source);
+  const rejectedRows = sourceResults.reduce((sum, result) => sum + result.rejected, 0);
+  const sourceFetchComplete = failedSources.length === 0;
+  const complete = sourceFetchComplete && rejectedRows === 0;
   return json({
-    ok: failedSources.length === 0,
-    complete: failedSources.length === 0,
+    ok: complete,
+    complete,
+    sourceFetchComplete,
     imported,
+    rejectedRows,
     failedSources,
     sources: sourceResults,
     note: "Se importaron solo canales en vivo con URL HTTPS .m3u8. Las fuentes M3U de películas/series quedan en channels como canales temáticos; no se insertaron registros falsos en movies/series. La importación no garantiza que cada emisión siga activa ni que cada proveedor autorice su redistribución.",
-  }, failedSources.length ? 207 : 200);
+  }, complete ? 200 : 207);
 });
