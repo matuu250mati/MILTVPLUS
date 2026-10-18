@@ -28,6 +28,20 @@ jobs:
       - name: Run tests
         run: flutter test
 
+  validate-m3u-edge-function:
+    name: Validate M3U Edge Function
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check M3U sync function
+        run: deno check --no-lock supabase/functions/sync-m3u-catalog/index.ts
+
   platform-build:
     name: Compile ${{ matrix.label }}
     needs: analyze-and-test
