@@ -43,6 +43,26 @@ const SOURCES: Source[] = [
 const BATCH_SIZE = 100;
 const clean = (value: string | undefined) => (value ?? "").trim();
 
+// M3U country metadata is inconsistent: it may contain ISO-2 codes or full names.
+// Unknown countries use ISO 3166-1 user-assigned code ZZ instead of being mislabeled Argentina.
+function normalizeCountryCode(value: string | undefined): string {
+  const raw = clean(value).split(/[;,]/)[0].trim().toLowerCase().replace(/\\./g, "");
+  if (/^[a-z]{2}$/i.test(raw)) return raw.toUpperCase();
+  const aliases: Record<string, string> = {
+    argentina: "AR", méxico: "MX", mexico: "MX", brasil: "BR", brazil: "BR",
+    chile: "CL", uruguay: "UY", paraguay: "PY", bolivia: "BO", perú: "PE", peru: "PE",
+    colombia: "CO", ecuador: "EC", venezuela: "VE", "united states": "US",
+    "united states of america": "US", usa: "US", "united kingdom": "GB", uk: "GB",
+    britain: "GB", canada: "CA", españa: "ES", spain: "ES", francia: "FR", france: "FR",
+    alemania: "DE", germany: "DE", italia: "IT", italy: "IT", portugal: "PT",
+    japón: "JP", japon: "JP", japan: "JP", china: "CN", india: "IN",
+    australia: "AU", "new zealand": "NZ", rusia: "RU", russia: "RU",
+    "south korea": "KR", "corea del sur": "KR", "south africa": "ZA",
+    "puerto rico": "PR", cuba: "CU", internacional: "ZZ", international: "ZZ",
+  };
+  return aliases[raw] ?? "ZZ";
+}
+
 function attribute(line: string, key: string): string {
   const match = line.match(new RegExp('(?:^|\\s)' + key + '="([^"]*)"', "i"));
   return clean(match?.[1]);
@@ -102,7 +122,7 @@ async function parsePlaylist(source: Source, body: string) {
       })();
     const groupTitle = attribute(meta, "group-title") || source.category;
     // The channels.country_code column is NOT NULL; PostgreSQL defaults do not apply when an explicit null is sent.
-    const countryCode = source.countryCode || attribute(meta, "tvg-country").split(/[;,]/)[0]?.trim().toUpperCase() || "AR";
+    const countryCode = source.countryCode || normalizeCountryCode(attribute(meta, "tvg-country"));
     // A channel may belong to several genre/country playlists. Scope the stable key
     // to the category so an upsert in one playlist cannot erase its other category row.
     const categoryKey = source.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
