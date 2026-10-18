@@ -381,7 +381,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ],
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: _busy ? null : _submit,
+                        onPressed: _busy || !widget.backendReady ? null : _submit,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           child: _busy
