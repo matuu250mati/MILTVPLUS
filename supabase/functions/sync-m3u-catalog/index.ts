@@ -1,5 +1,5 @@
 // MILTVPLUS: idempotent M3U sync for live channels only.
-// Deploy after migration 20261016110000_m3u_catalog_sync.sql.
+// Deploy after migration 20261018130000_m3u_catalog_sync_qa.sql on QA.
 // Requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SYNC_SECRET.
 // Only HTTPS direct HLS (.m3u8) entries are imported. This does NOT import VOD into movies/series.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
