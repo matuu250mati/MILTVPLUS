@@ -84,20 +84,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final info = await service.checkForUpdate();
     if (!mounted) return;
     if (!info.updateAvailable) {
-      // Surface OTA failures instead of silently treating them as "up to date".
-      if (info.message != 'MILTVPLUS está actualizado.') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(info.message),
-            duration: const Duration(seconds: 7),
-          ),
-        );
-      }
+      // Background update checks must not interrupt startup with transient
+      // network/DNS notices. User-triggered checks report their result in Settings.
       return;
     }
 
-    final preferences = await SharedPreferences.getInstance();
-    final snoozedUntil = preferences.getInt('miltvplus_update_snooze_until_ms_v1') ?? 0;
+    // A broken local preference store must not block entry to the app or
+    // prevent a genuinely available mandatory update from being presented.
+    SharedPreferences? preferences;
+    var snoozedUntil = 0;
+    try {
+      preferences = await SharedPreferences.getInstance();
+      snoozedUntil = preferences.getInt('miltvplus_update_snooze_until_ms_v1') ?? 0;
+    } catch (error) {
+      debugPrint('MILTVPLUS: update snooze preferences unavailable: $error');
+    }
     if (!info.mandatory && DateTime.now().millisecondsSinceEpoch < snoozedUntil) return;
     if (!mounted || _updateDialogShowing) return;
 
@@ -141,11 +142,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             ),
           ) ??
           false;
-      if (!installNow && !info.mandatory) {
-        await preferences.setInt(
-          'miltvplus_update_snooze_until_ms_v1',
-          DateTime.now().add(const Duration(hours: 12)).millisecondsSinceEpoch,
-        );
+      if (!installNow && !info.mandatory && preferences != null) {
+        try {
+          await preferences.setInt(
+            'miltvplus_update_snooze_until_ms_v1',
+            DateTime.now().add(const Duration(hours: 12)).millisecondsSinceEpoch,
+          );
+        } catch (error) {
+          debugPrint('MILTVPLUS: could not save update snooze preference: $error');
+        }
       }
     } finally {
       _updateDialogShowing = false;
@@ -162,16 +167,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _showWelcomeOnce() async {
-    final preferences = await SharedPreferences.getInstance();
-    if (!mounted ||
-        (preferences.getBool('miltvplus_welcome_guide_seen_v2') ?? false)) {
-      return;
-    }
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted ||
+          (preferences.getBool('miltvplus_welcome_guide_seen_v2') ?? false)) {
+        return;
+      }
 
-    final profileName =
-        preferences.getString('miltv_profile_name_v1') ?? 'Usuario MILTVPLUS';
-    await showMiltvPlusGuide(context, profileName: profileName);
-    await preferences.setBool('miltvplus_welcome_guide_seen_v2', true);
+      final profileName =
+          preferences.getString('miltv_profile_name_v1') ?? 'Usuario MILTVPLUS';
+      await showMiltvPlusGuide(context, profileName: profileName);
+      await preferences.setBool('miltvplus_welcome_guide_seen_v2', true);
+    } catch (error, stackTrace) {
+      // Optional welcome state is not allowed to trap the user outside the app.
+      debugPrint('MILTVPLUS: welcome guide preference failure: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   bool get _isOwner {
