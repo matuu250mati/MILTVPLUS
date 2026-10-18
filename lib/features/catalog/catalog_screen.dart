@@ -412,6 +412,13 @@ Future<void> _openSeriesEpisodes(
   }
 }
 
+bool _hasHttpsStream(String? rawUrl) {
+  if (rawUrl == null || rawUrl.trim().isEmpty) return false;
+  final uri = Uri.tryParse(rawUrl.trim());
+  return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty &&
+      uri.userInfo.isEmpty;
+}
+
 class _AvailabilityLabel extends StatelessWidget {
   const _AvailabilityLabel({
     required this.available,
@@ -561,7 +568,7 @@ class _CatalogCard extends StatelessWidget {
             runSpacing: 4,
             children: [
               _AvailabilityLabel(
-                available: entry.streamUrl?.trim().isNotEmpty == true,
+                available: _hasHttpsStream(entry.streamUrl),
                 isSeries: entry.seriesId != null,
               ),
               if (entry.year != null && entry.year! >= DateTime.now().year - 1)
