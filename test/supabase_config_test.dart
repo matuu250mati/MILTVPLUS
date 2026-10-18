@@ -3,8 +3,9 @@ import 'package:miltv_plus/core/supabase_config.dart';
 
 void main() {
   group('Supabase URL validation', () {
-    test('accepts a canonical project URL with optional trailing slash', () {
+    test('accepts canonical project URLs with 19–20 character refs and optional trailing slash', () {
       expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co'), isTrue);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.supabase.co'), isTrue);
       expect(isValidSupabaseUrl(' https://abcdefghijklmnopqrst.supabase.co/// '), isTrue);
       expect(normalizeSupabaseUrl(' https://abcdefghijklmnopqrst.supabase.co/// '),
           'https://abcdefghijklmnopqrst.supabase.co');
@@ -21,8 +22,9 @@ void main() {
       expect(isValidSupabaseUrl('https://user:pass@abcdefghijklmnopqrst.supabase.co'), isFalse);
       expect(isValidSupabaseUrl('https://abcdefghijklmnopqrst.supabase.co:8443'), isFalse);
       expect(isValidSupabaseUrl('https://project_ref.supabase.co'), isFalse);
-      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.supabase.co'), isFalse);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqr.supabase.co'), isFalse);
       expect(isValidSupabaseUrl('https://abcdefghijklmnopqrstu.supabase.co'), isFalse);
+      expect(isValidSupabaseUrl('https://abcdefghijklmnopqrs.foo.supabase.co'), isFalse);
     });
   });
 }

@@ -1,7 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/supabase_config.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_player_screen.dart';
@@ -20,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final CatalogService _catalog = CatalogService();
   late Future<_HomeData> _dataFuture;
+  bool _channelsLoadFailed = false;
+  bool _moviesLoadFailed = false;
+  bool _seriesLoadFailed = false;
 
   @override
   void initState() {
@@ -43,7 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<ChannelModel>> _safeChannels() async {
     try {
       return await _catalog.getChannels();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _channelsLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar canales publicados: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
@@ -51,7 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<MovieModel>> _safeMovies() async {
     try {
       return await _catalog.getMovies();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _moviesLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar películas publicadas: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
@@ -59,12 +71,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<SeriesModel>> _safeSeries() async {
     try {
       return await _catalog.getSeries();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _seriesLoadFailed = true;
+      debugPrint('MILTVPLUS: no se pudieron cargar series publicadas: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return const [];
     }
   }
 
-  void _reload() => setState(() => _dataFuture = _loadData());
+  void _reload() => setState(() {
+        _channelsLoadFailed = false;
+        _moviesLoadFailed = false;
+        _seriesLoadFailed = false;
+        _dataFuture = _loadData();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +104,10 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
             final data = snapshot.data ?? const _HomeData.empty();
-            return RefreshIndicator(
+            return Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
               color: AppTheme.accent,
               onRefresh: () async => _reloadAndWait(),
               child: ListView(
@@ -117,9 +140,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.channels.isEmpty)
                     _EmptyRow(
-                      message: 'Los canales publicados aparecerán acá.',
-                      actionLabel: 'Abrir TV en vivo',
-                      onAction: () => widget.onNavigate(0),
+                      message: _channelsLoadFailed
+                          ? 'No se pudieron consultar los canales. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay canales marcados como publicados.',
+                      actionLabel: _channelsLoadFailed ? 'Reintentar' : 'Abrir TV en vivo',
+                      onAction: _channelsLoadFailed ? _reload : () => widget.onNavigate(0),
                     )
                   else
                     _ChannelRail(
@@ -137,9 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.movies.isEmpty)
                     _EmptyRow(
-                      message: 'Todavía no hay películas publicadas.',
-                      actionLabel: 'Explorar catálogo',
-                      onAction: () => widget.onNavigate(8),
+                      message: _moviesLoadFailed
+                          ? 'No se pudieron consultar las películas. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay películas marcadas como publicadas.',
+                      actionLabel: _moviesLoadFailed ? 'Reintentar' : 'Explorar catálogo',
+                      onAction: _moviesLoadFailed ? _reload : () => widget.onNavigate(8),
                     )
                   else
                     _PosterRail<MovieModel>(
@@ -147,10 +174,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       compact: compact,
                       titleOf: (item) => item.title,
                       imageOf: (item) => item.logo,
-                      subtitleOf: (item) => [
-                        if (item.releaseYear != null) item.releaseYear.toString(),
-                        item.category,
-                      ].join(' · '),
+                      subtitleOf: (item) => item.urlStream.trim().isEmpty
+                          ? 'Metadatos · enlace pendiente'
+                          : [
+                              if (item.releaseYear != null) item.releaseYear.toString(),
+                              item.category,
+                            ].join(' · '),
                       onTap: (item) => _openMovie(item),
                     ),
                   SizedBox(height: compact ? 20 : 26),
@@ -163,9 +192,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   if (data.series.isEmpty)
                     _EmptyRow(
-                      message: 'Las series publicadas aparecerán en esta fila.',
-                      actionLabel: 'Ver series',
-                      onAction: () => widget.onNavigate(3),
+                      message: _seriesLoadFailed
+                          ? 'No se pudieron consultar las series. Revisá la conexión con el servicio y reintentá.'
+                          : 'La consulta terminó correctamente, pero no hay series marcadas como publicadas.',
+                      actionLabel: _seriesLoadFailed ? 'Reintentar' : 'Ver series',
+                      onAction: _seriesLoadFailed ? _reload : () => widget.onNavigate(3),
                     )
                   else
                     _PosterRail<SeriesModel>(
@@ -188,7 +219,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ],
-              ),
+                  ),
+                  ),
+                ),
+                const _DashboardStatusFooter(),
+              ],
             );
           },
         );
@@ -197,6 +232,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _reloadAndWait() async {
+    _channelsLoadFailed = false;
+    _moviesLoadFailed = false;
+    _seriesLoadFailed = false;
     final next = _loadData();
     setState(() => _dataFuture = next);
     try {
@@ -220,6 +258,87 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+
+class _DashboardStatusFooter extends StatefulWidget {
+  const _DashboardStatusFooter();
+
+  @override
+  State<_DashboardStatusFooter> createState() => _DashboardStatusFooterState();
+}
+
+class _DashboardStatusFooterState extends State<_DashboardStatusFooter> {
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
+  @override
+  Widget build(BuildContext context) {
+    final countryCode = Localizations.localeOf(context).countryCode?.toUpperCase();
+    final countryFlag = countryCode != null && countryCode.length == 2
+        ? String.fromCharCodes(
+            countryCode.codeUnits.map((code) => 0x1F1E6 + code - 0x41),
+          )
+        : '🌐';
+
+    String userStatus = 'Sesión no disponible';
+    try {
+      userStatus = Supabase.instance.client.auth.currentUser == null
+          ? 'Invitado'
+          : 'Sesión activa';
+    } catch (_) {
+      userStatus = 'Sin sesión';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFF080A10),
+        border: Border(top: BorderSide(color: Color(0xFF17304A))),
+      ),
+      child: FutureBuilder<PackageInfo>(
+        future: _packageInfo,
+        builder: (context, snapshot) {
+          final version = snapshot.data?.version;
+          final items = <Widget>[
+            _statusItem(Icons.info_outline_rounded, version == null ? 'MILTVPLUS' : 'v$version'),
+            _statusItem(Icons.person_outline_rounded, 'Usuario: $userStatus'),
+            _statusItem(
+              isSupabaseConfigured ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+              isSupabaseConfigured ? 'Backend configurado' : 'Backend sin configurar',
+            ),
+            _statusItem(Icons.public_rounded, '$countryFlag ${countryCode ?? 'Región no definida'}'),
+          ];
+
+          return LayoutBuilder(
+            builder: (context, constraints) => Wrap(
+              alignment: constraints.maxWidth < 620
+                  ? WrapAlignment.start
+                  : WrapAlignment.spaceBetween,
+              runAlignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 4,
+              children: items,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _statusItem(IconData icon, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppTheme.accent),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+          ),
+        ],
+      );
 }
 
 class _HomeData {
@@ -302,6 +421,19 @@ class _DashboardHeader extends StatelessWidget {
           tooltip: 'Buscar contenido',
           onPressed: () => onNavigate(8),
           icon: const Icon(Icons.search_rounded),
+        ),
+        IconButton(
+          tooltip: 'Estado de notificaciones',
+          onPressed: () => ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(content: Text('No hay avisos nuevos en esta versión QA.')),
+            ),
+          icon: const Badge(
+            smallSize: 8,
+            backgroundColor: AppTheme.accent,
+            child: Icon(Icons.notifications_none_rounded),
+          ),
         ),
         IconButton(
           tooltip: 'Configuración',

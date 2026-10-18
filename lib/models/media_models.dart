@@ -142,8 +142,11 @@ class MovieModel {
     synopsis: _nullableString(json, 'synopsis'),
     category: _stringValue(json, 'category', 'General'),
     genres: _stringList(json, 'genres'),
-    logo: _nullableString(json, 'logo'),
-    backdropUrl: _nullableString(json, 'backdrop_url'),
+    logo: _nullableString(json, 'poster_url') ??
+        _nullableString(json, 'poster') ??
+        _nullableString(json, 'logo'),
+    backdropUrl: _nullableString(json, 'backdrop_url') ??
+        _nullableString(json, 'backdrop'),
     urlStream: _firstStreamUrl(json),
     streamUrls: _streamUrlList(json, _firstStreamUrl(json)),
     releaseYear: _nullableInt(json, 'release_year'),
@@ -178,8 +181,11 @@ class SeriesModel {
     synopsis: _nullableString(json, 'synopsis'),
     category: _stringValue(json, 'category', 'Series'),
     genres: _stringList(json, 'genres'),
-    logo: _nullableString(json, 'logo'),
-    backdropUrl: _nullableString(json, 'backdrop_url'),
+    logo: _nullableString(json, 'poster_url') ??
+        _nullableString(json, 'poster') ??
+        _nullableString(json, 'logo'),
+    backdropUrl: _nullableString(json, 'backdrop_url') ??
+        _nullableString(json, 'backdrop'),
     releaseYear: _nullableInt(json, 'release_year'),
     countryCode: _stringValue(json, 'country_code', 'AR'),
     isPublished: _boolValue(json, 'is_published'),

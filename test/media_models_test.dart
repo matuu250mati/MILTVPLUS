@@ -217,4 +217,30 @@ void main() {
     expect(documentary.liveSection, 'Cultura/Documentales');
     expect(movies.liveSection, 'HBO/Cine');
   });
+
+  test('keeps metadata-only VOD entries and resolves legacy poster fields', () {
+    final movie = MovieModel.fromJson({
+      'id': 'tmdb-movie-1',
+      'title': 'Película de catálogo',
+      'poster_url': 'https://image.example.org/poster.jpg',
+      'backdrop': 'https://image.example.org/backdrop.jpg',
+      'url_stream': '',
+      'is_published': true,
+    });
+    final series = SeriesModel.fromJson({
+      'id': 'tmdb-series-1',
+      'title': 'Serie de catálogo',
+      'poster': 'https://image.example.org/series.jpg',
+      'backdrop': 'https://image.example.org/series-backdrop.jpg',
+      'is_published': true,
+    });
+
+    expect(movie.isPublished, isTrue);
+    expect(movie.urlStream, isEmpty);
+    expect(movie.logo, 'https://image.example.org/poster.jpg');
+    expect(movie.backdropUrl, 'https://image.example.org/backdrop.jpg');
+    expect(series.isPublished, isTrue);
+    expect(series.logo, 'https://image.example.org/series.jpg');
+    expect(series.backdropUrl, 'https://image.example.org/series-backdrop.jpg');
+  });
 }
