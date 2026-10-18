@@ -165,7 +165,7 @@ jobs:
           # Ask PostgREST to resolve required columns with limit=0. This validates
           # the schema even when a catalog table has no publicly visible rows.
           declare -A required_columns=(
-            [channels]="title,url_stream,is_published,sort_order,logo"
+            [channels]="title,url_stream,is_published,sort_order,logo,source_key,source_name,group_title,country_code,category,stream_urls"
             [movies]="title,url_stream,is_published,created_at"
             [series]="title,is_published"
             [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
