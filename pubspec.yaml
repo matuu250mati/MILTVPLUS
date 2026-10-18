@@ -17,13 +17,17 @@ dependencies:
   flutter_riverpod: ^2.6.1
   dio: ^5.7.0
   cached_network_image: ^3.4.1
-  shared_preferences: ^2.3.2
+  shared_preferences: 2.3.5
   crypto: ^3.0.6
   open_filex: ^4.7.0
   package_info_plus: ^8.1.2
   device_info_plus: ^11.3.0
   path_provider: ^2.1.4
   file_picker: ^8.1.7
+
+dependency_overrides:
+  # Keep the Dart API paired with the compatible Android implementation.
+  shared_preferences_android: 2.3.4
 
 dev_dependencies:
   flutter_test:
