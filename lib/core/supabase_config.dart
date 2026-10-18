@@ -27,8 +27,9 @@ bool isValidSupabaseUrl(String value) {
   }
 
   final projectRef = uri.host.substring(0, uri.host.length - '.supabase.co'.length);
-  // Supabase project refs are exactly 20 lowercase alphanumeric characters.
-  return projectRef.length == 20 && RegExp(r'^[a-z0-9]{20}$').hasMatch(projectRef);
+  // Keep the app guard consistent with the QA URL guard (19–20 lowercase alphanumeric chars).
+  // CI separately verifies that the configured QA host is the intended isolated project.
+  return RegExp(r'^[a-z0-9]{19,20}$').hasMatch(projectRef);
 }
 
 String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
