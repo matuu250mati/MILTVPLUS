@@ -261,6 +261,8 @@ Deno.serve(async (req) => {
           ? "La lista no contiene entradas #EXTINF."
           : result.parsed.length === 0
           ? "No contiene URLs HTTPS directas .m3u8 aceptables."
+          : rejected > 0
+          ? `${rejected} entradas fueron rechazadas; solo se aceptan entradas con título y URL HTTPS directa terminada en .m3u8.`
           : undefined);
       sourceResults.push({
         source: result.source.name,
