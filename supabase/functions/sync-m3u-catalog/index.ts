@@ -49,16 +49,20 @@ function normalizeCountryCode(value: string | undefined): string {
   const raw = clean(value).split(/[;,]/)[0].trim().toLowerCase().replace(/\./g, "");
   if (/^[a-z]{2}$/i.test(raw)) return raw.toUpperCase();
   const aliases: Record<string, string> = {
-    argentina: "AR", méxico: "MX", mexico: "MX", brasil: "BR", brazil: "BR",
-    chile: "CL", uruguay: "UY", paraguay: "PY", bolivia: "BO", perú: "PE", peru: "PE",
-    colombia: "CO", ecuador: "EC", venezuela: "VE", "united states": "US",
-    "united states of america": "US", usa: "US", "united kingdom": "GB", uk: "GB",
-    britain: "GB", canada: "CA", españa: "ES", spain: "ES", francia: "FR", france: "FR",
-    alemania: "DE", germany: "DE", italia: "IT", italy: "IT", portugal: "PT",
-    japón: "JP", japon: "JP", japan: "JP", china: "CN", india: "IN",
-    australia: "AU", "new zealand": "NZ", rusia: "RU", russia: "RU",
-    "south korea": "KR", "corea del sur": "KR", "south africa": "ZA",
-    "puerto rico": "PR", cuba: "CU", internacional: "ZZ", international: "ZZ",
+    argentina: "AR", arg: "AR", méxico: "MX", mexico: "MX", mex: "MX",
+    brasil: "BR", brazil: "BR", bra: "BR", chile: "CL", chl: "CL",
+    uruguay: "UY", ury: "UY", paraguay: "PY", pry: "PY", bolivia: "BO", bol: "BO",
+    perú: "PE", peru: "PE", per: "PE", colombia: "CO", col: "CO",
+    ecuador: "EC", ecu: "EC", venezuela: "VE", ven: "VE",
+    "united states": "US", "united states of america": "US", usa: "US",
+    "united kingdom": "GB", uk: "GB", gbr: "GB", britain: "GB", canada: "CA", can: "CA",
+    españa: "ES", spain: "ES", esp: "ES", francia: "FR", france: "FR", fra: "FR",
+    alemania: "DE", germany: "DE", deu: "DE", italia: "IT", italy: "IT", ita: "IT",
+    portugal: "PT", prt: "PT", japón: "JP", japon: "JP", japan: "JP", jpn: "JP",
+    china: "CN", chn: "CN", india: "IN", ind: "IN", australia: "AU", aus: "AU",
+    "new zealand": "NZ", nzl: "NZ", rusia: "RU", russia: "RU", rus: "RU",
+    "south korea": "KR", kor: "KR", "corea del sur": "KR", "south africa": "ZA", zaf: "ZA",
+    "puerto rico": "PR", pri: "PR", cuba: "CU", internacional: "ZZ", international: "ZZ",
   };
   return aliases[raw] ?? "ZZ";
 }
