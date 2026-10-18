@@ -46,7 +46,7 @@ const clean = (value: string | undefined) => (value ?? "").trim();
 // M3U country metadata is inconsistent: it may contain ISO-2 codes or full names.
 // Unknown countries use ISO 3166-1 user-assigned code ZZ instead of being mislabeled Argentina.
 function normalizeCountryCode(value: string | undefined): string {
-  const raw = clean(value).split(/[;,]/)[0].trim().toLowerCase().replace(/\\./g, "");
+  const raw = clean(value).split(/[;,]/)[0].trim().toLowerCase().replace(/\./g, "");
   if (/^[a-z]{2}$/i.test(raw)) return raw.toUpperCase();
   const aliases: Record<string, string> = {
     argentina: "AR", méxico: "MX", mexico: "MX", brasil: "BR", brazil: "BR",
