@@ -272,40 +272,41 @@ jobs:
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify APK signature."; exit 1; }
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify APK signature."; exit 1; }
+          verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
+            printf '%s\n' "$verification_output"
+            echo "::error::The APK signature is invalid."
+            exit 1
+          }
+          printf '%s\n' "$verification_output"
+          actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
+            tolower($0) ~ /certificate sha-256 digest:/ {
+              line = tolower($0)
+              sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
+              gsub(/[^0-9a-f]/, "", line)
+              print line
+              exit
+            }
+          ')"
+          [[ "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || {
+            echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
+            exit 1
+          }
           if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
-            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
-            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
-            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
-            verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
-              printf '%s\n' "$verification_output"
-              echo "::error::The release APK signature is invalid."
+            [[ "${MILTVPLUS_EXPECTED_SIGNER_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "::error::Expected production signer fingerprint is missing or invalid."
               exit 1
             }
-            printf '%s\n' "$verification_output"
-            # Parse SHA-256 without relying on exact signer numbering, capitalization,
-            # colon formatting, or whitespace used by different build-tools versions.
-            actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
-              tolower($0) ~ /certificate sha-256 digest:/ {
-                line = tolower($0)
-                sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
-                gsub(/[^0-9a-f]/, "", line)
-                print line
-                exit
-              }
-            ')"
-            if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
-              echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
-              echo "::error::Refusing to skip the production-certificate match check."
-              exit 1
-            fi
             [[ "$actual_cert_sha256" == "$MILTVPLUS_EXPECTED_SIGNER_SHA256" ]] || {
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
             }
             echo "Production APK signature is valid and matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing verification was not requested."
+            echo "APK signature is valid for this QA/CI build; this certificate is not approved for production."
           fi
 
       - name: Name APK and generate SHA-256 checksum
