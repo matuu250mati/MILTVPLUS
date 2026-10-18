@@ -132,11 +132,14 @@ class _AuthScreenState extends State<AuthScreen> {
           _message = e.message;
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final detail = error.toString();
         setState(() {
           _error = true;
-          _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
+          _message = detail.contains('Failed host lookup')
+              ? 'No se puede resolver el servidor de Supabase (DNS). Revisá la URL del proyecto QA y la conexión a internet.\n\nDetalle: $detail'
+              : 'Falló la operación de autenticación.\n\nDetalle técnico: $detail';
         });
       }
     } finally {
@@ -164,11 +167,11 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) { setState(() { _error = true; _message = e.message; }); }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         setState(() {
           _error = true;
-          _message = 'No se pudo enviar el correo. Intentá más tarde.';
+          _message = 'No se pudo enviar el correo. Detalle técnico: $error';
         });
       }
     } finally {
