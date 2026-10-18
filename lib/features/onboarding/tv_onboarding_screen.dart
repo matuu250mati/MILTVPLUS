@@ -79,52 +79,69 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
         await preferences.setString('miltv_installation_id_v1', installationId);
       }
 
-      final packageInfo = await PackageInfo.fromPlatform();
-      final deviceInfo = DeviceInfoPlugin();
-      var label = defaultTargetPlatform.name;
-      if (!kIsWeb) {
-        switch (defaultTargetPlatform) {
-          case TargetPlatform.android:
-            final info = await deviceInfo.androidInfo;
-            label = 'Android · ${info.manufacturer} ${info.model} · Android ${info.version.release}';
-            break;
-          case TargetPlatform.iOS:
-            final info = await deviceInfo.iosInfo;
-            label = 'iOS · ${info.model} · ${info.systemVersion}';
-            break;
-          case TargetPlatform.macOS:
-            final info = await deviceInfo.macOsInfo;
-            label = 'macOS · ${info.model} · ${info.osRelease}';
-            break;
-          case TargetPlatform.windows:
-            final info = await deviceInfo.windowsInfo;
-            label = 'Windows · ${info.productName}';
-            break;
-          case TargetPlatform.linux:
-            final info = await deviceInfo.linuxInfo;
-            label = 'Linux · ${info.prettyName}';
-            break;
-          case TargetPlatform.fuchsia:
-            label = 'Fuchsia';
-            break;
+      // Device metadata is diagnostic only. A failure in a platform plugin
+      // must not block a valid installation from continuing through onboarding.
+      var appVersion = 'No disponible';
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      } catch (_) {
+        // Keep the fallback version; the local installation ID is sufficient.
+      }
+
+      var label = '${defaultTargetPlatform.name} · información del dispositivo no disponible';
+      if (kIsWeb) {
+        label = 'Web';
+      } else {
+        try {
+          final deviceInfo = DeviceInfoPlugin();
+          switch (defaultTargetPlatform) {
+            case TargetPlatform.android:
+              final info = await deviceInfo.androidInfo;
+              label = 'Android · ${info.manufacturer} ${info.model} · Android ${info.version.release}';
+              break;
+            case TargetPlatform.iOS:
+              final info = await deviceInfo.iosInfo;
+              label = 'iOS · ${info.model} · ${info.systemVersion}';
+              break;
+            case TargetPlatform.macOS:
+              final info = await deviceInfo.macOsInfo;
+              label = 'macOS · ${info.model} · ${info.osRelease}';
+              break;
+            case TargetPlatform.windows:
+              final info = await deviceInfo.windowsInfo;
+              label = 'Windows · ${info.productName}';
+              break;
+            case TargetPlatform.linux:
+              final info = await deviceInfo.linuxInfo;
+              label = 'Linux · ${info.prettyName}';
+              break;
+            case TargetPlatform.fuchsia:
+              label = 'Fuchsia';
+              break;
+          }
+        } catch (_) {
+          // Device information is optional and no Android runtime permission
+          // is required for this local, non-identifying diagnostic label.
         }
       }
 
       if (!mounted) return;
       setState(() {
         _installationId = installationId!;
-        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+        _appVersion = appVersion;
         _deviceLabel = label;
         _busy = false;
         _syncSuccessful = true;
         _step = 0;
+        _error = null;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _busy = false;
         _syncSuccessful = false;
-        _error = 'No pudimos completar la comprobación del dispositivo. Revisá los permisos y volvé a intentar.';
+        _error = 'No pudimos guardar la configuración local. Revisá el almacenamiento disponible e intentá nuevamente.';
       });
     }
   }
