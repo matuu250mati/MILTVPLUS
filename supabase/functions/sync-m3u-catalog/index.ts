@@ -168,6 +168,7 @@ Deno.serve(async (req) => {
 
   const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
+  const selectedByKey = new Map<string, Record<string, unknown>>();
   const seen = new Set<string>();
 
   // Keep network concurrency bounded so the public playlist hosts are not flooded.
@@ -203,10 +204,23 @@ Deno.serve(async (req) => {
         if (!key) continue;
         if (seen.has(key)) {
           duplicates++;
+          // Same channel/category may appear in multiple configured playlists with
+          // different stream URLs. Keep every unique URL as an ordered playback mirror.
+          const previous = selectedByKey.get(key);
+          if (previous) {
+            const previousMirrors = Array.isArray(previous.stream_urls)
+              ? previous.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+              : [];
+            const previousPrimary = typeof previous.url_stream === "string" ? previous.url_stream : "";
+            const incomingUrl = typeof row.url_stream === "string" ? row.url_stream : "";
+            previous.stream_urls = [...new Set([previousPrimary, ...previousMirrors, incomingUrl].filter(Boolean))];
+          }
           continue;
         }
         seen.add(key);
+        row.stream_urls = typeof row.url_stream === "string" ? [row.url_stream] : [];
         selected.push(row);
+        selectedByKey.set(key, row);
         accepted++;
       }
       const rejected = Math.max(0, result.fetched - result.parsed.length);
@@ -239,6 +253,42 @@ Deno.serve(async (req) => {
   let imported = 0;
   for (let start = 0; start < selected.length; start += BATCH_SIZE) {
     const batch = selected.slice(start, start + BATCH_SIZE);
+    const batchKeys = batch.map((row) => String(row.source_key ?? "")).filter(Boolean);
+    const { data: existingRows, error: existingError } = await supabase
+      .from("channels")
+      .select("source_key,url_stream,stream_urls")
+      .in("source_key", batchKeys);
+    if (existingError) {
+      return json({
+        ok: false,
+        imported,
+        attempted: selected.length,
+        sources: sourceResults,
+        error: `No se pudieron leer las URLs existentes antes de sincronizar: ${existingError.message}`,
+      }, 502);
+    }
+
+    const existingByKey = new Map(
+      (existingRows ?? []).map((row) => [String(row.source_key), row]),
+    );
+    for (const row of batch) {
+      const key = String(row.source_key ?? "");
+      const existing = existingByKey.get(key);
+      const incomingPrimary = typeof row.url_stream === "string" ? row.url_stream : "";
+      const incomingMirrors = Array.isArray(row.stream_urls)
+        ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+        : [];
+      const existingPrimary = typeof existing?.url_stream === "string" ? existing.url_stream : "";
+      const existingMirrors = Array.isArray(existing?.stream_urls)
+        ? existing.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+        : [];
+      // Prefer the current playlist URL, but retain the previous primary and all
+      // previously stored mirrors so a resync cannot silently discard a URL.
+      row.stream_urls = [...new Set([
+        incomingPrimary, ...incomingMirrors, existingPrimary, ...existingMirrors,
+      ].filter(Boolean))];
+    }
+
     const { data, error } = await supabase
       .from("channels")
       .upsert(batch, { onConflict: "source_key" })
