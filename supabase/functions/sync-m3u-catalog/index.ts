@@ -268,12 +268,9 @@ Deno.serve(async (req) => {
       }, 502);
     }
 
-    const existingByKey = new Map(
-      (existingRows ?? []).map((row) => [String(row.source_key), row]),
-    );
     for (const row of batch) {
       const key = String(row.source_key ?? "");
-      const existing = existingByKey.get(key);
+      const existing = (existingRows ?? []).find((candidate) => String(candidate.source_key) === key);
       const incomingPrimary = typeof row.url_stream === "string" ? row.url_stream : "";
       const incomingMirrors = Array.isArray(row.stream_urls)
         ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
