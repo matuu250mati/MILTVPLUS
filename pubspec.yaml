@@ -30,5 +30,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+# QA-only compatibility guard: shared_preferences_android 2.5.0 switched
+# its native bridge to Pigeon JNI and is the version resolved by CI when the
+# runtime NoSuchMethodError was observed. Hold the Android implementation at
+# the last pre-JNI release while we verify the native API on real devices.
+dependency_overrides:
+  shared_preferences_android: 2.4.25
+
 flutter:
   uses-material-design: true
