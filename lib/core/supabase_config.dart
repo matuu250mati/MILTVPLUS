@@ -4,6 +4,7 @@ const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 // A valid URL/key does not guarantee that Supabase finished booting. If startup
 // times out, keep the UI available and let the auth screen explain the failure.
 bool supabaseStartupFailed = false;
+String? supabaseStartupError;
 
 /// Accepts the canonical Supabase project URL, optionally with trailing slashes.
 /// Paths such as /rest/v1, dashboard URLs, query strings, and fragments are rejected.
@@ -38,7 +39,7 @@ String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
 
 String? get supabaseConfigurationError {
   if (supabaseStartupFailed) {
-    return 'No se pudo iniciar la conexión con el servicio. Revisá internet e intentá abrir la aplicación nuevamente.';
+    return 'No se pudo inicializar Supabase. Detalle técnico: ${supabaseStartupError ?? "sin detalle disponible"}';
   }
   if (supabaseUrl.trim().isEmpty) {
     return 'Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.';
