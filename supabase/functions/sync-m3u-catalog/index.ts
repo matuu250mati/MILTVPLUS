@@ -190,17 +190,17 @@ Deno.serve(async (req) => {
   const dryRun = requestBody?.dry_run === true;
   const liveSyncConfirmed = requestBody?.confirm_sync === "MILTVPLUS-QA";
 
+  const expectedSecret = Deno.env.get("SYNC_SECRET");
+  const suppliedSecret = req.headers.get("x-sync-secret");
+  if (!expectedSecret || !suppliedSecret || suppliedSecret !== expectedSecret) {
+    return json({ error: "Unauthorized catalog sync request." }, 401);
+  }
+
   if (!dryRun && !liveSyncConfirmed) {
     return json({
       error: "Explicit mode required. Send { dry_run: true } for a read-only preflight or { confirm_sync: 'MILTVPLUS-QA' } to authorize a live QA catalog sync.",
       writePerformed: false,
     }, 400);
-  }
-
-  const expectedSecret = Deno.env.get("SYNC_SECRET");
-  const suppliedSecret = req.headers.get("x-sync-secret");
-  if (!expectedSecret || !suppliedSecret || suppliedSecret !== expectedSecret) {
-    return json({ error: "Unauthorized catalog sync request." }, 401);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
