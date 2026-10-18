@@ -136,12 +136,19 @@ class _TvOnboardingScreenState extends State<TvOnboardingScreen> {
         _step = 0;
         _error = null;
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // QA diagnostic: preserve the real failure so the next test can identify
+      // whether plugin initialization, preference reads, or writes are failing.
+      debugPrint('MILTVPLUS QA onboarding local setup failed: $error');
+      debugPrintStack(
+        label: 'MILTVPLUS QA onboarding local setup stack',
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _busy = false;
         _syncSuccessful = false;
-        _error = 'No pudimos guardar la configuración local. Revisá el almacenamiento disponible e intentá nuevamente.';
+        _error = 'Falló la configuración local (${error.runtimeType}). Detalle: $error';
       });
     }
   }
