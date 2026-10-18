@@ -164,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _EmptyRow(
                       message: _moviesLoadFailed
                           ? 'No se pudieron consultar las películas. Revisá la conexión con el servicio y reintentá.'
-                          : 'La consulta terminó correctamente, pero no hay películas marcadas como publicadas con una URL válida.',
+                          : 'La consulta terminó correctamente, pero no hay películas marcadas como publicadas.',
                       actionLabel: _moviesLoadFailed ? 'Reintentar' : 'Explorar catálogo',
                       onAction: _moviesLoadFailed ? _reload : () => widget.onNavigate(8),
                     )
@@ -174,10 +174,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       compact: compact,
                       titleOf: (item) => item.title,
                       imageOf: (item) => item.logo,
-                      subtitleOf: (item) => [
-                        if (item.releaseYear != null) item.releaseYear.toString(),
-                        item.category,
-                      ].join(' · '),
+                      subtitleOf: (item) => item.urlStream.trim().isEmpty
+                          ? 'Metadatos · enlace pendiente'
+                          : [
+                              if (item.releaseYear != null) item.releaseYear.toString(),
+                              item.category,
+                            ].join(' · '),
                       onTap: (item) => _openMovie(item),
                     ),
                   SizedBox(height: compact ? 20 : 26),
