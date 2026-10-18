@@ -32,13 +32,17 @@ Deno.serve(async (req) => {
     return json({ error: "Missing TMDB_API_KEY or Supabase server secrets." }, 500);
   }
 
-  let request: { pages?: number; includeMovies?: boolean; includeSeries?: boolean };
+  let request: { pages?: number; startPage?: number; includeMovies?: boolean; includeSeries?: boolean };
   try {
     request = await req.json();
   } catch {
     request = {};
   }
-  const pages = Math.max(1, Math.min(Number(request.pages ?? 1) || 1, 5));
+  // Run bounded chunks to stay within Edge Function time limits. Call again
+  // with the next startPage until all available TMDB pages have been covered.
+  const pages = Math.max(1, Math.min(Number(request.pages ?? 10) || 10, 20));
+  const startPage = Math.max(1, Math.min(Number(request.startPage ?? 1) || 1, 500));
+  const endPage = Math.min(startPage + pages - 1, 500);
   const includeMovies = request.includeMovies !== false;
   const includeSeries = request.includeSeries !== false;
   if (!includeMovies && !includeSeries) return json({ error: "Select movies, series, or both." }, 400);
@@ -66,9 +70,12 @@ Deno.serve(async (req) => {
 
     let moviesProcessed = 0;
     let seriesProcessed = 0;
-    for (let page = 1; page <= pages; page++) {
+    let moviePagesAvailable = 0;
+    let seriesPagesAvailable = 0;
+    for (let page = startPage; page <= endPage; page++) {
       if (includeMovies) {
-        const data = await api(`movie/popular?page=${page}`);
+        const data = await api(`discover/movie?include_adult=false&sort_by=popularity.desc&page=${page}`);
+        moviePagesAvailable = Math.max(moviePagesAvailable, Number(data.total_pages ?? 0));
         const rows = (data.results ?? []).map((item: any) => ({
           tmdb_id: Number(item.id),
           title: String(item.title ?? item.original_title ?? "").trim(),
@@ -92,7 +99,8 @@ Deno.serve(async (req) => {
       }
 
       if (includeSeries) {
-        const data = await api(`tv/popular?page=${page}`);
+        const data = await api(`discover/tv?sort_by=popularity.desc&page=${page}`);
+        seriesPagesAvailable = Math.max(seriesPagesAvailable, Number(data.total_pages ?? 0));
         const rows = (data.results ?? []).map((item: any) => ({
           tmdb_id: Number(item.id),
           title: String(item.name ?? item.original_name ?? "").trim(),
@@ -115,7 +123,11 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
-      pages,
+      startPage,
+      endPage,
+      pagesRequested: endPage - startPage + 1,
+      moviePagesAvailable,
+      seriesPagesAvailable,
       moviesProcessed,
       seriesProcessed,
       note: "Metadata imported. Movies without an authorized stream remain non-playable until an owner adds one.",
