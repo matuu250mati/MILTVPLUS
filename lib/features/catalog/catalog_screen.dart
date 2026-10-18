@@ -412,6 +412,86 @@ Future<void> _openSeriesEpisodes(
   }
 }
 
+bool _hasHttpsStream(String? rawUrl) {
+  if (rawUrl == null || rawUrl.trim().isEmpty) return false;
+  final uri = Uri.tryParse(rawUrl.trim());
+  return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty &&
+      uri.userInfo.isEmpty;
+}
+
+class _AvailabilityLabel extends StatelessWidget {
+  const _AvailabilityLabel({
+    required this.available,
+    required this.isSeries,
+  });
+
+  final bool available;
+  final bool isSeries;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSeries
+        ? const Color(0xFF55B8FF)
+        : available
+            ? const Color(0xFF27D879)
+            : const Color(0xFFFF5B65);
+    final label = isSeries
+        ? 'Ver episodios'
+        : available
+            ? 'Listo para ver'
+            : 'No disponible por el momento';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CatalogTag extends StatelessWidget {
+  const _CatalogTag({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .14),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: color.withValues(alpha: .45)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: .4,
+          ),
+        ),
+      );
+}
+
 class _CatalogCard extends StatelessWidget {
   const _CatalogCard({required this.entry});
 
@@ -481,6 +561,19 @@ class _CatalogCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
+          ),
+          const SizedBox(height: 5),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              _AvailabilityLabel(
+                available: _hasHttpsStream(entry.streamUrl),
+                isSeries: entry.seriesId != null,
+              ),
+              if (entry.year != null && entry.year! >= DateTime.now().year - 1)
+                const _CatalogTag(label: 'RECIENTE', color: Color(0xFF21C7A8)),
+            ],
           ),
           if (entry.synopsis != null && entry.synopsis!.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
