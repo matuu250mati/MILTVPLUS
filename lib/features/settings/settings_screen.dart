@@ -235,6 +235,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final systemScale = mediaQuery.textScaler.scale(1.0);
+    final effectiveScale = (systemScale * _textScale).clamp(1.0, 1.2).toDouble();
+    return MediaQuery(
+      data: mediaQuery.copyWith(textScaler: TextScaler.linear(effectiveScale)),
+      child: _buildSettingsContent(context),
+    );
+  }
+
+  Widget _buildSettingsContent(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
 
@@ -869,6 +879,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 titles[section] ?? 'Configuración',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
             ),
@@ -955,7 +967,12 @@ class _InfoRow extends StatelessWidget {
       ),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: 3),
         Text(description, style: const TextStyle(color: AppTheme.muted, height: 1.4, fontSize: 12)),
       ])),
