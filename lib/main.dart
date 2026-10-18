@@ -27,10 +27,11 @@ Future<void> main() async {
         url: normalizedSupabaseUrl,
         publishableKey: supabaseAnonKey.trim(),
       ).timeout(const Duration(seconds: 8));
-    } catch (_) {
-      // Never trap the user on the native splash while auth/network startup
-      // is unavailable. The app will render an actionable connection message.
+    } catch (error) {
+      // Keep the original failure visible in QA instead of masking DNS,
+      // storage, or initialization errors behind a generic connection message.
       supabaseStartupFailed = true;
+      supabaseStartupError = error.toString();
     }
   }
 
