@@ -84,7 +84,7 @@ jobs:
           print(f"Dry run only; database writes performed: {report.get('writePerformed')}")
           print(f"Sources: {len(sources)}; entries fetched: {total_fetched}; accepted: {total_accepted}; rejected: {total_rejected}; duplicates: {total_duplicates}")
           for source in sources:
-              print(f"- {source.get('source')}: fetched={source.get('fetched', 0)}, accepted={source.get('accepted', 0)}, rejected={source.get('rejected', 0)}, duplicates={source.get('duplicates', 0)}, error={source.get('error', 'none')}, warning={source.get('warning', 'none')}")
+              print(f"- {source.get('source')}: fetched={source.get('fetched', 0)}, accepted={source.get('accepted', 0)}, rejected={source.get('rejected', 0)}, duplicates={source.get('duplicates', 0)}, reasons={json.dumps(source.get('rejectedReasons', {}), sort_keys=True)}, extensions={json.dumps(source.get('rejectedExtensions', {}), sort_keys=True)}, error={source.get('error', 'none')}, warning={source.get('warning', 'none')}")
           with open(Path.home() / "m3u-preflight-summary.md", "w") as summary:
               summary.write("# QA M3U read-only preflight\n\n")
               summary.write(f"- Sources: {len(sources)}\n- Fetched entries: {total_fetched}\n- Accepted entries: {total_accepted}\n- Rejected entries: {total_rejected}\n- Duplicates: {total_duplicates}\n")
