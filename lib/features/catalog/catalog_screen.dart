@@ -448,41 +448,20 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.isMovie
-            ? () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => MovieDetailScreen(
-                      contentKey: entry.contentKey,
-                      title: entry.title,
-                      category: entry.category,
-                      genres: entry.genres,
-                      posterUrl: entry.posterUrl,
-                      year: entry.year,
-                      synopsis: entry.synopsis,
-                    ),
-                  ),
-                )
-            : entry.hasPlayableStream
-                ? () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => CatalogPlayerScreen(
-                          title: entry.title,
-                          streamUrl: entry.streamUrls.isNotEmpty
-                              ? entry.streamUrls.first
-                              : entry.streamUrl!,
-                          backupStreamUrls: entry.streamUrls.length > 1
-                              ? entry.streamUrls.skip(1).toList(growable: false)
-                              : const <String>[],
-                        ),
-                      ),
-                    )
-                : entry.seriesId != null
-                    ? () => _openSeriesEpisodes(context, entry)
-                    : () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Este título todavía no está disponible para reproducir.'),
-                          ),
-                        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MovieDetailScreen(
+              contentKey: entry.contentKey,
+              title: entry.title,
+              category: entry.category,
+              genres: entry.genres,
+              posterUrl: entry.posterUrl,
+              year: entry.year,
+              synopsis: entry.synopsis,
+              isSeries: !entry.isMovie,
+            ),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
