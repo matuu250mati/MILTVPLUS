@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
@@ -135,6 +136,16 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           uri.userInfo.isNotEmpty ||
           !['https', 'http'].contains(uri.scheme.toLowerCase())) {
         lastFailure = 'Se omitió una URL de transmisión no válida.';
+        continue;
+      }
+      // Keep HTTP mirrors in the catalog, but do not attempt cleartext requests
+      // on mobile/web platforms where platform security policy blocks them.
+      // Android's manifest intentionally sets usesCleartextTraffic=false.
+      if (uri.scheme.toLowerCase() == 'http' &&
+          (kIsWeb ||
+              defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
+        lastFailure = 'Se omitió una fuente HTTP porque esta plataforma exige transporte seguro.';
         continue;
       }
 
