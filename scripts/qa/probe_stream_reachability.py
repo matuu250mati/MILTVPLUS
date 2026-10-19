@@ -84,34 +84,50 @@ def safe_candidate(row):
 def choose_sample(rows):
     by_category = defaultdict(list)
     by_country = defaultdict(list)
+    all_candidates = []
     for row in rows:
         candidate = safe_candidate(row)
         if candidate:
+            all_candidates.append(candidate)
             by_category[candidate["category"]].append(candidate)
             by_country[candidate["country"]].append(candidate)
 
     ordered = []
     seen_urls = set()
-    # Stratify across genres first, then countries so large countries do not
-    # consume the entire sample. Stable database ordering makes runs comparable.
+    # Prioritize rows that actually have alternate URLs so the fallback path is
+    # exercised, then fill the remaining budget with a category/country sample.
+    for item in all_candidates:
+        if not item["alternate_urls"]:
+            continue
+        if item["url"] not in seen_urls:
+            seen_urls.add(item["url"])
+            ordered.append(item)
+
+    stratified = []
+    stratified_urls = set(seen_urls)
     for bucket, limit in [(by_category, 2), (by_country, 1)]:
         for key in sorted(bucket):
             added = 0
             for item in bucket[key]:
-                if item["url"] in seen_urls:
+                if item["url"] in stratified_urls:
                     continue
-                seen_urls.add(item["url"])
-                ordered.append(item)
+                stratified_urls.add(item["url"])
+                stratified.append(item)
                 added += 1
                 if added >= limit:
                     break
+    ordered.extend(stratified)
 
     result = []
     host_counts = Counter()
+    result_urls = set()
+    # A host cap avoids hammering a single provider. Alternate-bearing rows are
+    # considered first; the remaining slots stay stratified across categories.
     for item in ordered:
-        if host_counts[item["host"]] >= MAX_PER_HOST:
+        if item["url"] in result_urls or host_counts[item["host"]] >= MAX_PER_HOST:
             continue
         result.append(item)
+        result_urls.add(item["url"])
         host_counts[item["host"]] += 1
         if len(result) >= MAX_SAMPLES:
             break
