@@ -16,6 +16,7 @@ class MovieDetailScreen extends StatefulWidget {
     required this.posterUrl,
     required this.year,
     required this.synopsis,
+    this.isSeries = false,
   });
 
   final String contentKey;
@@ -25,6 +26,7 @@ class MovieDetailScreen extends StatefulWidget {
   final String? posterUrl;
   final int? year;
   final String? synopsis;
+  final bool isSeries;
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -34,8 +36,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _favorite = false;
   bool _liked = false;
   bool _loaded = false;
-  String get _favoriteKey => 'miltvplus.favorite.movie.${widget.contentKey}';
-  String get _likeKey => 'miltvplus.like.movie.${widget.contentKey}';
+  String get _favoriteKey => 'miltvplus.favorite.${widget.isSeries ? 'series' : 'movie'}.${widget.contentKey}';
+  String get _likeKey => 'miltvplus.like.${widget.isSeries ? 'series' : 'movie'}.${widget.contentKey}';
 
   @override
   void initState() {
@@ -99,7 +101,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppTheme.panel,
         icon: const Icon(Icons.lock_clock_rounded, color: AppTheme.accent, size: 38),
-        title: const Text('Estamos preparando este título'),
+        title: const Text('No disponible por el momento'),
         content: const Text(
           'La ficha ya está disponible en MILTVPLUS, pero la reproducción todavía no está habilitada. '
           'Estamos trabajando para incorporar una fuente autorizada y confirmar la disponibilidad. '
@@ -187,7 +189,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _statusChip(Icons.lock_clock_rounded, 'Reproducción próximamente'),
+                    _statusChip(Icons.circle, 'No disponible por el momento'),
                     ...tags.map((tag) => _statusChip(Icons.local_offer_outlined, tag)),
                   ],
                 ),
@@ -241,8 +243,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: _showUnavailable,
-                    icon: const Icon(Icons.lock_clock_rounded),
-                    label: const Text('Reproducción próximamente'),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Reproducir'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.accent,
                       foregroundColor: const Color(0xFF07101B),
@@ -252,7 +254,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Este título no se reproducirá hasta que se confirme la autorización correspondiente y se configure una fuente válida.',
+                  'Estado: no disponible por el momento. La reproducción se habilitará cuando exista una fuente válida y autorizada.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.45),
                 ),
