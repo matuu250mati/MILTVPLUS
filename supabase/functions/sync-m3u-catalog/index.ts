@@ -376,6 +376,35 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Build playback fallbacks across category-specific rows only when the exact
+  // tvg-id matches. This preserves separate country/genre memberships while
+  // letting the player try alternate URLs if one source is unavailable.
+  const urlsByTvgId = new Map<string, string[]>();
+  for (const row of selected) {
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const knownUrls = urlsByTvgId.get(tvgId) ?? [];
+    const rowMirrors = Array.isArray(row.stream_urls)
+      ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [];
+    for (const value of [row.url_stream, ...rowMirrors]) {
+      if (typeof value === "string" && value.length > 0 && !knownUrls.includes(value)) {
+        knownUrls.push(value);
+      }
+    }
+    urlsByTvgId.set(tvgId, knownUrls);
+  }
+  for (const row of selected) {
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const sharedUrls = urlsByTvgId.get(tvgId) ?? [];
+    const primary = typeof row.url_stream === "string" ? row.url_stream : "";
+    const existingMirrors = Array.isArray(row.stream_urls)
+      ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [];
+    row.stream_urls = [...new Set([primary, ...sharedUrls, ...existingMirrors].filter(Boolean))];
+  }
+
   if (!selected.length) {
     return json({
       ok: false,
