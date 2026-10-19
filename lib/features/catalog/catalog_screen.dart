@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import 'catalog_player_screen.dart';
+import 'movie_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key, required this.category});
@@ -263,6 +264,8 @@ String _catalogCategoryIcon(String value) {
 class _CatalogEntry {
   const _CatalogEntry({
     required this.title,
+    required this.contentKey,
+    required this.isMovie,
     required this.category,
     required this.genres,
     required this.posterUrl,
@@ -274,6 +277,8 @@ class _CatalogEntry {
   });
 
   final String title;
+  final String contentKey;
+  final bool isMovie;
   final String category;
   final List<String> genres;
   final String? posterUrl;
@@ -302,6 +307,8 @@ class _CatalogEntry {
 
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
         title: movie.title,
+        contentKey: movie.id.isNotEmpty ? movie.id : movie.title,
+        isMovie: true,
         category: movie.category,
         genres: movie.genres,
         posterUrl: movie.logo,
@@ -314,6 +321,8 @@ class _CatalogEntry {
 
   factory _CatalogEntry.fromSeries(SeriesModel series) => _CatalogEntry(
         title: series.title,
+        contentKey: series.id.isNotEmpty ? series.id : series.title,
+        isMovie: false,
         category: series.category,
         genres: series.genres,
         posterUrl: series.logo,
@@ -335,6 +344,8 @@ class _CatalogEntry {
       title: isEpisode && seriesTitle != null && seriesTitle.trim().isNotEmpty
           ? '$seriesTitle · $rawTitle'
           : rawTitle,
+      contentKey: rawTitle,
+      isMovie: !isEpisode,
       category: [
         isEpisode ? 'Episodio' : 'Película de la comunidad',
         if (isEpisode && season != null && episode != null) 'T$season E$episode',
@@ -437,27 +448,41 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.hasPlayableStream
+        onTap: entry.isMovie
             ? () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => CatalogPlayerScreen(
+                    builder: (_) => MovieDetailScreen(
+                      contentKey: entry.contentKey,
                       title: entry.title,
-                      streamUrl: entry.streamUrls.isNotEmpty
-                          ? entry.streamUrls.first
-                          : entry.streamUrl!,
-                      backupStreamUrls: entry.streamUrls.length > 1
-                          ? entry.streamUrls.skip(1).toList(growable: false)
-                          : const <String>[],
+                      category: entry.category,
+                      genres: entry.genres,
+                      posterUrl: entry.posterUrl,
+                      year: entry.year,
+                      synopsis: entry.synopsis,
                     ),
                   ),
                 )
-            : entry.seriesId != null
-                ? () => _openSeriesEpisodes(context, entry)
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Este título todavía no está disponible para reproducir.'),
+            : entry.hasPlayableStream
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => CatalogPlayerScreen(
+                          title: entry.title,
+                          streamUrl: entry.streamUrls.isNotEmpty
+                              ? entry.streamUrls.first
+                              : entry.streamUrl!,
+                          backupStreamUrls: entry.streamUrls.length > 1
+                              ? entry.streamUrls.skip(1).toList(growable: false)
+                              : const <String>[],
+                        ),
                       ),
-                    ),
+                    )
+                : entry.seriesId != null
+                    ? () => _openSeriesEpisodes(context, entry)
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Este título todavía no está disponible para reproducir.'),
+                          ),
+                        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
