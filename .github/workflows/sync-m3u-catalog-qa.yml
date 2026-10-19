@@ -1,0 +1,140 @@
+name: Import M3U catalog to MILTVPLUS-QA
+
+on:
+  push:
+    branches:
+      - qa/deploy-m3u-sync-isolated-2026-10-18
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-qa-live-m3u-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-qa-only:
+    if: github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' && contains(github.event.head_commit.message, '[run-qa-catalog-sync]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: miltvplus-qa
+    steps:
+      - name: Verify isolated QA destination and required secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" || { echo "::error::Missing QA access token."; exit 1; }
+          test -n "${SUPABASE_ANON_KEY//[[:space:]]/}" || { echo "::error::Missing QA anon/publishable key."; exit 1; }
+          test -n "${SYNC_SECRET//[[:space:]]/}" || { echo "::error::Missing QA sync secret."; exit 1; }
+          normalized="$(printf '%s' "$SUPABASE_URL" | xargs)"
+          normalized="${normalized%/}"
+          [[ "$normalized" == "https://uoqfovrynlyterjylpqj.supabase.co" ]] || {
+            echo "::error::Refusing to sync: SUPABASE_QA_URL does not match the hardcoded QA project."
+            exit 1
+          }
+          echo "QA project ref verified. Production is not a target."
+          status="$(curl --silent --show-error --max-time 15 -o /tmp/schema-check.json -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$normalized/rest/v1/channels?select=source_key,url_stream,stream_urls&limit=0" || true)"
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::QA channels schema check failed (HTTP ${status:-000}). Migration/schema must be fixed before import."
+            head -c 500 /tmp/schema-check.json || true
+            exit 1
+          fi
+          echo "Verified QA channels schema includes source_key, url_stream and stream_urls."
+
+      - name: Run read-only preflight before any catalog write
+        env:
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --max-time 180 \
+            -X POST "${SUPABASE_QA_URL%/}/functions/v1/sync-m3u-catalog" \
+            -H 'Content-Type: application/json' \
+            -H "x-sync-secret: $SYNC_SECRET" \
+            --data '{"dry_run":true}' -o m3u-preflight.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("m3u-preflight.json").read_text())
+          if report.get("dryRun") is not True or report.get("writePerformed") is not False:
+              raise SystemExit("Safety stop: preflight did not prove it was read-only.")
+          if report.get("ok") is not True or int(report.get("failedSources", 0)) != 0:
+              raise SystemExit("Safety stop: one or more playlist sources failed preflight.")
+          print("Read-only preflight passed.")
+          print(f"Sources={len(report.get('sources', []))}; candidate channels={report.get('candidateChannels')}; database writes=False")
+          PY
+
+      - name: Import catalog into QA only and verify counts
+        env:
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            -X POST "${SUPABASE_QA_URL%/}/functions/v1/sync-m3u-catalog" \
+            -H 'Content-Type: application/json' \
+            -H "x-sync-secret: $SYNC_SECRET" \
+            --data '{"confirm_sync":"MILTVPLUS-QA"}' -o m3u-live-sync.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("m3u-live-sync.json").read_text())
+          sources = report.get("sources", [])
+          accepted = sum(int(source.get("accepted", 0)) for source in sources)
+          failed = [source.get("source", "(unknown)") for source in sources if source.get("error")]
+          imported = int(report.get("imported", 0))
+          print(f"Live QA sync: complete={report.get('complete')}; imported={imported}; accepted_sum={accepted}; failed_sources={len(failed)}")
+          if report.get("complete") is not True or report.get("ok") is not True:
+              raise SystemExit("Catalog sync did not report complete=true.")
+          if imported <= 0 or imported != accepted:
+              raise SystemExit("Imported row count does not match accepted unique candidates.")
+          if int(report.get("failedSources", 0)) != 0 or failed:
+              raise SystemExit("One or more sources failed during catalog import.")
+          print("QA catalog write count verified against accepted unique candidates.")
+          PY
+
+      - name: Publish sanitized QA sync summary
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          for filename, heading in [
+              ("m3u-preflight.json", "Read-only preflight"),
+              ("m3u-live-sync.json", "QA live sync"),
+          ]:
+              print(f"## {heading}")
+              if not Path(filename).exists():
+                  print("No report was produced.")
+                  continue
+              report = json.loads(Path(filename).read_text())
+              print(f"- ok: {report.get('ok')}")
+              print(f"- dryRun: {report.get('dryRun', 'not applicable')}")
+              print(f"- writePerformed: {report.get('writePerformed', 'not applicable')}")
+              print(f"- imported: {report.get('imported', report.get('candidateChannels', 'not reported'))}")
+              print(f"- failedSources: {report.get('failedSources', 'not reported')}")
+              print(f"- warningSources: {report.get('warningSources', 'not reported')}")
+              print()
+          PY
+
+      - name: Upload sanitized QA sync reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miltvplus-qa-m3u-catalog-sync
+          path: |
+            m3u-preflight.json
+            m3u-live-sync.json
+          if-no-files-found: warn
+          retention-days: 7
