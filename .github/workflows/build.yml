@@ -194,10 +194,12 @@ jobs:
           done
           if [[ "$failed" -ne 0 ]]; then
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not match the app schema. Treat this QA build as blocked until the QA API key and schema checks pass."
+              echo "### Supabase schema validation: FAILED — QA build blocked"
+              echo "One or more tables could not be validated. Do not install or distribute this QA APK until the QA key and schema checks pass."
               echo "See supabase/SETUP_ES.md and the job log for table-level details."
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::QA build blocked: Supabase credentials/schema validation did not pass for every required table."
+            exit 1
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
