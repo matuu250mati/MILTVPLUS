@@ -70,6 +70,7 @@ def main():
     rows_with_legacy_m3u_key = 0
     rows_with_primary = 0
     rows_with_mirrors = 0
+    rows_with_stream_urls_array = 0
     rows_missing_primary = 0
     rows_country_zz = 0
     rows_missing_country = 0
@@ -102,7 +103,14 @@ def main():
         else:
             rows_missing_primary += 1
         mirrors = row.get("stream_urls")
-        if isinstance(mirrors, list) and any(isinstance(x, str) and x.startswith(("https://", "http://")) for x in mirrors):
+        valid_mirrors = [
+            value.strip() for value in mirrors
+            if isinstance(mirrors, list) and isinstance(value, str)
+            and value.strip().startswith(("https://", "http://"))
+        ] if isinstance(mirrors, list) else []
+        if valid_mirrors:
+            rows_with_stream_urls_array += 1
+        if any(value != primary for value in valid_mirrors):
             rows_with_mirrors += 1
 
     report = {
@@ -114,6 +122,7 @@ def main():
         "rows_with_category_scoped_key": rows_with_category_scoped_key,
         "rows_with_legacy_m3u_key": rows_with_legacy_m3u_key,
         "rows_with_primary_url": rows_with_primary,
+        "rows_with_stream_urls_array": rows_with_stream_urls_array,
         "rows_with_mirrors": rows_with_mirrors,
         "rows_missing_primary_url": rows_missing_primary,
         "rows_country_zz": rows_country_zz,
@@ -132,7 +141,7 @@ def main():
     print(json.dumps({k: report[k] for k in (
         "target", "total_rows", "unique_titles", "rows_with_repeated_title",
         "distinct_titles_repeated", "rows_with_category_scoped_key", "rows_with_legacy_m3u_key", "rows_with_primary_url",
-        "rows_with_mirrors", "rows_missing_primary_url", "rows_country_zz",
+        "rows_with_stream_urls_array", "rows_with_mirrors", "rows_missing_primary_url", "rows_country_zz",
         "rows_missing_country_code", "argentina_categories", "countries", "categories"
     )}, ensure_ascii=False, indent=2))
     print(f"Full report written to {args.output}")
