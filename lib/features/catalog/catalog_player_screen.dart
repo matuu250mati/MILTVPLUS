@@ -34,6 +34,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   String? _error;
   bool _loading = true;
   bool _showControls = true;
+  Timer? _controlsHideTimer;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
       streamUrl: widget.streamUrl,
     );
     _enterImmersiveMode();
+    _scheduleControlsHide();
     _initialize();
   }
 
@@ -62,6 +64,20 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+  }
+
+  void _scheduleControlsHide() {
+    _controlsHideTimer?.cancel();
+    _controlsHideTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && !_loading && _error == null && _controller?.value.isPlaying == true) {
+        setState(() => _showControls = false);
+      }
+    });
+  }
+
+  void _revealControls() {
+    if (!_showControls) setState(() => _showControls = true);
+    _scheduleControlsHide();
   }
 
   Future<void> _initialize() async {
@@ -115,7 +131,9 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
           _controller = initializedController;
           _loading = false;
           _error = null;
+          _showControls = true;
         });
+        _scheduleControlsHide();
         initializedController.addListener(
           () => _handlePlaybackProgress(initializedController),
         );
@@ -192,6 +210,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
   void dispose() {
     final current = _controller;
     if (current != null) unawaited(_persistPlaybackProgress(current));
+    _controlsHideTimer?.cancel();
     _controller?.dispose();
     _restoreSystemUi();
     super.dispose();
@@ -248,7 +267,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                     )
                   : GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => setState(() => _showControls = !_showControls),
+                      onTap: _revealControls,
                       child: Stack(
                         fit: StackFit.expand,
                         alignment: Alignment.center,
@@ -301,7 +320,15 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                                 builder: (context, value, _) => IconButton.filledTonal(
                                   tooltip: value.isPlaying ? 'Pausar' : 'Reproducir',
                                   iconSize: 42,
-                                  onPressed: () => value.isPlaying ? controller.pause() : controller.play(),
+                                  onPressed: () {
+                                    if (value.isPlaying) {
+                                      controller.pause();
+                                      setState(() => _showControls = true);
+                                    } else {
+                                      controller.play();
+                                      _scheduleControlsHide();
+                                    }
+                                  },
                                   icon: Icon(value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
                                 ),
                               ),
