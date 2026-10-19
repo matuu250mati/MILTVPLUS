@@ -132,11 +132,19 @@ class _AuthScreenState extends State<AuthScreen> {
           _message = e.message;
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final details = error.toString();
+        final isDnsFailure = details.contains('Failed host lookup') ||
+            details.contains('SocketException') ||
+            details.contains('ClientException');
+        final endpointHost =
+            Uri.tryParse(normalizedSupabaseUrl)?.host ?? 'servidor configurado';
         setState(() {
           _error = true;
-          _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
+          _message = isDnsFailure
+              ? 'No se pudo resolver por DNS el servidor: $endpointHost. Comprobá la conexión del teléfono. Detalle: $details'
+              : 'Fallo técnico (${error.runtimeType}). Detalle: $details';
         });
       }
     } finally {

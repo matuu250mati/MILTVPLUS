@@ -44,12 +44,58 @@ jobs:
       - name: Prepare Android project
         run: bash tool/bootstrap_android.sh
 
+      # Preinstall the exact NDK required by Flutter/Gradle. Retry cleanly if the
+      # runner receives a truncated/corrupt SDK ZIP (ZipException: not a ZIP archive).
+      - name: Install and verify Android NDK with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" && -d "$sdk_root" ]] || {
+            echo "::error::Android SDK root is unavailable; cannot install NDK."
+            exit 1
+          }
+          sdkmanager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager -print 2>/dev/null | sort -V | tail -n 1)"
+          [[ -x "$sdkmanager" ]] || {
+            echo "::error::sdkmanager was not found under the Android SDK command-line tools."
+            exit 1
+          }
+          ndk_version="27.0.12077973"
+          ndk_dir="$sdk_root/ndk/$ndk_version"
+          # GitHub's hosted images normally have licenses pre-accepted. This also
+          # handles images where sdkmanager still requests acceptance.
+          yes | "$sdkmanager" --sdk_root="$sdk_root" --licenses >/dev/null 2>&1 || true
+          installed=false
+          for attempt in 1 2 3; do
+            echo "Installing/verifying NDK $ndk_version (attempt $attempt/3)."
+            if [[ -d "$ndk_dir" ]] && grep -Fq "Pkg.Revision = $ndk_version" "$ndk_dir/source.properties" 2>/dev/null && [[ -x "$ndk_dir/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" ]]; then
+              installed=true
+              break
+            fi
+            # Remove only this NDK version so Gradle cannot reuse a partial archive.
+            rm -rf "$ndk_dir"
+            if "$sdkmanager" --sdk_root="$sdk_root" --install "ndk;$ndk_version" &&
+               grep -Fq "Pkg.Revision = $ndk_version" "$ndk_dir/source.properties" 2>/dev/null &&
+               [[ -x "$ndk_dir/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" ]]; then
+              installed=true
+              break
+            fi
+            echo "::warning::NDK $ndk_version install/verification failed on attempt $attempt."
+            rm -rf "$ndk_dir"
+            sleep "$attempt"
+          done
+          [[ "$installed" == true ]] || {
+            echo "::error::NDK $ndk_version could not be installed as a valid package after 3 attempts."
+            exit 1
+          }
+          echo "Verified NDK $ndk_version at $ndk_dir."
+
       - name: Add OTA installation permissions to Android manifest
         run: bash tool/patch_ota_manifest.sh
 
       # Every PR build uses a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,7 +134,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
             SUPABASE_URL="$SUPABASE_QA_URL"
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
-            expected_ref="uqofvrynlyterjylpoj"
+            expected_ref="uoqfovrynlyterjylpqj"
           else
             SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
             SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
@@ -106,6 +152,12 @@ jobs:
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
+          # Some mobile copy/paste flows save the REST endpoint rather than the project root.
+          # Strip only this known suffix; arbitrary paths remain invalid and the exact QA ref is checked below.
+          if [[ "$SUPABASE_URL" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
+            SUPABASE_URL="${BASH_REMATCH[1]}"
+            echo "Normalized Supabase REST endpoint to project root."
+          fi
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
             echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
             exit 1
@@ -129,6 +181,29 @@ jobs:
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
 
+      - name: Verify QA Supabase DNS and HTTPS reachability
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="${SUPABASE_URL_NORMALIZED%/}/auth/v1/health"
+          last_status="000"
+          for attempt in 1 2 3 4 5; do
+            last_status="$(curl --silent --show-error --max-time 12 \
+              --output /tmp/supabase-health-body.txt \
+              --write-out '%{http_code}' "$endpoint" 2>/tmp/supabase-health-error.txt || true)"
+            # Auth health may require an apikey and return 4xx; that still proves DNS/TLS/HTTP reachability.
+            if [[ "$last_status" =~ ^[234][0-9][0-9]$ ]]; then
+              echo "QA Supabase DNS/HTTPS reachable (HTTP $last_status; no credentials sent)."
+              exit 0
+            fi
+            echo "QA Supabase endpoint attempt $attempt/5 returned HTTP ${last_status:-000}; retrying."
+            sleep 3
+          done
+          detail="$(head -c 300 /tmp/supabase-health-error.txt 2>/dev/null || true)"
+          echo "::error::QA Supabase DNS/HTTPS preflight failed after 5 attempts (HTTP ${last_status:-000}). Check SUPABASE_QA_URL and project status. $detail"
+          exit 1
+
       - name: Verify required Supabase schema (diagnostic; APK build continues)
         shell: bash
         run: |
@@ -136,7 +211,7 @@ jobs:
           # Ask PostgREST to resolve required columns with limit=0. This validates
           # the schema even when a catalog table has no publicly visible rows.
           declare -A required_columns=(
-            [channels]="title,url_stream,is_published,sort_order,logo"
+            [channels]="title,url_stream,is_published,sort_order,logo,source_key,source_name,group_title,country_code,category,stream_urls"
             [movies]="title,url_stream,is_published,created_at"
             [series]="title,is_published"
             [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
@@ -149,21 +224,28 @@ jobs:
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
+              if [[ "$status" == "401" && "$detail" == *"Invalid API key"* ]]; then
+                echo "::error::Supabase rejected the configured QA API key as invalid. Replace GitHub Actions secret SUPABASE_QA_ANON_KEY with the publishable/anon key copied from the MILTVPLUS-QA dashboard; never use the production key."
+                exit 1
+              fi
+              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Correct the QA API key or deploy/verify the required QA schema before distributing the APK. $detail"
               failed=1
             fi
           done
           if [[ "$failed" -ne 0 ]]; then
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
+              echo "### Supabase schema validation: FAILED — QA build blocked"
+              echo "One or more tables could not be validated. Do not install or distribute this QA APK until the QA key and schema checks pass."
+              echo "See supabase/SETUP_ES.md and the job log for table-level details."
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::QA build blocked: Supabase credentials/schema validation did not pass for every required table."
+            exit 1
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -243,40 +325,41 @@ jobs:
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify APK signature."; exit 1; }
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify APK signature."; exit 1; }
+          verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
+            printf '%s\n' "$verification_output"
+            echo "::error::The APK signature is invalid."
+            exit 1
+          }
+          printf '%s\n' "$verification_output"
+          actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
+            tolower($0) ~ /certificate sha-256 digest:/ {
+              line = tolower($0)
+              sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
+              gsub(/[^0-9a-f]/, "", line)
+              print line
+              exit
+            }
+          ')"
+          [[ "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]] || {
+            echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
+            exit 1
+          }
           if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
-            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
-            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
-            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
-            verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
-              printf '%s\n' "$verification_output"
-              echo "::error::The release APK signature is invalid."
+            [[ "${MILTVPLUS_EXPECTED_SIGNER_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "::error::Expected production signer fingerprint is missing or invalid."
               exit 1
             }
-            printf '%s\n' "$verification_output"
-            # Parse SHA-256 without relying on exact signer numbering, capitalization,
-            # colon formatting, or whitespace used by different build-tools versions.
-            actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
-              tolower($0) ~ /certificate sha-256 digest:/ {
-                line = tolower($0)
-                sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
-                gsub(/[^0-9a-f]/, "", line)
-                print line
-                exit
-              }
-            ')"
-            if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
-              echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
-              echo "::error::Refusing to skip the production-certificate match check."
-              exit 1
-            fi
             [[ "$actual_cert_sha256" == "$MILTVPLUS_EXPECTED_SIGNER_SHA256" ]] || {
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
             }
             echo "Production APK signature is valid and matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing verification was not requested."
+            echo "APK signature is valid for this QA/CI build; this certificate is not approved for production."
           fi
 
       - name: Name APK and generate SHA-256 checksum
@@ -308,7 +391,7 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') }}
         uses: actions/upload-artifact@v4
         with:
           name: MILTVPLUS-qa-apk

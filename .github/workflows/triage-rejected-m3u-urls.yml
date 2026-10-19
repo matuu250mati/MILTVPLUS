@@ -1,0 +1,63 @@
+name: Triage rejected M3U URLs (read-only)
+
+on:
+  push:
+    branches:
+      - qa/deploy-m3u-sync-isolated-2026-10-18
+    paths:
+      - "scripts/qa/triage_rejected_m3u_urls.py"
+      - ".github/workflows/triage-rejected-m3u-urls.yml"
+      - "supabase/functions/sync-m3u-catalog/index.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe rejected candidates without database writes
+        run: python scripts/qa/triage_rejected_m3u_urls.py
+
+      - name: Publish sanitized summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f m3u-rejected-url-triage.json ]]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open("m3u-rejected-url-triage.json", encoding="utf-8"))
+          print("# M3U rejected URL triage — read-only\n")
+          print("- Database writes: **0**")
+          print(f"- Configured sources: **{d.get('configured_sources', 0)}**")
+          print(f"- Rejected entries examined: **{d.get('rejected_entries_seen', 0)}**")
+          print(f"- Unique candidate URLs probed: **{d.get('unique_candidate_urls_probed', 0)}**")
+          print(f"- Source fetch errors: **{len(d.get('source_fetch_errors', []))}**")
+          print(f"- Elapsed probe time: **{d.get('elapsed_seconds', 0)} seconds**\n")
+          print("## Rejection reasons")
+          for k, v in d.get("reason_counts", {}).items():
+              print(f"- {k}: {v}")
+          print("\n## Probe outcomes")
+          for k, v in d.get("probe_status_counts", {}).items():
+              print(f"- {k}: {v}")
+          print("\nFull stream URLs, query values, credentials, and token-bearing paths are omitted from the report.")
+          PY
+          fi
+
+      - name: Upload sanitized triage report
+        if: always() && hashFiles('m3u-rejected-url-triage.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: miltvplus-qa-m3u-rejected-url-triage
+          path: m3u-rejected-url-triage.json
+          retention-days: 7

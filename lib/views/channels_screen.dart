@@ -22,8 +22,24 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 
   Future<void> fetchChannels() async {
     try {
-      final response = await _supabase.from('channels').select();
-      final data = List<Map<String, dynamic>>.from(response);
+      // Fetch all published rows in bounded pages; PostgREST may cap a single
+      // response at 1,000 rows. Stable ordering prevents rows being skipped
+      // between pages when many channels share the same display title.
+      const pageSize = 500;
+      final data = <Map<String, dynamic>>[];
+      for (var offset = 0;; offset += pageSize) {
+        final response = await _supabase
+            .from('channels')
+            .select()
+            .eq('is_published', true)
+            .order('sort_order', ascending: true)
+            .order('title', ascending: true)
+            .order('id', ascending: true)
+            .range(offset, offset + pageSize - 1);
+        final page = List<Map<String, dynamic>>.from(response);
+        data.addAll(page);
+        if (page.length < pageSize) break;
+      }
       if (!mounted) return;
       setState(() {
         channels = data.map((json) => ChannelModel.fromJson(json)).toList();

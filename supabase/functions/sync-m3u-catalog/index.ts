@@ -1,7 +1,7 @@
 // MILTVPLUS: idempotent M3U sync for live channels only.
 // Deploy after migration 20261016110000_m3u_catalog_sync.sql.
 // Requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SYNC_SECRET.
-// Only HTTPS direct HLS (.m3u8) entries are imported. This does NOT import VOD into movies/series.
+// Preserve safe HTTP/HTTPS stream candidates, including HLS, DASH and extensionless URLs. This does NOT import VOD into movies/series.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -37,15 +37,100 @@ const SOURCES: Source[] = [
   { name: "IPTV-org Documentales", url: "https://iptv-org.github.io/iptv/categories/documentary.m3u", category: "Documentales" },
   { name: "IPTV-org Argentina", url: "https://iptv-org.github.io/iptv/countries/ar.m3u", category: "TV Argentina", countryCode: "AR" },
   { name: "IPTV-org México", url: "https://iptv-org.github.io/iptv/countries/mx.m3u", category: "TV México", countryCode: "MX" },
+  { name: "IPTV-org Bolivia", url: "https://iptv-org.github.io/iptv/countries/bo.m3u", category: "TV Bolivia", countryCode: "BO" },
+  { name: "IPTV-org Brasil", url: "https://iptv-org.github.io/iptv/countries/br.m3u", category: "TV Brasil", countryCode: "BR" },
+  { name: "IPTV-org Chile", url: "https://iptv-org.github.io/iptv/countries/cl.m3u", category: "TV Chile", countryCode: "CL" },
+  { name: "IPTV-org Colombia", url: "https://iptv-org.github.io/iptv/countries/co.m3u", category: "TV Colombia", countryCode: "CO" },
+  { name: "IPTV-org Costa Rica", url: "https://iptv-org.github.io/iptv/countries/cr.m3u", category: "TV Costa Rica", countryCode: "CR" },
+  { name: "IPTV-org Cuba", url: "https://iptv-org.github.io/iptv/countries/cu.m3u", category: "TV Cuba", countryCode: "CU" },
+  { name: "IPTV-org República Dominicana", url: "https://iptv-org.github.io/iptv/countries/do.m3u", category: "TV República Dominicana", countryCode: "DO" },
+  { name: "IPTV-org Ecuador", url: "https://iptv-org.github.io/iptv/countries/ec.m3u", category: "TV Ecuador", countryCode: "EC" },
+  { name: "IPTV-org El Salvador", url: "https://iptv-org.github.io/iptv/countries/sv.m3u", category: "TV El Salvador", countryCode: "SV" },
+  { name: "IPTV-org Guatemala", url: "https://iptv-org.github.io/iptv/countries/gt.m3u", category: "TV Guatemala", countryCode: "GT" },
+  { name: "IPTV-org Honduras", url: "https://iptv-org.github.io/iptv/countries/hn.m3u", category: "TV Honduras", countryCode: "HN" },
+  { name: "IPTV-org Nicaragua", url: "https://iptv-org.github.io/iptv/countries/ni.m3u", category: "TV Nicaragua", countryCode: "NI" },
+  { name: "IPTV-org Panamá", url: "https://iptv-org.github.io/iptv/countries/pa.m3u", category: "TV Panamá", countryCode: "PA" },
+  { name: "IPTV-org Paraguay", url: "https://iptv-org.github.io/iptv/countries/py.m3u", category: "TV Paraguay", countryCode: "PY" },
+  { name: "IPTV-org Perú", url: "https://iptv-org.github.io/iptv/countries/pe.m3u", category: "TV Perú", countryCode: "PE" },
+  { name: "IPTV-org Puerto Rico", url: "https://iptv-org.github.io/iptv/countries/pr.m3u", category: "TV Puerto Rico", countryCode: "PR" },
+  { name: "IPTV-org Uruguay", url: "https://iptv-org.github.io/iptv/countries/uy.m3u", category: "TV Uruguay", countryCode: "UY" },
+  { name: "IPTV-org Venezuela", url: "https://iptv-org.github.io/iptv/countries/ve.m3u", category: "TV Venezuela", countryCode: "VE" },
+  { name: "IPTV-org Estados Unidos", url: "https://iptv-org.github.io/iptv/countries/us.m3u", category: "TV Estados Unidos", countryCode: "US" },
+  { name: "IPTV-org Canadá", url: "https://iptv-org.github.io/iptv/countries/ca.m3u", category: "TV Canadá", countryCode: "CA" },
+  { name: "IPTV-org España", url: "https://iptv-org.github.io/iptv/countries/es.m3u", category: "TV España", countryCode: "ES" },
+  { name: "IPTV-org Reino Unido", url: "https://iptv-org.github.io/iptv/countries/uk.m3u", category: "TV Reino Unido", countryCode: "GB" },
+  { name: "IPTV-org Francia", url: "https://iptv-org.github.io/iptv/countries/fr.m3u", category: "TV Francia", countryCode: "FR" },
+  { name: "IPTV-org Alemania", url: "https://iptv-org.github.io/iptv/countries/de.m3u", category: "TV Alemania", countryCode: "DE" },
+  { name: "IPTV-org Italia", url: "https://iptv-org.github.io/iptv/countries/it.m3u", category: "TV Italia", countryCode: "IT" },
+  { name: "IPTV-org Portugal", url: "https://iptv-org.github.io/iptv/countries/pt.m3u", category: "TV Portugal", countryCode: "PT" },
+  { name: "IPTV-org Japón", url: "https://iptv-org.github.io/iptv/countries/jp.m3u", category: "TV Japón", countryCode: "JP" },
+  { name: "IPTV-org Australia", url: "https://iptv-org.github.io/iptv/countries/au.m3u", category: "TV Australia", countryCode: "AU" },
   { name: "Free-TV lista general", url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", category: "TV en Vivo" },
 ];
 
+// Keep the existing-row lookup URL below common proxy/PostgREST request-size limits.
 const BATCH_SIZE = 100;
 const clean = (value: string | undefined) => (value ?? "").trim();
+
+// M3U country metadata is inconsistent: it may contain ISO-2 codes or full names.
+// Unknown countries use ISO 3166-1 user-assigned code ZZ instead of being mislabeled Argentina.
+function normalizeCountryCode(value: string | undefined): string {
+  const raw = clean(value).split(/[;,]/)[0].trim().toLowerCase().replace(/\./g, "");
+  if (/^[a-z]{2}$/i.test(raw)) return raw.toUpperCase();
+  const aliases: Record<string, string> = {
+    argentina: "AR", arg: "AR", méxico: "MX", mexico: "MX", mex: "MX",
+    brasil: "BR", brazil: "BR", bra: "BR", chile: "CL", chl: "CL",
+    uruguay: "UY", ury: "UY", paraguay: "PY", pry: "PY", bolivia: "BO", bol: "BO",
+    perú: "PE", peru: "PE", per: "PE", colombia: "CO", col: "CO",
+    ecuador: "EC", ecu: "EC", venezuela: "VE", ven: "VE",
+    "united states": "US", "united states of america": "US", usa: "US",
+    "united kingdom": "GB", uk: "GB", gbr: "GB", britain: "GB", canada: "CA", can: "CA",
+    españa: "ES", spain: "ES", esp: "ES", francia: "FR", france: "FR", fra: "FR",
+    alemania: "DE", germany: "DE", deu: "DE", italia: "IT", italy: "IT", ita: "IT",
+    portugal: "PT", prt: "PT", japón: "JP", japon: "JP", japan: "JP", jpn: "JP",
+    china: "CN", chn: "CN", india: "IN", ind: "IN", australia: "AU", aus: "AU",
+    "new zealand": "NZ", nzl: "NZ", rusia: "RU", russia: "RU", rus: "RU",
+    "south korea": "KR", kor: "KR", "corea del sur": "KR", "south africa": "ZA", zaf: "ZA",
+    "puerto rico": "PR", pri: "PR", cuba: "CU", internacional: "ZZ", international: "ZZ",
+  };
+  return aliases[raw] ?? "ZZ";
+}
 
 function attribute(line: string, key: string): string {
   const match = line.match(new RegExp('(?:^|\\s)' + key + '="([^"]*)"', "i"));
   return clean(match?.[1]);
+}
+
+// Optional upstream metadata enrichment. Failure is non-fatal: the catalog
+// sync still imports safe stream URLs and leaves unknown countries as ZZ.
+async function loadIptvOrgCountryMap(): Promise<Map<string, Set<string>>> {
+  const countriesById = new Map<string, Set<string>>();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch("https://iptv-org.github.io/api/channels.json", {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return countriesById;
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) return countriesById;
+    for (const value of payload) {
+      if (!value || typeof value !== "object") continue;
+      const row = value as Record<string, unknown>;
+      const id = typeof row.id === "string" ? row.id.trim().toLowerCase() : "";
+      const country = typeof row.country === "string" ? row.country.trim().toUpperCase() : "";
+      if (!id || !/^[A-Z]{2}$/.test(country) || country === "ZZ") continue;
+      const known = countriesById.get(id) ?? new Set<string>();
+      known.add(country);
+      countriesById.set(id, known);
+    }
+  } catch {
+    // Optional reference metadata must never block the safe catalog import.
+  } finally {
+    clearTimeout(timeout);
+  }
+  return countriesById;
 }
 
 async function stableHash(value: string): Promise<string> {
@@ -53,11 +138,22 @@ async function stableHash(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function directHttpsHls(value: string): string | null {
+// Recognize HLS manifests even when providers append URL path parameters
+// (for example, .m3u8;session=...) or percent-encode the path. Query-string
+// tokens are already supported by URL.pathname and remain untouched.
+function isHlsManifestPath(pathname: string): boolean {
+  try {
+    const decoded = decodeURIComponent(pathname).toLowerCase();
+    return /\.m3u8(?:;[^/]*)?$/.test(decoded);
+  } catch {
+    return /\.m3u8(?:;[^/]*)?$/.test(pathname.toLowerCase());
+  }
+}
+
+function safeStreamUrl(value: string): string | null {
   try {
     const parsed = new URL(value.trim());
-    if (parsed.protocol !== "https:") return null;
-    if (!parsed.pathname.toLowerCase().endsWith(".m3u8")) return null;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
     if (parsed.username || parsed.password) return null;
     if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname.toLowerCase())) return null;
     return parsed.toString();
@@ -68,6 +164,23 @@ function directHttpsHls(value: string): string | null {
 
 async function parsePlaylist(source: Source, body: string) {
   const entries: Array<Record<string, unknown>> = [];
+  const rejectedReasons: Record<string, number> = {};
+  const rejectedExtensions: Record<string, number> = {};
+  // Keep a few sanitized examples per reason for compatibility triage. Never expose
+  // full stream URLs, credentials, query values, or token-bearing path segments.
+  const rejectedSamples: Array<{ reason: string; protocol: string; host: string; extension: string; hasQuery: boolean }> = [];
+  const reject = (reason: string, extension = "(sin extensión)", candidateUrl = "") => {
+    rejectedReasons[reason] = (rejectedReasons[reason] ?? 0) + 1;
+    rejectedExtensions[extension] = (rejectedExtensions[extension] ?? 0) + 1;
+    if (candidateUrl && rejectedSamples.filter((sample) => sample.reason === reason).length < 5) {
+      try {
+        const parsed = new URL(candidateUrl);
+        rejectedSamples.push({ reason, protocol: parsed.protocol, host: parsed.hostname, extension, hasQuery: Boolean(parsed.search) });
+      } catch {
+        rejectedSamples.push({ reason, protocol: "(invalid)", host: "(invalid)", extension, hasQuery: false });
+      }
+    }
+  };
   const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/);
   let meta = "";
   for (const raw of lines) {
@@ -80,28 +193,47 @@ async function parsePlaylist(source: Source, body: string) {
     if (line.startsWith("#")) continue;
     if (!meta) continue;
 
-    const streamUrl = directHttpsHls(line);
+    const streamUrl = safeStreamUrl(line);
     const comma = meta.indexOf(",");
     const rawTitle = comma >= 0 ? meta.slice(comma + 1).trim() : "";
     const title = clean(rawTitle).replace(/[\u200e\u200f]/g, "");
     if (!streamUrl || !title) {
+      if (!title) {
+        reject("missing_title");
+      } else {
+        try {
+          const parsedUrl = new URL(line);
+          const pathname = parsedUrl.pathname.toLowerCase();
+          const lastSegment = pathname.split("/").pop() ?? "";
+          const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
+          if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") reject("unsupported_protocol", extension, line);
+          else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension, line);
+          else if (/\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension, line);
+          else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension, line);
+          else reject("invalid_url", extension, line);
+        } catch {
+          reject("invalid_url");
+        }
+      }
       meta = "";
       continue;
     }
 
     const tvgId = attribute(meta, "tvg-id").toLowerCase();
-    const logoUrl = directHttpsHls(attribute(meta, "tvg-logo")) ??
-      (() => {
-        const rawLogo = attribute(meta, "tvg-logo");
-        try {
-          const parsed = new URL(rawLogo);
-          return parsed.protocol === "https:" ? parsed.toString() : null;
-        } catch {
-          return null;
-        }
-      })();
+    const logoUrl = (() => {
+      const rawLogo = attribute(meta, "tvg-logo");
+      try {
+        const parsed = new URL(rawLogo);
+        return parsed.protocol === "https:" && !parsed.username && !parsed.password
+          ? parsed.toString()
+          : null;
+      } catch {
+        return null;
+      }
+    })();
     const groupTitle = attribute(meta, "group-title") || source.category;
-    const countryCode = source.countryCode || attribute(meta, "tvg-country").split(/[;,]/)[0]?.trim().toUpperCase() || null;
+    // The channels.country_code column is NOT NULL; PostgreSQL defaults do not apply when an explicit null is sent.
+    const countryCode = source.countryCode || normalizeCountryCode(attribute(meta, "tvg-country"));
     // A channel may belong to several genre/country playlists. Scope the stable key
     // to the category so an upsert in one playlist cannot erase its other category row.
     const categoryKey = source.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -122,17 +254,32 @@ async function parsePlaylist(source: Source, body: string) {
     });
     meta = "";
   }
-  return entries;
+  return { entries, rejectedReasons, rejectedExtensions, rejectedSamples };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
 
+  // Optional read-only preflight: fetch and parse every configured source but do not touch the database.
+  const requestBody = await req.clone().json().catch(() => ({})) as {
+    dry_run?: unknown;
+    confirm_sync?: unknown;
+  };
+  const dryRun = requestBody?.dry_run === true;
+  const liveSyncConfirmed = requestBody?.confirm_sync === "MILTVPLUS-QA";
+
   const expectedSecret = Deno.env.get("SYNC_SECRET");
   const suppliedSecret = req.headers.get("x-sync-secret");
   if (!expectedSecret || !suppliedSecret || suppliedSecret !== expectedSecret) {
     return json({ error: "Unauthorized catalog sync request." }, 401);
+  }
+
+  if (!dryRun && !liveSyncConfirmed) {
+    return json({
+      error: "Explicit mode required. Send { dry_run: true } for a read-only preflight or { confirm_sync: 'MILTVPLUS-QA' } to authorize a live QA catalog sync.",
+      writePerformed: false,
+    }, 400);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -145,18 +292,19 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; rejectedReasons?: Record<string, number>; rejectedExtensions?: Record<string, number>; rejectedSamples?: Array<{ reason: string; protocol: string; host: string; extension: string; hasQuery: boolean }>; error?: string; warning?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
+  const selectedByKey = new Map<string, Record<string, unknown>>();
   const seen = new Set<string>();
 
   // Keep network concurrency bounded so the public playlist hosts are not flooded.
-  for (let start = 0; start < SOURCES.length; start += 4) {
-    const group = SOURCES.slice(start, start + 4);
+  for (let start = 0; start < SOURCES.length; start += 6) {
+    const group = SOURCES.slice(start, start + 6);
     const results = await Promise.all(group.map(async (source) => {
       try {
         const response = await fetch(source.url, {
           headers: { Accept: "application/x-mpegURL, audio/x-mpegurl, text/plain, */*" },
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(10000),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
@@ -166,7 +314,7 @@ Deno.serve(async (req) => {
       } catch (error) {
         return {
           source,
-          parsed: [] as Array<Record<string, unknown>>,
+          parsed: { entries: [] as Array<Record<string, unknown>>, rejectedReasons: {}, rejectedExtensions: {}, rejectedSamples: [] },
           fetched: 0,
           error: error instanceof Error ? error.message : "Error de descarga",
         };
@@ -176,34 +324,129 @@ Deno.serve(async (req) => {
     for (const result of results) {
       let accepted = 0;
       let duplicates = 0;
-      for (const row of result.parsed) {
+      for (const row of result.parsed.entries) {
         const key = String(row.source_key ?? "");
         // Deduplicate within a category, while preserving cross-category memberships.
         if (!key) continue;
         if (seen.has(key)) {
           duplicates++;
+          // Same channel/category may appear in multiple configured playlists with
+          // different stream URLs. Keep every unique URL as an ordered playback mirror.
+          const previous = selectedByKey.get(key);
+          if (previous) {
+            const previousMirrors = Array.isArray(previous.stream_urls)
+              ? previous.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+              : [];
+            const previousPrimary = typeof previous.url_stream === "string" ? previous.url_stream : "";
+            const incomingUrl = typeof row.url_stream === "string" ? row.url_stream : "";
+            previous.stream_urls = [...new Set([previousPrimary, ...previousMirrors, incomingUrl].filter(Boolean))];
+          }
           continue;
         }
         seen.add(key);
+        row.stream_urls = typeof row.url_stream === "string" ? [row.url_stream] : [];
         selected.push(row);
+        selectedByKey.set(key, row);
         accepted++;
       }
-      const rejected = Math.max(0, result.fetched - result.parsed.length);
+      const rejected = Math.max(0, result.fetched - result.parsed.entries.length);
       const sourceError = result.error ??
         (result.fetched === 0
           ? "La lista no contiene entradas #EXTINF."
-          : result.parsed.length === 0
-          ? "No contiene URLs HTTPS directas .m3u8 aceptables."
+          : result.parsed.entries.length === 0
+          ? "No contiene URLs HTTP/HTTPS seguras aceptables."
           : undefined);
+      const sourceWarning = rejected > 0
+        ? `${rejected} entradas filtradas; se filtran entradas sin título, con protocolo no HTTP(S), credenciales embebidas o host local.`
+        : undefined;
       sourceResults.push({
         source: result.source.name,
         fetched: result.fetched,
         accepted,
         rejected,
         duplicates,
+        rejectedReasons: result.parsed.rejectedReasons,
+        rejectedExtensions: result.parsed.rejectedExtensions,
+        rejectedSamples: result.parsed.rejectedSamples,
         ...(sourceError ? { error: sourceError } : {}),
+        ...(sourceWarning ? { warning: sourceWarning } : {}),
       });
     }
+  }
+
+  // Infer missing country metadata only from an exact tvg-id match to a
+  // country-specific playlist entry. Never guess from the channel title or URL.
+  // This lets a sports/news/etc. row retain its category while also carrying
+  // country metadata when the same channel is explicitly listed by country.
+  const countriesByTvgId = new Map<string, Set<string>>();
+  const tvgIdFromSourceKey = (value: unknown): string | null => {
+    const key = typeof value === "string" ? value : "";
+    if (!key.startsWith("m3u:") || key.startsWith("m3u:url:")) return null;
+    const match = key.match(/^m3u:(.*):category:[a-z0-9-]+$/);
+    return match?.[1] ? match[1] : null;
+  };
+  for (const row of selected) {
+    const countryCode = typeof row.country_code === "string" ? row.country_code : "";
+    if (!countryCode || countryCode === "ZZ") continue;
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const known = countriesByTvgId.get(tvgId) ?? new Set<string>();
+    known.add(countryCode);
+    countriesByTvgId.set(tvgId, known);
+  }
+  // Enrich only IDs that did not receive a country from the configured M3U
+  // sources. Exact ID matches only; ambiguous or missing metadata stays ZZ.
+  const upstreamCountryMap = await loadIptvOrgCountryMap();
+  const upstreamOnlyTvgIds = new Set<string>();
+  for (const [tvgId, countries] of upstreamCountryMap) {
+    if (countriesByTvgId.has(tvgId)) continue;
+    countriesByTvgId.set(tvgId, countries);
+    upstreamOnlyTvgIds.add(tvgId);
+  }
+
+  let inferredCountryRows = 0;
+  let upstreamMetadataCountryRows = 0;
+  for (const row of selected) {
+    if (row.country_code !== "ZZ") continue;
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const known = countriesByTvgId.get(tvgId);
+    // If metadata conflicts across country lists, leave it unknown rather than
+    // assigning a potentially incorrect country.
+    if (known?.size === 1) {
+      row.country_code = [...known][0];
+      inferredCountryRows++;
+      if (upstreamOnlyTvgIds.has(tvgId)) upstreamMetadataCountryRows++;
+    }
+  }
+
+  // Build playback fallbacks across category-specific rows only when the exact
+  // tvg-id matches. This preserves separate country/genre memberships while
+  // letting the player try alternate URLs if one source is unavailable.
+  const urlsByTvgId = new Map<string, string[]>();
+  for (const row of selected) {
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const knownUrls = urlsByTvgId.get(tvgId) ?? [];
+    const rowMirrors = Array.isArray(row.stream_urls)
+      ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [];
+    for (const value of [row.url_stream, ...rowMirrors]) {
+      if (typeof value === "string" && value.length > 0 && !knownUrls.includes(value)) {
+        knownUrls.push(value);
+      }
+    }
+    urlsByTvgId.set(tvgId, knownUrls);
+  }
+  for (const row of selected) {
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const sharedUrls = urlsByTvgId.get(tvgId) ?? [];
+    const primary = typeof row.url_stream === "string" ? row.url_stream : "";
+    const existingMirrors = Array.isArray(row.stream_urls)
+      ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+      : [];
+    row.stream_urls = [...new Set([primary, ...sharedUrls, ...existingMirrors].filter(Boolean))];
   }
 
   if (!selected.length) {
@@ -211,13 +454,62 @@ Deno.serve(async (req) => {
       ok: false,
       imported: 0,
       sources: sourceResults,
-      error: "No se encontraron URLs HTTPS directas con extensión .m3u8; no se modificó el catálogo.",
+      error: "No se encontraron URLs HTTP/HTTPS seguras; no se modificó el catálogo.",
     }, 422);
+  }
+
+  if (dryRun) {
+    const failedSources = sourceResults.filter((source) => Boolean(source.error));
+    return json({
+      ok: failedSources.length === 0,
+      dryRun: true,
+      writePerformed: false,
+      candidateChannels: selected.length,
+      inferredCountryRows,
+      upstreamMetadataCountryRows,
+      failedSources: failedSources.length,
+      warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
+      sources: sourceResults,
+      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Unsafe entries are reported as warnings and not imported; stream-format compatibility and playback are verified separately.",
+    });
   }
 
   let imported = 0;
   for (let start = 0; start < selected.length; start += BATCH_SIZE) {
     const batch = selected.slice(start, start + BATCH_SIZE);
+    const batchKeys = batch.map((row) => String(row.source_key ?? "")).filter(Boolean);
+    const { data: existingRows, error: existingError } = await supabase
+      .from("channels")
+      .select("source_key,url_stream,stream_urls")
+      .in("source_key", batchKeys);
+    if (existingError) {
+      return json({
+        ok: false,
+        imported,
+        attempted: selected.length,
+        sources: sourceResults,
+        error: `No se pudieron leer las URLs existentes antes de sincronizar (${batchKeys.length} claves): ${existingError.message}; code=${existingError.code ?? "unknown"}; details=${existingError.details ?? "none"}`,
+      }, 502);
+    }
+
+    for (const row of batch) {
+      const key = String(row.source_key ?? "");
+      const existing = (existingRows ?? []).find((candidate) => String(candidate.source_key) === key);
+      const incomingPrimary = typeof row.url_stream === "string" ? row.url_stream : "";
+      const incomingMirrors = Array.isArray(row.stream_urls)
+        ? row.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+        : [];
+      const existingPrimary = typeof existing?.url_stream === "string" ? existing.url_stream : "";
+      const existingMirrors = Array.isArray(existing?.stream_urls)
+        ? existing.stream_urls.filter((value): value is string => typeof value === "string" && value.length > 0)
+        : [];
+      // Prefer the current playlist URL, but retain the previous primary and all
+      // previously stored mirrors so a resync cannot silently discard a URL.
+      row.stream_urls = [...new Set([
+        incomingPrimary, ...incomingMirrors, existingPrimary, ...existingMirrors,
+      ].filter(Boolean))];
+    }
+
     const { data, error } = await supabase
       .from("channels")
       .upsert(batch, { onConflict: "source_key" })
@@ -227,6 +519,7 @@ Deno.serve(async (req) => {
         ok: false,
         imported,
         attempted: selected.length,
+        inferredCountryRows,
         sources: sourceResults,
         error: `Falló la importación por lotes: ${error.message}`,
       }, 502);
@@ -236,6 +529,7 @@ Deno.serve(async (req) => {
         ok: false,
         imported,
         attempted: selected.length,
+        inferredCountryRows,
         sources: sourceResults,
         error: `Verificación de escritura fallida: se esperaban ${batch.length} filas confirmadas y se recibieron ${data?.length ?? 0}.`,
       }, 502);
@@ -250,7 +544,10 @@ Deno.serve(async (req) => {
     complete,
     imported,
     failedSources: failedSources.length,
+    inferredCountryRows,
+    upstreamMetadataCountryRows,
+    warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
     sources: sourceResults,
-    note: "Se importaron canales en vivo con URL HTTPS .m3u8 por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
+    note: "Se importaron canales en vivo con URLs HTTP/HTTPS seguras por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
   });
 });

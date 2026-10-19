@@ -4,7 +4,7 @@ import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 void main() {
   const parser = M3uPlaylistParser();
 
-  test('parses named HTTPS channels and skips metadata and HTTP rows', () {
+  test('parses named HTTPS channels and keeps HTTP rows as candidates', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1 tvg-id="one" tvg-name="Canal Uno" group-title="Argentina",Canal Uno
@@ -14,10 +14,11 @@ https://example.com/live/one.m3u8
 http://example.com/two/index.m3u8?token=abc
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Canal Uno');
-    expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
-    expect(channels.single.groupTitle, 'Argentina');
+    expect(channels, hasLength(2));
+    expect(channels.first.name, 'Canal Uno');
+    expect(channels.first.streamUrl, 'https://example.com/live/one.m3u8');
+    expect(channels.first.groupTitle, 'Argentina');
+    expect(channels.last.streamUrl, 'http://example.com/two/index.m3u8?token=abc');
   });
 
   test('extracts category, country, and language metadata from M3U', () {
@@ -33,7 +34,7 @@ https://example.com/sports.m3u8
     expect(channels.single.language, 'spa');
   });
 
-  test('ignores non-HTTPS URLs and malformed playlist rows', () {
+  test('ignores unsupported schemes and malformed playlist rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Invalid
@@ -142,5 +143,23 @@ https://example.com/live.m3u8
 
     expect(channels, hasLength(1));
     expect(channels.single.name, 'Direct stream');
+  });
+  test('preserves alternate HTTP/HTTPS URLs for the same tvg-id as ordered mirrors', () {
+    final channels = parser.parse('''
+#EXTM3U
+#EXTINF:-1 tvg-id="same.id" group-title="News",Canal Noticias
+https://primary.example/live.m3u8
+#EXTINF:-1 tvg-id="same.id" group-title="News",Canal Noticias
+http://backup.example/live/manifest
+#EXTINF:-1 tvg-id="same.id" group-title="News",Canal Noticias
+https://backup.example/live/manifest.mpd
+''');
+
+    expect(channels, hasLength(1));
+    expect(channels.single.streamUrl, 'https://primary.example/live.m3u8');
+    expect(channels.single.backupStreamUrls, [
+      'http://backup.example/live/manifest',
+      'https://backup.example/live/manifest.mpd',
+    ]);
   });
 }

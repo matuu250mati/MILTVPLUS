@@ -283,6 +283,23 @@ class _CatalogEntry {
   final List<String> streamUrls;
   final String? seriesId;
 
+  bool get hasPlayableStream {
+    for (final candidate in <String?>[
+      ...streamUrls,
+      streamUrl,
+    ]) {
+      final raw = candidate?.trim() ?? '';
+      if (raw.isEmpty) continue;
+      final uri = Uri.tryParse(raw);
+      if (uri != null &&
+          (uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
         title: movie.title,
         category: movie.category,
@@ -420,7 +437,7 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.streamUrl != null && entry.streamUrl!.trim().isNotEmpty
+        onTap: entry.hasPlayableStream
             ? () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => CatalogPlayerScreen(
@@ -481,6 +498,33 @@ class _CatalogCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Icon(
+                Icons.circle,
+                size: 8,
+                color: entry.hasPlayableStream ? Colors.green : AppTheme.muted,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  entry.hasPlayableStream
+                      ? 'Listo para ver'
+                      : entry.seriesId != null
+                          ? 'Consultá los episodios'
+                          : 'Estamos preparando la reproducción',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: entry.hasPlayableStream ? Colors.green : AppTheme.muted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
           if (entry.synopsis != null && entry.synopsis!.trim().isNotEmpty) ...[
             const SizedBox(height: 4),

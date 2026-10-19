@@ -1,0 +1,65 @@
+name: Read-only MILTVPLUS-QA catalog audit
+
+on:
+  push:
+    branches:
+      - qa/deploy-m3u-sync-isolated-2026-10-18
+  workflow_dispatch:
+    inputs:
+      confirm_qa_project:
+        description: "Type MILTVPLUS-QA to confirm the read-only audit target"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  audit-qa-catalog:
+    if: github.event_name == 'push' || inputs.confirm_qa_project == 'MILTVPLUS-QA'
+    runs-on: ubuntu-latest
+    environment: miltvplus-qa
+    steps:
+      - name: Checkout QA audit branch
+        uses: actions/checkout@v4
+
+      - name: Audit public QA catalog (read only)
+        env:
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_QA_ANON_KEY//[[:space:]]/}" || { echo "::error::Missing SUPABASE_QA_ANON_KEY in miltvplus-qa environment"; exit 1; }
+          python3 scripts/qa/audit_m3u_catalog.py --url 'https://uoqfovrynlyterjylpqj.supabase.co' --output qa-catalog-audit.json
+
+      - name: Publish summary
+        if: always()
+        run: |
+          if test -f qa-catalog-audit.json; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          d=json.loads(Path("qa-catalog-audit.json").read_text())
+          print("# MILTVPLUS-QA catalog audit (read only)")
+          print(f"- Target: {d.get('target')}")
+          print(f"- Total published rows: {d.get('total_rows')}")
+          print(f"- Unique channel titles: {d.get('unique_titles')}")
+          print(f"- Rows with primary stream URL: {d.get('rows_with_primary_url')}")
+          print(f"- Rows with alternative stream URLs: {d.get('rows_with_mirrors')}")
+          print(f"- Rows with missing/invalid primary URL: {d.get('rows_missing_primary_url')}")
+          print(f"- Rows with unknown country code (ZZ): {d.get('rows_country_zz')}")
+          print("\n## Argentina")
+          for k,v in sorted(d.get('argentina_categories',{}).items()): print(f"- {k}: {v}")
+          print("\n## Countries")
+          for k,v in sorted(d.get('countries',{}).items()): print(f"- {k}: {v}")
+          print("\n## Categories")
+          for k,v in sorted(d.get('categories',{}).items()): print(f"- {k}: {v}")
+          PY
+          fi
+
+      - name: Upload audit report
+        if: always() && hashFiles('qa-catalog-audit.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: miltvplus-qa-catalog-audit
+          path: qa-catalog-audit.json
+          if-no-files-found: error
