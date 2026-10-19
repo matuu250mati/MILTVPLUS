@@ -33,7 +33,7 @@ class CatalogService {
         .toList(growable: false);
   }
 
-  Future<List<ChannelModel>> getChannels({List<String>? categories}) async {
+  Future<List<ChannelModel>> getChannels({List<String>? categories, int? limit}) async {
     // Database category values are not always canonical: existing providers
     // use English labels, lowercase values, or broad categories such as
     // "General". Expand known aliases so the UI's canonical genre filter
@@ -97,9 +97,14 @@ class CatalogService {
 
     // Supabase/PostgREST may cap a response at 1,000 rows. Fetch in stable,
     // bounded pages so the app does not silently hide most of the live catalog.
-    const pageSize = 500;
+    const maxPageSize = 500;
+    final rowLimit = limit != null && limit > 0 ? limit : null;
     final allRows = <Map<String, dynamic>>[];
-    for (var offset = 0;; offset += pageSize) {
+    var offset = 0;
+    while (true) {
+      final remaining = rowLimit == null ? maxPageSize : rowLimit - allRows.length;
+      if (remaining <= 0) break;
+      final pageSize = remaining < maxPageSize ? remaining : maxPageSize;
       final query = _supabase
           .from('channels')
           .select()
@@ -115,6 +120,7 @@ class CatalogService {
       final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
       allRows.addAll(pageRows);
       if (pageRows.length < pageSize) break;
+      offset += pageRows.length;
     }
 
     return allRows
@@ -122,12 +128,17 @@ class CatalogService {
         .toList(growable: false);
   }
 
-  Future<List<MovieModel>> getMovies() async {
+  Future<List<MovieModel>> getMovies({int? limit}) async {
     // Keep every published movie in the catalog, even when playback URLs
     // have not been supplied yet. Paginate to avoid PostgREST's row cap.
-    const pageSize = 500;
+    const maxPageSize = 500;
+    final rowLimit = limit != null && limit > 0 ? limit : null;
     final allRows = <Map<String, dynamic>>[];
-    for (var offset = 0;; offset += pageSize) {
+    var offset = 0;
+    while (true) {
+      final remaining = rowLimit == null ? maxPageSize : rowLimit - allRows.length;
+      if (remaining <= 0) break;
+      final pageSize = remaining < maxPageSize ? remaining : maxPageSize;
       final response = await _supabase
           .from('movies')
           .select()
@@ -138,16 +149,22 @@ class CatalogService {
       final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
       allRows.addAll(pageRows);
       if (pageRows.length < pageSize) break;
+      offset += pageRows.length;
     }
     return allRows
         .map((item) => MovieModel.fromJson(item))
         .toList(growable: false);
   }
 
-  Future<List<SeriesModel>> getSeries() async {
-    const pageSize = 500;
+  Future<List<SeriesModel>> getSeries({int? limit}) async {
+    const maxPageSize = 500;
+    final rowLimit = limit != null && limit > 0 ? limit : null;
     final allRows = <Map<String, dynamic>>[];
-    for (var offset = 0;; offset += pageSize) {
+    var offset = 0;
+    while (true) {
+      final remaining = rowLimit == null ? maxPageSize : rowLimit - allRows.length;
+      if (remaining <= 0) break;
+      final pageSize = remaining < maxPageSize ? remaining : maxPageSize;
       final response = await _supabase
           .from('series')
           .select()
@@ -158,6 +175,7 @@ class CatalogService {
       final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
       allRows.addAll(pageRows);
       if (pageRows.length < pageSize) break;
+      offset += pageRows.length;
     }
     return allRows
         .map((item) => SeriesModel.fromJson(item))
