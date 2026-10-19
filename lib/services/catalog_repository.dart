@@ -22,14 +22,23 @@ class CatalogRepository {
   Future<List<Map<String, dynamic>>> episodes(String seriesId) async {
     final client = _client;
     if (client == null) return [];
-    final rows = await client
-        .from('episodes')
-        .select()
-        .eq('series_id', seriesId)
-        .eq('is_published', true)
-        .order('season_number')
-        .order('episode_number');
-    return List<Map<String, dynamic>>.from(rows);
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final response = await client
+          .from('episodes')
+          .select()
+          .eq('series_id', seriesId)
+          .eq('is_published', true)
+          .order('season_number')
+          .order('episode_number')
+          .order('id')
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return allRows;
   }
 
   Future<List<Map<String, dynamic>>> _read(
@@ -38,11 +47,20 @@ class CatalogRepository {
   }) async {
     final client = _client;
     if (client == null) return [];
-    final rows = await client
-        .from(table)
-        .select()
-        .eq('is_published', true)
-        .order(orderBy);
-    return List<Map<String, dynamic>>.from(rows);
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final response = await client
+          .from(table)
+          .select()
+          .eq('is_published', true)
+          .order(orderBy)
+          .order('id')
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return allRows;
   }
 }
