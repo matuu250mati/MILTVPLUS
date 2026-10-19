@@ -75,7 +75,7 @@ void main() {
     await tester.tap(find.text('Reproducir'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No disponible por el momento'), findsOneWidget);
+    expect(find.text('No disponible por el momento'), findsNWidgets(2));
     expect(
       find.textContaining('una fuente autorizada'),
       findsOneWidget,
