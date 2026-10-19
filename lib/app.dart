@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/accessibility_settings.dart';
 import 'core/navigation/legacy_route_registry.dart';
 import 'core/supabase_config.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/auth_screen.dart';
 import 'features/onboarding/tv_onboarding_screen.dart';
 import 'features/shell/app_shell.dart';
 import 'features/splash/splash_screen.dart';
