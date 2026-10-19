@@ -68,7 +68,8 @@ const SOURCES: Source[] = [
   { name: "Free-TV lista general", url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", category: "TV en Vivo" },
 ];
 
-const BATCH_SIZE = 500;
+// Keep the existing-row lookup URL below common proxy/PostgREST request-size limits.
+const BATCH_SIZE = 100;
 const clean = (value: string | undefined) => (value ?? "").trim();
 
 // M3U country metadata is inconsistent: it may contain ISO-2 codes or full names.
@@ -378,7 +379,7 @@ Deno.serve(async (req) => {
         imported,
         attempted: selected.length,
         sources: sourceResults,
-        error: `No se pudieron leer las URLs existentes antes de sincronizar: ${existingError.message}`,
+        error: `No se pudieron leer las URLs existentes antes de sincronizar (${batchKeys.length} claves): ${existingError.message}; code=${existingError.code ?? "unknown"}; details=${existingError.details ?? "none"}`,
       }, 502);
     }
 
