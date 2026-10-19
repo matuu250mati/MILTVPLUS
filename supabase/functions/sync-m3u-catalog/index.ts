@@ -101,6 +101,38 @@ function attribute(line: string, key: string): string {
   return clean(match?.[1]);
 }
 
+// Optional upstream metadata enrichment. Failure is non-fatal: the catalog
+// sync still imports safe stream URLs and leaves unknown countries as ZZ.
+async function loadIptvOrgCountryMap(): Promise<Map<string, Set<string>>> {
+  const countriesById = new Map<string, Set<string>>();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch("https://iptv-org.github.io/api/channels.json", {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return countriesById;
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) return countriesById;
+    for (const value of payload) {
+      if (!value || typeof value !== "object") continue;
+      const row = value as Record<string, unknown>;
+      const id = typeof row.id === "string" ? row.id.trim().toLowerCase() : "";
+      const country = typeof row.country === "string" ? row.country.trim().toUpperCase() : "";
+      if (!id || !/^[A-Z]{2}$/.test(country) || country === "ZZ") continue;
+      const known = countriesById.get(id) ?? new Set<string>();
+      known.add(country);
+      countriesById.set(id, known);
+    }
+  } catch {
+    // Optional reference metadata must never block the safe catalog import.
+  } finally {
+    clearTimeout(timeout);
+  }
+  return countriesById;
+}
+
 async function stableHash(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -362,7 +394,18 @@ Deno.serve(async (req) => {
     known.add(countryCode);
     countriesByTvgId.set(tvgId, known);
   }
+  // Enrich only IDs that did not receive a country from the configured M3U
+  // sources. Exact ID matches only; ambiguous or missing metadata stays ZZ.
+  const upstreamCountryMap = await loadIptvOrgCountryMap();
+  const upstreamOnlyTvgIds = new Set<string>();
+  for (const [tvgId, countries] of upstreamCountryMap) {
+    if (countriesByTvgId.has(tvgId)) continue;
+    countriesByTvgId.set(tvgId, countries);
+    upstreamOnlyTvgIds.add(tvgId);
+  }
+
   let inferredCountryRows = 0;
+  let upstreamMetadataCountryRows = 0;
   for (const row of selected) {
     if (row.country_code !== "ZZ") continue;
     const tvgId = tvgIdFromSourceKey(row.source_key);
@@ -373,6 +416,7 @@ Deno.serve(async (req) => {
     if (known?.size === 1) {
       row.country_code = [...known][0];
       inferredCountryRows++;
+      if (upstreamOnlyTvgIds.has(tvgId)) upstreamMetadataCountryRows++;
     }
   }
 
@@ -422,6 +466,7 @@ Deno.serve(async (req) => {
       writePerformed: false,
       candidateChannels: selected.length,
       inferredCountryRows,
+      upstreamMetadataCountryRows,
       failedSources: failedSources.length,
       warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
       sources: sourceResults,
@@ -499,6 +544,8 @@ Deno.serve(async (req) => {
     complete,
     imported,
     failedSources: failedSources.length,
+    inferredCountryRows,
+    upstreamMetadataCountryRows,
     warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
     sources: sourceResults,
     note: "Se importaron canales en vivo con URLs HTTP/HTTPS seguras por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
