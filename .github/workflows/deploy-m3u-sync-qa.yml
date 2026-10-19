@@ -84,13 +84,13 @@ jobs:
           print(f"Dry run only; database writes performed: {report.get('writePerformed')}")
           print(f"Sources: {len(sources)}; entries fetched: {total_fetched}; accepted: {total_accepted}; rejected: {total_rejected}; duplicates: {total_duplicates}")
           for source in sources:
-              print(f"- {source.get('source')}: fetched={source.get('fetched', 0)}, accepted={source.get('accepted', 0)}, rejected={source.get('rejected', 0)}, duplicates={source.get('duplicates', 0)}, error={source.get('error', 'none')}")
+              print(f"- {source.get('source')}: fetched={source.get('fetched', 0)}, accepted={source.get('accepted', 0)}, rejected={source.get('rejected', 0)}, duplicates={source.get('duplicates', 0)}, error={source.get('error', 'none')}, warning={source.get('warning', 'none')}")
           with open(Path.home() / "m3u-preflight-summary.md", "w") as summary:
               summary.write("# QA M3U read-only preflight\n\n")
               summary.write(f"- Sources: {len(sources)}\n- Fetched entries: {total_fetched}\n- Accepted entries: {total_accepted}\n- Rejected entries: {total_rejected}\n- Duplicates: {total_duplicates}\n")
               summary.write(f"- Database writes performed: {report.get('writePerformed')}\n\n")
               for source in sources:
-                  summary.write(f"- **{source.get('source')}**: fetched {source.get('fetched', 0)}, accepted {source.get('accepted', 0)}, rejected {source.get('rejected', 0)}, duplicates {source.get('duplicates', 0)}; error: {source.get('error', 'none')}\n")
+                  summary.write(f"- **{source.get('source')}**: fetched {source.get('fetched', 0)}, accepted {source.get('accepted', 0)}, rejected {source.get('rejected', 0)}, duplicates {source.get('duplicates', 0)}; error: {source.get('error', 'none')}; warning: {source.get('warning', 'none')}\n")
           if report.get("dryRun") is not True or report.get("writePerformed") is not False:
               raise SystemExit("Safety check failed: response did not confirm a read-only dry run.")
           if report.get("ok") is not True:
