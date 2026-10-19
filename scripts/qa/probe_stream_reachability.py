@@ -8,6 +8,7 @@ never written to the report or logs.
 import concurrent.futures
 import json
 import os
+import socket
 import sys
 import urllib.error
 import urllib.parse
@@ -131,7 +132,7 @@ def probe(item):
                 "http_status": exc.code,
                 "result": "http_4xx" if 400 <= exc.code < 500 else "http_5xx",
                 "content_type": exc.headers.get("Content-Type", "").lower().split(";")[0][:80]}
-    except (TimeoutError, socket_timeout_types()):
+    except (TimeoutError, socket.timeout):
         return {"country": item["country"], "category": item["category"],
                 "host": item["host"], "scheme": item["scheme"],
                 "http_status": None, "result": "timeout", "content_type": ""}
@@ -149,11 +150,6 @@ def probe(item):
         return {"country": item["country"], "category": item["category"],
                 "host": item["host"], "scheme": item["scheme"],
                 "http_status": None, "result": result, "content_type": ""}
-
-
-def socket_timeout_types():
-    import socket
-    return (socket.timeout,)
 
 
 def main():
