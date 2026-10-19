@@ -43,3 +43,5 @@ The post-sync stream probe now tries up to two stored alternate URLs only when a
 ## Country metadata enrichment
 
 When a channel still has `ZZ` after configured country playlists and exact `tvg-id` matches, the QA sync may consult IPTV-org's public channel metadata by exact channel ID. This lookup is optional and read-only; if it fails or returns ambiguous countries, the sync continues and leaves the country unknown rather than guessing. Deployment runs the read-only source preflight before any separate catalog write.
+
+The optional IPTV-org country metadata enrichment deployed to MILTVPLUS-QA and its 42-source dry-run passed with `writePerformed=false`. The next QA-only sync applies exact-ID country enrichment; unknown/ambiguous values remain `ZZ`, and production remains untouched.
