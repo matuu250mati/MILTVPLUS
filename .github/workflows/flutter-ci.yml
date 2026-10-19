@@ -102,6 +102,11 @@ jobs:
 
       - name: Compile target
         shell: bash
+        # The bundled flutter_secure_storage_linux header emits a deprecated
+        # literal-operator warning that Clang promotes to an error. Keep the
+        # workaround scoped to this CI Linux build; do not weaken Dart analysis.
+        env:
+          CXXFLAGS: ${{ matrix.platform == 'linux' && '-Wno-error=deprecated-literal-operator' || '' }}
         run: ${{ matrix.command }}
 
       - name: Upload build output for QA
