@@ -14,7 +14,7 @@ PAGE_SIZE = 1000
 
 def get_page(base_url, anon_key, offset):
     query = urllib.parse.urlencode({
-        "select": "id,title,country_code,category,url_stream,stream_urls,is_published",
+        "select": "id,title,country_code,category,url_stream,stream_urls,is_published,source_key",
         "is_published": "eq.true",
         "order": "id.asc",
         "limit": str(PAGE_SIZE),
@@ -65,6 +65,9 @@ def main():
     categories = Counter()
     argentina_categories = Counter()
     title_keys = set()
+    title_counts = Counter()
+    rows_with_category_scoped_key = 0
+    rows_with_legacy_m3u_key = 0
     rows_with_primary = 0
     rows_with_mirrors = 0
     rows_missing_primary = 0
@@ -77,6 +80,12 @@ def main():
         title = str(row.get("title") or "").strip().casefold()
         if title:
             title_keys.add(title)
+            title_counts[title] += 1
+        source_key = str(row.get("source_key") or "")
+        if source_key.startswith("m3u:") and ":category:" in source_key:
+            rows_with_category_scoped_key += 1
+        elif source_key.startswith("m3u:"):
+            rows_with_legacy_m3u_key += 1
         countries[country or "(sin país)"] += 1
         categories[category] += 1
         if country == "AR":
@@ -100,6 +109,10 @@ def main():
         "target": "MILTVPLUS-QA (read only)",
         "total_rows": len(rows),
         "unique_titles": len(title_keys),
+        "rows_with_repeated_title": sum(count for count in title_counts.values() if count > 1),
+        "distinct_titles_repeated": sum(1 for count in title_counts.values() if count > 1),
+        "rows_with_category_scoped_key": rows_with_category_scoped_key,
+        "rows_with_legacy_m3u_key": rows_with_legacy_m3u_key,
         "rows_with_primary_url": rows_with_primary,
         "rows_with_mirrors": rows_with_mirrors,
         "rows_missing_primary_url": rows_missing_primary,
@@ -117,7 +130,8 @@ def main():
     }
     Path(args.output).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({k: report[k] for k in (
-        "target", "total_rows", "unique_titles", "rows_with_primary_url",
+        "target", "total_rows", "unique_titles", "rows_with_repeated_title",
+        "distinct_titles_repeated", "rows_with_category_scoped_key", "rows_with_legacy_m3u_key", "rows_with_primary_url",
         "rows_with_mirrors", "rows_missing_primary_url", "rows_country_zz",
         "rows_missing_country_code", "argentina_categories", "countries", "categories"
     )}, ensure_ascii=False, indent=2))
