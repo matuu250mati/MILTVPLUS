@@ -33,3 +33,5 @@ The gated QA workflow `Read-only MILTVPLUS-QA stream reachability probe` samples
 ## Cross-category playback mirror QA deployment
 
 The sync function now shares alternate stream URLs only between rows with an exact matching `tvg-id`, while retaining category-specific rows and existing stored URLs. Deploy via the QA-only gated workflow and require the read-only source preflight to pass before running the separate QA catalog sync. Production is not a target.
+
+The QA deployment of cross-category `tvg-id` mirror sharing completed successfully, and its read-only preflight passed for all 42 configured sources. Run the separate QA-only catalog sync to update `stream_urls`; the workflow verifies imported row counts and never targets production.
