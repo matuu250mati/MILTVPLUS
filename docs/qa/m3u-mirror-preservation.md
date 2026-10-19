@@ -37,3 +37,5 @@ The sync function now shares alternate stream URLs only between rows with an exa
 The QA deployment of cross-category `tvg-id` mirror sharing completed successfully, and its read-only preflight passed for all 42 configured sources. Run the separate QA-only catalog sync to update `stream_urls`; the workflow verifies imported row counts and never targets production.
 
 Post-sync verification is performed by the read-only catalog audit after the live QA sync completes; the earlier audit run may overlap the write and must not be treated as post-sync mirror counts.
+
+The post-sync stream probe now tries up to two stored alternate URLs only when a sampled primary URL does not return an HLS manifest. It records whether an alternate gives an HLS or other HTTP 2xx response, without logging stream URLs or tokens.
