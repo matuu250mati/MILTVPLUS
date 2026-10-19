@@ -47,3 +47,5 @@ When a channel still has `ZZ` after configured country playlists and exact `tvg-
 The optional IPTV-org country metadata enrichment deployed to MILTVPLUS-QA and its 42-source dry-run passed with `writePerformed=false`. The next QA-only sync applies exact-ID country enrichment; unknown/ambiguous values remain `ZZ`, and production remains untouched.
 
 After the metadata-enriched QA sync completed, rerun the read-only catalog audit and the mirror-prioritized stream probe against the final QA rows. This post-sync check must be kept separate from any concurrent write.
+
+The latest QA APK workflow passed Flutter analysis/tests, QA Supabase URL/DNS/HTTPS, required-schema checks, and Android TV manifest validation. The release APK build step remained active unusually long, so a fresh QA-only build run is being requested; this does not alter app code or production.
