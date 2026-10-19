@@ -19,3 +19,7 @@ This branch preserves each channel's primary URL and ordered alternatives in `st
 6. The signed QA APK is tested on a physical Android phone and the user's TCL Android TV.
 
 No step may be reported complete without its corresponding result.
+
+## QA country metadata inference (2026-10-19)
+
+The QA sync function may infer a missing country code only when an exact `tvg-id` matches an entry from a country-specific configured playlist. It does not infer from names or stream URLs, and leaves ambiguous matches as `ZZ`. Deploying this change runs a read-only source preflight only; it does not write catalog rows. Production is not a deployment target.
