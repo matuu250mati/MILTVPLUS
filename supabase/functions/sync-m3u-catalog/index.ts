@@ -58,7 +58,7 @@ const SOURCES: Source[] = [
   { name: "IPTV-org Estados Unidos", url: "https://iptv-org.github.io/iptv/countries/us.m3u", category: "TV Estados Unidos", countryCode: "US" },
   { name: "IPTV-org Canadá", url: "https://iptv-org.github.io/iptv/countries/ca.m3u", category: "TV Canadá", countryCode: "CA" },
   { name: "IPTV-org España", url: "https://iptv-org.github.io/iptv/countries/es.m3u", category: "TV España", countryCode: "ES" },
-  { name: "IPTV-org Reino Unido", url: "https://iptv-org.github.io/iptv/countries/gb.m3u", category: "TV Reino Unido", countryCode: "GB" },
+  { name: "IPTV-org Reino Unido", url: "https://iptv-org.github.io/iptv/countries/uk.m3u", category: "TV Reino Unido", countryCode: "GB" },
   { name: "IPTV-org Francia", url: "https://iptv-org.github.io/iptv/countries/fr.m3u", category: "TV Francia", countryCode: "FR" },
   { name: "IPTV-org Alemania", url: "https://iptv-org.github.io/iptv/countries/de.m3u", category: "TV Alemania", countryCode: "DE" },
   { name: "IPTV-org Italia", url: "https://iptv-org.github.io/iptv/countries/it.m3u", category: "TV Italia", countryCode: "IT" },
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string; warning?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
   const selectedByKey = new Map<string, Record<string, unknown>>();
   const seen = new Set<string>();
@@ -276,9 +276,10 @@ Deno.serve(async (req) => {
           ? "La lista no contiene entradas #EXTINF."
           : result.parsed.length === 0
           ? "No contiene URLs HTTPS directas .m3u8 aceptables."
-          : rejected > 0
-          ? `${rejected} entradas fueron rechazadas; solo se aceptan entradas con título y URL HTTPS directa terminada en .m3u8.`
           : undefined);
+      const sourceWarning = rejected > 0
+        ? `${rejected} entradas filtradas; solo se aceptan entradas con título y URL HTTPS directa terminada en .m3u8.`
+        : undefined;
       sourceResults.push({
         source: result.source.name,
         fetched: result.fetched,
@@ -286,6 +287,7 @@ Deno.serve(async (req) => {
         rejected,
         duplicates,
         ...(sourceError ? { error: sourceError } : {}),
+        ...(sourceWarning ? { warning: sourceWarning } : {}),
       });
     }
   }
@@ -307,8 +309,9 @@ Deno.serve(async (req) => {
       writePerformed: false,
       candidateChannels: selected.length,
       failedSources: failedSources.length,
+      warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
       sources: sourceResults,
-      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Review rejected entries before running a live sync.",
+      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Entries not matching the strict HTTPS .m3u8 rule are reported as warnings and are not imported.",
     });
   }
 
@@ -380,6 +383,7 @@ Deno.serve(async (req) => {
     complete,
     imported,
     failedSources: failedSources.length,
+    warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
     sources: sourceResults,
     note: "Se importaron canales en vivo con URL HTTPS .m3u8 por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
   });
