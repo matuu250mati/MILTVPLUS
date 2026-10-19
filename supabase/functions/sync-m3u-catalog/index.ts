@@ -134,9 +134,20 @@ async function parsePlaylist(source: Source, body: string) {
   const entries: Array<Record<string, unknown>> = [];
   const rejectedReasons: Record<string, number> = {};
   const rejectedExtensions: Record<string, number> = {};
-  const reject = (reason: string, extension = "(sin extensión)") => {
+  // Keep a few sanitized examples per reason for compatibility triage. Never expose
+  // full stream URLs, credentials, query values, or token-bearing path segments.
+  const rejectedSamples: Array<{ reason: string; protocol: string; host: string; extension: string; hasQuery: boolean }> = [];
+  const reject = (reason: string, extension = "(sin extensión)", candidateUrl = "") => {
     rejectedReasons[reason] = (rejectedReasons[reason] ?? 0) + 1;
     rejectedExtensions[extension] = (rejectedExtensions[extension] ?? 0) + 1;
+    if (candidateUrl && rejectedSamples.filter((sample) => sample.reason === reason).length < 5) {
+      try {
+        const parsed = new URL(candidateUrl);
+        rejectedSamples.push({ reason, protocol: parsed.protocol, host: parsed.hostname, extension, hasQuery: Boolean(parsed.search) });
+      } catch {
+        rejectedSamples.push({ reason, protocol: "(invalid)", host: "(invalid)", extension, hasQuery: false });
+      }
+    }
   };
   const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/);
   let meta = "";
@@ -163,11 +174,11 @@ async function parsePlaylist(source: Source, body: string) {
           const pathname = parsedUrl.pathname.toLowerCase();
           const lastSegment = pathname.split("/").pop() ?? "";
           const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
-          if (parsedUrl.protocol !== "https:") reject("non_https", extension);
-          else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension);
-          else if (/\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension);
-          else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension);
-          else reject("invalid_url", extension);
+          if (parsedUrl.protocol !== "https:") reject("non_https", extension, line);
+          else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension, line);
+          else if (/\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension, line);
+          else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension, line);
+          else reject("invalid_url", extension, line);
         } catch {
           reject("invalid_url");
         }
@@ -210,7 +221,7 @@ async function parsePlaylist(source: Source, body: string) {
     });
     meta = "";
   }
-  return { entries, rejectedReasons, rejectedExtensions };
+  return { entries, rejectedReasons, rejectedExtensions, rejectedSamples };
 }
 
 Deno.serve(async (req) => {
@@ -248,7 +259,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; rejectedReasons?: Record<string, number>; rejectedExtensions?: Record<string, number>; error?: string; warning?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; rejectedReasons?: Record<string, number>; rejectedExtensions?: Record<string, number>; rejectedSamples?: Array<{ reason: string; protocol: string; host: string; extension: string; hasQuery: boolean }>; error?: string; warning?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
   const selectedByKey = new Map<string, Record<string, unknown>>();
   const seen = new Set<string>();
@@ -270,7 +281,7 @@ Deno.serve(async (req) => {
       } catch (error) {
         return {
           source,
-          parsed: { entries: [] as Array<Record<string, unknown>>, rejectedReasons: {}, rejectedExtensions: {} },
+          parsed: { entries: [] as Array<Record<string, unknown>>, rejectedReasons: {}, rejectedExtensions: {}, rejectedSamples: [] },
           fetched: 0,
           error: error instanceof Error ? error.message : "Error de descarga",
         };
@@ -323,6 +334,7 @@ Deno.serve(async (req) => {
         duplicates,
         rejectedReasons: result.parsed.rejectedReasons,
         rejectedExtensions: result.parsed.rejectedExtensions,
+        rejectedSamples: result.parsed.rejectedSamples,
         ...(sourceError ? { error: sourceError } : {}),
         ...(sourceWarning ? { warning: sourceWarning } : {}),
       });
