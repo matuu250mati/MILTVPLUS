@@ -182,10 +182,25 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
 
+  // Optional read-only preflight: fetch and parse every configured source but do not touch the database.
+  const requestBody = await req.clone().json().catch(() => ({})) as {
+    dry_run?: unknown;
+    confirm_sync?: unknown;
+  };
+  const dryRun = requestBody?.dry_run === true;
+  const liveSyncConfirmed = requestBody?.confirm_sync === "MILTVPLUS-QA";
+
   const expectedSecret = Deno.env.get("SYNC_SECRET");
   const suppliedSecret = req.headers.get("x-sync-secret");
   if (!expectedSecret || !suppliedSecret || suppliedSecret !== expectedSecret) {
     return json({ error: "Unauthorized catalog sync request." }, 401);
+  }
+
+  if (!dryRun && !liveSyncConfirmed) {
+    return json({
+      error: "Explicit mode required. Send { dry_run: true } for a read-only preflight or { confirm_sync: 'MILTVPLUS-QA' } to authorize a live QA catalog sync.",
+      writePerformed: false,
+    }, 400);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -261,6 +276,8 @@ Deno.serve(async (req) => {
           ? "La lista no contiene entradas #EXTINF."
           : result.parsed.length === 0
           ? "No contiene URLs HTTPS directas .m3u8 aceptables."
+          : rejected > 0
+          ? `${rejected} entradas fueron rechazadas; solo se aceptan entradas con título y URL HTTPS directa terminada en .m3u8.`
           : undefined);
       sourceResults.push({
         source: result.source.name,
@@ -280,6 +297,19 @@ Deno.serve(async (req) => {
       sources: sourceResults,
       error: "No se encontraron URLs HTTPS directas con extensión .m3u8; no se modificó el catálogo.",
     }, 422);
+  }
+
+  if (dryRun) {
+    const failedSources = sourceResults.filter((source) => Boolean(source.error));
+    return json({
+      ok: failedSources.length === 0,
+      dryRun: true,
+      writePerformed: false,
+      candidateChannels: selected.length,
+      failedSources: failedSources.length,
+      sources: sourceResults,
+      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Review rejected entries before running a live sync.",
+    });
   }
 
   let imported = 0;
