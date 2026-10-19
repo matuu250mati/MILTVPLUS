@@ -23,7 +23,7 @@ end $$;
 
 -- Preflight the unique index before rewriting keys. Abort the whole transaction
 -- rather than risk overwriting or merging a row if a target key already exists.
-do $
+do $$
 begin
   if exists (
     select 1
@@ -41,7 +41,7 @@ begin
   ) then
     raise exception 'M3U category-key migration would collide with an existing source_key. No rows were changed; inspect duplicate keys first.';
   end if;
-end $;
+end $$;
 
 -- Existing M3U keys were globally unique by tvg-id/URL. Append the normalized
 -- category slug before deploying the revised sync function. Rows with a blank
