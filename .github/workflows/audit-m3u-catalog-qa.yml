@@ -1,6 +1,9 @@
 name: Read-only MILTVPLUS-QA catalog audit
 
 on:
+  push:
+    branches:
+      - qa/deploy-m3u-sync-isolated-2026-10-18
   workflow_dispatch:
     inputs:
       confirm_qa_project:
@@ -13,7 +16,7 @@ permissions:
 
 jobs:
   audit-qa-catalog:
-    if: inputs.confirm_qa_project == 'MILTVPLUS-QA'
+    if: github.event_name == 'push' || inputs.confirm_qa_project == 'MILTVPLUS-QA'
     runs-on: ubuntu-latest
     environment: miltvplus-qa
     steps:
