@@ -95,68 +95,94 @@ class CatalogService {
       ]);
     }
 
-    final query = _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true);
-    final filteredQuery = expandedCategories.isEmpty
-        ? query
-        : query.inFilter('category', expandedCategories.toList(growable: false));
-    final response = await filteredQuery
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+    // Supabase/PostgREST may cap a response at 1,000 rows. Fetch in stable,
+    // bounded pages so the app does not silently hide most of the live catalog.
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final query = _supabase
+          .from('channels')
+          .select()
+          .eq('is_published', true);
+      final filteredQuery = expandedCategories.isEmpty
+          ? query
+          : query.inFilter('category', expandedCategories.toList(growable: false));
+      final response = await filteredQuery
+          .order('sort_order', ascending: true)
+          .order('title', ascending: true)
+          .order('id', ascending: true)
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
 
-    return (response as List<dynamic>)
-        .map((item) => ChannelModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    return allRows
+        .map((item) => ChannelModel.fromJson(item))
         .toList(growable: false);
   }
 
   Future<List<MovieModel>> getMovies() async {
-    final response = await _supabase
-        .from('movies')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
-
     // Keep every published movie in the catalog, even when playback URLs
-    // have not been supplied yet. Playback availability is a presentation/
-    // playback concern; it must not silently remove catalog records.
-    return (response as List<dynamic>)
-        .map((item) => MovieModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    // have not been supplied yet. Paginate to avoid PostgREST's row cap.
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final response = await _supabase
+          .from('movies')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .order('id', ascending: true)
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return allRows
+        .map((item) => MovieModel.fromJson(item))
         .toList(growable: false);
   }
 
   Future<List<SeriesModel>> getSeries() async {
-    final response = await _supabase
-        .from('series')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
-
-    return (response as List<dynamic>)
-        .map((item) => SeriesModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final response = await _supabase
+          .from('series')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .order('id', ascending: true)
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return allRows
+        .map((item) => SeriesModel.fromJson(item))
         .toList(growable: false);
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
-    final response = await _supabase
-        .from('episodes')
-        .select()
-        .eq('series_id', seriesId)
-        .eq('is_published', true)
-        .order('season_number', ascending: true)
-        .order('episode_number', ascending: true);
-
-    return (response as List<dynamic>)
-        .map((item) => EpisodeModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    const pageSize = 500;
+    final allRows = <Map<String, dynamic>>[];
+    for (var offset = 0;; offset += pageSize) {
+      final response = await _supabase
+          .from('episodes')
+          .select()
+          .eq('series_id', seriesId)
+          .eq('is_published', true)
+          .order('season_number', ascending: true)
+          .order('episode_number', ascending: true)
+          .order('id', ascending: true)
+          .range(offset, offset + pageSize - 1);
+      final pageRows = List<Map<String, dynamic>>.from(response as List<dynamic>);
+      allRows.addAll(pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return allRows
+        .map((item) => EpisodeModel.fromJson(item))
         .toList(growable: false);
   }
 }
