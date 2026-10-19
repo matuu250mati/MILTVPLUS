@@ -1,7 +1,7 @@
 // MILTVPLUS: idempotent M3U sync for live channels only.
 // Deploy after migration 20261016110000_m3u_catalog_sync.sql.
 // Requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SYNC_SECRET.
-// Only HTTPS direct HLS (.m3u8) entries are imported. This does NOT import VOD into movies/series.
+// Preserve safe HTTP/HTTPS stream candidates, including HLS, DASH and extensionless URLs. This does NOT import VOD into movies/series.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -117,11 +117,10 @@ function isHlsManifestPath(pathname: string): boolean {
   }
 }
 
-function directHttpsHls(value: string): string | null {
+function safeStreamUrl(value: string): string | null {
   try {
     const parsed = new URL(value.trim());
-    if (parsed.protocol !== "https:") return null;
-    if (!isHlsManifestPath(parsed.pathname)) return null;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
     if (parsed.username || parsed.password) return null;
     if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname.toLowerCase())) return null;
     return parsed.toString();
@@ -161,7 +160,7 @@ async function parsePlaylist(source: Source, body: string) {
     if (line.startsWith("#")) continue;
     if (!meta) continue;
 
-    const streamUrl = directHttpsHls(line);
+    const streamUrl = safeStreamUrl(line);
     const comma = meta.indexOf(",");
     const rawTitle = comma >= 0 ? meta.slice(comma + 1).trim() : "";
     const title = clean(rawTitle).replace(/[\u200e\u200f]/g, "");
@@ -174,7 +173,7 @@ async function parsePlaylist(source: Source, body: string) {
           const pathname = parsedUrl.pathname.toLowerCase();
           const lastSegment = pathname.split("/").pop() ?? "";
           const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
-          if (parsedUrl.protocol !== "https:") reject("non_https", extension, line);
+          if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") reject("unsupported_protocol", extension, line);
           else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension, line);
           else if (/\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension, line);
           else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension, line);
@@ -188,7 +187,7 @@ async function parsePlaylist(source: Source, body: string) {
     }
 
     const tvgId = attribute(meta, "tvg-id").toLowerCase();
-    const logoUrl = directHttpsHls(attribute(meta, "tvg-logo")) ??
+    const logoUrl = (() => { const rawLogo = attribute(meta, "tvg-logo"); try { const parsed = new URL(rawLogo); return parsed.protocol === "https:" ? parsed.toString() : null; } catch { return null; } })() ??
       (() => {
         const rawLogo = attribute(meta, "tvg-logo");
         try {
@@ -321,10 +320,10 @@ Deno.serve(async (req) => {
         (result.fetched === 0
           ? "La lista no contiene entradas #EXTINF."
           : result.parsed.entries.length === 0
-          ? "No contiene URLs HTTPS directas .m3u8 aceptables."
+          ? "No contiene URLs HTTP/HTTPS seguras aceptables."
           : undefined);
       const sourceWarning = rejected > 0
-        ? `${rejected} entradas filtradas; solo se aceptan entradas con título y URL HTTPS directa terminada en .m3u8.`
+        ? `${rejected} entradas filtradas; se filtran entradas sin título, con protocolo no HTTP(S), credenciales embebidas o host local.`
         : undefined;
       sourceResults.push({
         source: result.source.name,
@@ -346,7 +345,7 @@ Deno.serve(async (req) => {
       ok: false,
       imported: 0,
       sources: sourceResults,
-      error: "No se encontraron URLs HTTPS directas con extensión .m3u8; no se modificó el catálogo.",
+      error: "No se encontraron URLs HTTP/HTTPS seguras; no se modificó el catálogo.",
     }, 422);
   }
 
@@ -360,7 +359,7 @@ Deno.serve(async (req) => {
       failedSources: failedSources.length,
       warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
       sources: sourceResults,
-      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Entries not matching the strict HTTPS .m3u8 rule are reported as warnings and are not imported.",
+      note: "Read-only preflight: configured M3U sources were fetched and parsed, but no catalog rows or URLs were read or written. Unsafe entries are reported as warnings and not imported; stream-format compatibility and playback are verified separately.",
     });
   }
 
@@ -434,6 +433,6 @@ Deno.serve(async (req) => {
     failedSources: failedSources.length,
     warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
     sources: sourceResults,
-    note: "Se importaron canales en vivo con URL HTTPS .m3u8 por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
+    note: "Se importaron canales en vivo con URLs HTTP/HTTPS seguras por lotes. Las entradas que pertenecen a varias categorías se almacenan como filas categorizadas separadas para conservar ambos filtros. Las fuentes de películas/series siguen siendo canales temáticos, no registros VOD. La importación no garantiza disponibilidad de cada emisión ni derechos de redistribución.",
   });
 });
