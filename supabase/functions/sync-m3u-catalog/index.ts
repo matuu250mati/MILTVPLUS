@@ -111,9 +111,9 @@ async function stableHash(value: string): Promise<string> {
 function isHlsManifestPath(pathname: string): boolean {
   try {
     const decoded = decodeURIComponent(pathname).toLowerCase();
-    return /\\.m3u8(?:;[^/]*)?$/.test(decoded);
+    return /\.m3u8(?:;[^/]*)?$/.test(decoded);
   } catch {
-    return /\\.m3u8(?:;[^/]*)?$/.test(pathname.toLowerCase());
+    return /\.m3u8(?:;[^/]*)?$/.test(pathname.toLowerCase());
   }
 }
 
@@ -165,7 +165,7 @@ async function parsePlaylist(source: Source, body: string) {
           const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
           if (parsedUrl.protocol !== "https:") reject("non_https", extension);
           else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension);
-          else if (/\\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension);
+          else if (/\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension);
           else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension);
           else reject("invalid_url", extension);
         } catch {
