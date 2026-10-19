@@ -14,7 +14,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   bool _showSkip = false;
-  Future<void>? _skipDelay;
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -37,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _skipDelay = Future<void>.delayed(const Duration(seconds: 3), () {
+    Future<void>.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _showSkip = true);
     });
   }
