@@ -1,4 +1,5 @@
 name: Import M3U catalog to MILTVPLUS-QA
+# Safety: only the hardcoded QA project is targeted; read-only preflight must pass all configured sources before writes.
 
 on:
   push:
