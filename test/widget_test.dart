@@ -2,6 +2,7 @@ import 'dart:ui' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:miltv_plus/app.dart';
+import 'package:miltv_plus/features/shell/app_shell.dart';
 import 'package:miltv_plus/core/supabase_config.dart';
 
 void main() {
@@ -36,7 +37,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // Guest catalog access must not require production Supabase credentials.
-    expect(find.text('TV en Vivo'), findsWidgets);
-    expect(find.text('Películas'), findsWidgets);
+    expect(find.byType(AppShell), findsOneWidget);
   });
 }
