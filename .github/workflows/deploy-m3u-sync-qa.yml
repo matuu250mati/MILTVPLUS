@@ -97,14 +97,14 @@ jobs:
           with open(Path.home() / "m3u-preflight-summary.md", "w") as summary:
               summary.write("# QA M3U read-only preflight\n\n")
               summary.write(f"- Sources: {len(sources)}\n- Fetched entries: {total_fetched}\n- Accepted entries: {total_accepted}\n- Rejected entries: {total_rejected}\n- Duplicates: {total_duplicates}\n")
-              summary.write(f"- Database writes performed: {report.get('writePerformed')}\\n\\n")
-              summary.write("## Rejection reasons (aggregate)\\n\\n")
+              summary.write(f"- Database writes performed: {report.get('writePerformed')}\n\n")
+              summary.write("## Rejection reasons (aggregate)\n\n")
               for reason, count in sorted(total_rejected_reasons.items()):
-                  summary.write(f"- `{reason}`: {count}\\n")
-              summary.write("\\n## Rejected URL extensions (aggregate)\\n\\n")
+                  summary.write(f"- `{reason}`: {count}\n")
+              summary.write("\n## Rejected URL extensions (aggregate)\n\n")
               for extension, count in sorted(total_rejected_extensions.items(), key=lambda item: (-item[1], item[0])):
-                  summary.write(f"- `{extension}`: {count}\\n")
-              summary.write("\\n## Per-source results\\n\\n")
+                  summary.write(f"- `{extension}`: {count}\n")
+              summary.write("\n## Per-source results\n\n")
               for source in sources:
                   summary.write(f"- **{source.get('source')}**: fetched {source.get('fetched', 0)}, accepted {source.get('accepted', 0)}, rejected {source.get('rejected', 0)}, duplicates {source.get('duplicates', 0)}; error: {source.get('error', 'none')}; warning: {source.get('warning', 'none')}\n")
           if report.get("dryRun") is not True or report.get("writePerformed") is not False:
