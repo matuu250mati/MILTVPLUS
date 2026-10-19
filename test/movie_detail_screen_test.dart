@@ -71,11 +71,11 @@ void main() {
     await tester.pumpWidget(buildScreen(synopsis: 'Sinopsis de prueba'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Reproducción próximamente').last);
-    await tester.tap(find.text('Reproducción próximamente').last);
+    await tester.ensureVisible(find.text('Reproducir'));
+    await tester.tap(find.text('Reproducir'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Estamos preparando este título'), findsOneWidget);
+    expect(find.text('No disponible por el momento'), findsOneWidget);
     expect(
       find.textContaining('una fuente autorizada'),
       findsOneWidget,
