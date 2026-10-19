@@ -49,7 +49,7 @@ jobs:
 
       # Every PR build uses a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -178,20 +178,25 @@ jobs:
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
+              if [[ "$status" == "401" && "$detail" == *"Invalid API key"* ]]; then
+                echo "::error::Supabase rejected the configured QA API key as invalid. Replace GitHub Actions secret SUPABASE_QA_ANON_KEY with the publishable/anon key copied from the MILTVPLUS-QA dashboard; never use the production key."
+                exit 1
+              fi
+              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Correct the QA API key or deploy/verify the required QA schema before distributing the APK. $detail"
               failed=1
             fi
           done
           if [[ "$failed" -ne 0 ]]; then
             {
               echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
+              echo "One or more tables do not match the app schema. Treat this QA build as blocked until the QA API key and schema checks pass."
+              echo "See supabase/SETUP_ES.md and the job log for table-level details."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
@@ -338,7 +343,7 @@ jobs:
           echo "No production APK artifact uploaded: run the workflow manually with verify_production_signing enabled, or build a version tag." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload QA APK and checksum
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/qa/') }}
         uses: actions/upload-artifact@v4
         with:
           name: MILTVPLUS-qa-apk
