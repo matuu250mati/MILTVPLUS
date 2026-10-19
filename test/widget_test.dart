@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Guest catalog access must not require production Supabase credentials.
-    expect(find.text('TV EN VIVO'), findsWidgets);
-    expect(find.text('PELÍCULAS'), findsWidgets);
+    expect(find.text('TV en Vivo'), findsWidgets);
+    expect(find.text('Películas'), findsWidgets);
   });
 }
