@@ -23,3 +23,5 @@ No step may be reported complete without its corresponding result.
 ## QA country metadata inference (2026-10-19)
 
 The QA sync function may infer a missing country code only when an exact `tvg-id` matches an entry from a country-specific configured playlist. It does not infer from names or stream URLs, and leaves ambiguous matches as `ZZ`. Deploying this change runs a read-only source preflight only; it does not write catalog rows. Production is not a deployment target.
+
+The country-inference code passed the Deno type-check and the updated Edge Function was deployed to MILTVPLUS-QA. The deployment's source preflight completed as a dry run with `writePerformed=false`; this documentation commit authorizes the separate QA-only catalog sync workflow to apply the reviewed inference. No production target is configured.
