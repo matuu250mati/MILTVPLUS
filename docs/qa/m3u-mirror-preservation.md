@@ -39,3 +39,7 @@ The QA deployment of cross-category `tvg-id` mirror sharing completed successful
 Post-sync verification is performed by the read-only catalog audit after the live QA sync completes; the earlier audit run may overlap the write and must not be treated as post-sync mirror counts.
 
 The post-sync stream probe now tries up to two stored alternate URLs only when a sampled primary URL does not return an HLS manifest. It records whether an alternate gives an HLS or other HTTP 2xx response, without logging stream URLs or tokens.
+
+## Country metadata enrichment
+
+When a channel still has `ZZ` after configured country playlists and exact `tvg-id` matches, the QA sync may consult IPTV-org's public channel metadata by exact channel ID. This lookup is optional and read-only; if it fails or returns ambiguous countries, the sync continues and leaves the country unknown rather than guessing. Deployment runs the read-only source preflight before any separate catalog write.
