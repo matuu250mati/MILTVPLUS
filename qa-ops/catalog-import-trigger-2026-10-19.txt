@@ -1,0 +1,1 @@
+Explicit operational trigger for controlled M3U catalog import into the isolated MILTVPLUS-QA project only. The workflow performs its own read-only preflight before any write, verifies complete results and fails closed. Production must not be touched.
