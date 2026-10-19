@@ -8,6 +8,7 @@ class M3uPlaylistParser {
     final channels = <TvChannel>[];
     final byChannelIdentity = <String, int>{};
     final seenUrlsByChannel = <String, Set<String>>{};
+    final channelIndexByUrl = <String, int>{};
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
@@ -43,6 +44,8 @@ class M3uPlaylistParser {
           ? 'id:${tvgId.toLowerCase()}|${(groupTitle ?? '').toLowerCase()}'
           : 'name:${name.trim().toLowerCase()}|${(groupTitle ?? '').toLowerCase()}|${(country ?? '').toLowerCase()}';
       final normalizedUrl = _streamIdentity(uri);
+      final urlOwnerIndex = channelIndexByUrl[normalizedUrl];
+      if (urlOwnerIndex != null && byChannelIdentity[identity] == null) continue;
       final existingIndex = byChannelIdentity[identity];
       if (existingIndex != null) {
         final seen = seenUrlsByChannel[identity]!;
@@ -62,12 +65,14 @@ class M3uPlaylistParser {
                 .toSet()
                 .toList(growable: false),
           );
+          channelIndexByUrl[normalizedUrl] = existingIndex;
         }
         continue;
       }
 
       byChannelIdentity[identity] = channels.length;
       seenUrlsByChannel[identity] = {normalizedUrl};
+      channelIndexByUrl[normalizedUrl] = channels.length;
       channels.add(TvChannel(
         name: name,
         streamUrl: streamUrl,
