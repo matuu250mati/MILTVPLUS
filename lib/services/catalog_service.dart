@@ -120,21 +120,14 @@ class CatalogService {
         .eq('is_published', true)
         .order('title', ascending: true);
 
-    final movies = (response as List<dynamic>)
+    // Keep every published movie in the catalog, even when playback URLs
+    // have not been supplied yet. Playback availability is a presentation/
+    // playback concern; it must not silently remove catalog records.
+    return (response as List<dynamic>)
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .where((movie) {
-          final url = movie.urlStream.trim();
-          final uri = Uri.tryParse(url);
-
-          return uri != null &&
-              (uri.scheme == 'http' || uri.scheme == 'https') &&
-              uri.host.isNotEmpty;
-        })
         .toList(growable: false);
-
-    return movies;
   }
 
   Future<List<SeriesModel>> getSeries() async {
