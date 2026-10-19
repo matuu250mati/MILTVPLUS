@@ -1,0 +1,62 @@
+name: Read-only MILTVPLUS-QA stream reachability probe
+
+on:
+  push:
+    branches:
+      - qa/deploy-m3u-sync-isolated-2026-10-18
+  workflow_dispatch:
+    inputs:
+      confirm_qa_project:
+        description: "Type MILTVPLUS-QA to confirm the read-only stream probe"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe-qa-streams:
+    if: github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' && ((github.event_name == 'workflow_dispatch' && inputs.confirm_qa_project == 'MILTVPLUS-QA') || (github.event_name == 'push' && contains(github.event.head_commit.message, '[run-qa-stream-probe]')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: miltvplus-qa
+    steps:
+      - name: Checkout QA branch
+        uses: actions/checkout@v4
+
+      - name: Validate probe script
+        run: python3 -m py_compile scripts/qa/probe_stream_reachability.py
+
+      - name: Probe a rate-limited sample of QA stream URLs (read only)
+        env:
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_QA_ANON_KEY//[[:space:]]/}" || { echo "::error::Missing SUPABASE_QA_ANON_KEY in miltvplus-qa environment"; exit 1; }
+          python3 scripts/qa/probe_stream_reachability.py --output qa-stream-probe.json
+
+      - name: Publish sanitized summary
+        if: always()
+        run: |
+          if test -f qa-stream-probe.json; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          d=json.loads(Path("qa-stream-probe.json").read_text())
+          print("# MILTVPLUS-QA stream reachability (read only)")
+          print(f"- Published rows seen: {d.get('published_rows_seen')}")
+          print(f"- Sample size: {d.get('sample_size')}")
+          print(f"- Result counts: {d.get('result_counts')}")
+          print("\nThis is a reachability sample, not proof of sustained playback. URLs and tokens are omitted.")
+          PY
+          fi
+
+      - name: Upload sanitized probe report
+        if: always() && hashFiles('qa-stream-probe.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: miltvplus-qa-stream-reachability
+          path: qa-stream-probe.json
+          if-no-files-found: error
+          retention-days: 7
