@@ -133,7 +133,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       if (uri == null ||
           !uri.hasAuthority ||
           uri.userInfo.isNotEmpty ||
-          uri.scheme != 'https') {
+          !['https', 'http'].contains(uri.scheme.toLowerCase())) {
         lastFailure = 'Se omitió una URL de transmisión no válida.';
         continue;
       }
