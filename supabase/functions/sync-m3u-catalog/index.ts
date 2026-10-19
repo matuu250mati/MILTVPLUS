@@ -105,11 +105,23 @@ async function stableHash(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Recognize HLS manifests even when providers append URL path parameters
+// (for example, .m3u8;session=...) or percent-encode the path. Query-string
+// tokens are already supported by URL.pathname and remain untouched.
+function isHlsManifestPath(pathname: string): boolean {
+  try {
+    const decoded = decodeURIComponent(pathname).toLowerCase();
+    return /\\.m3u8(?:;[^/]*)?$/.test(decoded);
+  } catch {
+    return /\\.m3u8(?:;[^/]*)?$/.test(pathname.toLowerCase());
+  }
+}
+
 function directHttpsHls(value: string): string | null {
   try {
     const parsed = new URL(value.trim());
     if (parsed.protocol !== "https:") return null;
-    if (!parsed.pathname.toLowerCase().endsWith(".m3u8")) return null;
+    if (!isHlsManifestPath(parsed.pathname)) return null;
     if (parsed.username || parsed.password) return null;
     if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname.toLowerCase())) return null;
     return parsed.toString();
@@ -153,7 +165,8 @@ async function parsePlaylist(source: Source, body: string) {
           const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
           if (parsedUrl.protocol !== "https:") reject("non_https", extension);
           else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension);
-          else if (!pathname.endsWith(".m3u8")) reject("non_m3u8_https", extension);
+          else if (/\\.mpd(?:;[^/]*)?$/.test(decodeURIComponent(pathname))) reject("dash_requires_player_compatibility_check", extension);
+          else if (!isHlsManifestPath(pathname)) reject("non_m3u8_https", extension);
           else reject("invalid_url", extension);
         } catch {
           reject("invalid_url");
