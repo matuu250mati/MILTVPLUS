@@ -76,22 +76,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error --max-time 300 \
+          # Preserve the response body even for HTTP 4xx/5xx so the exact DB/API
+          # error is visible in the job log and artifact instead of only "curl 22".
+          http_status="$(curl --silent --show-error --max-time 300 --write-out '%{http_code}' \
             -X POST "https://uoqfovrynlyterjylpqj.supabase.co/functions/v1/sync-m3u-catalog" \
             -H 'Content-Type: application/json' \
             -H "x-sync-secret: $SYNC_SECRET" \
-            --data '{"confirm_sync":"MILTVPLUS-QA"}' -o m3u-live-sync.json
+            --data '{"confirm_sync":"MILTVPLUS-QA"}' -o m3u-live-sync.json || true)"
+          export HTTP_STATUS="$http_status"
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
-          report = json.loads(Path("m3u-live-sync.json").read_text())
+          path = Path("m3u-live-sync.json")
+          try:
+              report = json.loads(path.read_text()) if path.exists() else {}
+          except Exception:
+              report = {"error": "The function returned a non-JSON response; inspect the HTTP status and Supabase function logs."}
+          status = int(os.environ.get("HTTP_STATUS", "0") or "0")
+          if not 200 <= status < 300:
+              print(f"QA catalog import HTTP status: {status}")
+              print(f"Function error: {report.get('error', 'No structured error body returned.')}")
+              if report.get("code"):
+                  print(f"Database/API code: {report['code']}")
+              if report.get("details"):
+                  print(f"Details: {report['details']}")
+              raise SystemExit(1)
           sources = report.get("sources", [])
           accepted = sum(int(source.get("accepted", 0)) for source in sources)
           failed = [source.get("source", "(unknown)") for source in sources if source.get("error")]
           imported = int(report.get("imported", 0))
           print(f"Live QA sync: complete={report.get('complete')}; imported={imported}; accepted_sum={accepted}; failed_sources={len(failed)}")
           if report.get("complete") is not True or report.get("ok") is not True:
-              raise SystemExit("Catalog sync did not report complete=true.")
+              print(f"Function error: {report.get('error', 'Catalog sync did not report complete=true.')}")
+              raise SystemExit(1)
           if imported <= 0 or imported != accepted:
               raise SystemExit("Imported row count does not match accepted unique candidates.")
           if int(report.get("failedSources", 0)) != 0 or failed:
