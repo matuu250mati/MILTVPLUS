@@ -120,6 +120,12 @@ function directHttpsHls(value: string): string | null {
 
 async function parsePlaylist(source: Source, body: string) {
   const entries: Array<Record<string, unknown>> = [];
+  const rejectedReasons: Record<string, number> = {};
+  const rejectedExtensions: Record<string, number> = {};
+  const reject = (reason: string, extension = "(sin extensión)") => {
+    rejectedReasons[reason] = (rejectedReasons[reason] ?? 0) + 1;
+    rejectedExtensions[extension] = (rejectedExtensions[extension] ?? 0) + 1;
+  };
   const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/);
   let meta = "";
   for (const raw of lines) {
@@ -137,6 +143,22 @@ async function parsePlaylist(source: Source, body: string) {
     const rawTitle = comma >= 0 ? meta.slice(comma + 1).trim() : "";
     const title = clean(rawTitle).replace(/[\u200e\u200f]/g, "");
     if (!streamUrl || !title) {
+      if (!title) {
+        reject("missing_title");
+      } else {
+        try {
+          const parsedUrl = new URL(line);
+          const pathname = parsedUrl.pathname.toLowerCase();
+          const lastSegment = pathname.split("/").pop() ?? "";
+          const extension = lastSegment.includes(".") ? lastSegment.slice(lastSegment.lastIndexOf(".")) : "(sin extensión)";
+          if (parsedUrl.protocol !== "https:") reject("non_https", extension);
+          else if (parsedUrl.username || parsedUrl.password || ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname.toLowerCase())) reject("unsafe_url", extension);
+          else if (!pathname.endsWith(".m3u8")) reject("non_m3u8_https", extension);
+          else reject("invalid_url", extension);
+        } catch {
+          reject("invalid_url");
+        }
+      }
       meta = "";
       continue;
     }
@@ -175,7 +197,7 @@ async function parsePlaylist(source: Source, body: string) {
     });
     meta = "";
   }
-  return entries;
+  return { entries, rejectedReasons, rejectedExtensions };
 }
 
 Deno.serve(async (req) => {
@@ -213,7 +235,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; error?: string; warning?: string }> = [];
+  const sourceResults: Array<{ source: string; fetched: number; accepted: number; rejected: number; duplicates: number; rejectedReasons?: Record<string, number>; rejectedExtensions?: Record<string, number>; error?: string; warning?: string }> = [];
   const selected: Array<Record<string, unknown>> = [];
   const selectedByKey = new Map<string, Record<string, unknown>>();
   const seen = new Set<string>();
@@ -235,7 +257,7 @@ Deno.serve(async (req) => {
       } catch (error) {
         return {
           source,
-          parsed: [] as Array<Record<string, unknown>>,
+          parsed: { entries: [] as Array<Record<string, unknown>>, rejectedReasons: {}, rejectedExtensions: {} },
           fetched: 0,
           error: error instanceof Error ? error.message : "Error de descarga",
         };
@@ -245,7 +267,7 @@ Deno.serve(async (req) => {
     for (const result of results) {
       let accepted = 0;
       let duplicates = 0;
-      for (const row of result.parsed) {
+      for (const row of result.parsed.entries) {
         const key = String(row.source_key ?? "");
         // Deduplicate within a category, while preserving cross-category memberships.
         if (!key) continue;
@@ -270,11 +292,11 @@ Deno.serve(async (req) => {
         selectedByKey.set(key, row);
         accepted++;
       }
-      const rejected = Math.max(0, result.fetched - result.parsed.length);
+      const rejected = Math.max(0, result.fetched - result.parsed.entries.length);
       const sourceError = result.error ??
         (result.fetched === 0
           ? "La lista no contiene entradas #EXTINF."
-          : result.parsed.length === 0
+          : result.parsed.entries.length === 0
           ? "No contiene URLs HTTPS directas .m3u8 aceptables."
           : undefined);
       const sourceWarning = rejected > 0
@@ -286,6 +308,8 @@ Deno.serve(async (req) => {
         accepted,
         rejected,
         duplicates,
+        rejectedReasons: result.parsed.rejectedReasons,
+        rejectedExtensions: result.parsed.rejectedExtensions,
         ...(sourceError ? { error: sourceError } : {}),
         ...(sourceWarning ? { warning: sourceWarning } : {}),
       });
