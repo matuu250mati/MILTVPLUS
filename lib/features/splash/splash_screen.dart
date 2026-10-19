@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, this.onSkip});
+
+  final VoidCallback? onSkip;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -11,6 +13,9 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  bool _showSkip = false;
+  Future<void>? _skipDelay;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1700),
@@ -28,6 +33,14 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _glow = Tween<double>(begin: .35, end: 1).animate(
     CurvedAnimation(parent: _controller, curve: const Interval(.08, .9, curve: Curves.easeOut)),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _skipDelay = Future<void>.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _showSkip = true);
+    });
+  }
 
   @override
   void dispose() {
@@ -162,6 +175,19 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
+              if (_showSkip && widget.onSkip != null)
+                Positioned(
+                  right: 20,
+                  bottom: 18,
+                  child: SafeArea(
+                    child: TextButton.icon(
+                      onPressed: widget.onSkip,
+                      icon: const Icon(Icons.skip_next_rounded),
+                      label: const Text('OMITIR INTRO'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                    ),
+                  ),
+                ),
             ],
           ),
           ),
