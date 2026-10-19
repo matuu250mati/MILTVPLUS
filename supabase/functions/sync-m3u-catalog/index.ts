@@ -187,16 +187,17 @@ async function parsePlaylist(source: Source, body: string) {
     }
 
     const tvgId = attribute(meta, "tvg-id").toLowerCase();
-    const logoUrl = (() => { const rawLogo = attribute(meta, "tvg-logo"); try { const parsed = new URL(rawLogo); return parsed.protocol === "https:" ? parsed.toString() : null; } catch { return null; } })() ??
-      (() => {
-        const rawLogo = attribute(meta, "tvg-logo");
-        try {
-          const parsed = new URL(rawLogo);
-          return parsed.protocol === "https:" ? parsed.toString() : null;
-        } catch {
-          return null;
-        }
-      })();
+    const logoUrl = (() => {
+      const rawLogo = attribute(meta, "tvg-logo");
+      try {
+        const parsed = new URL(rawLogo);
+        return parsed.protocol === "https:" && !parsed.username && !parsed.password
+          ? parsed.toString()
+          : null;
+      } catch {
+        return null;
+      }
+    })();
     const groupTitle = attribute(meta, "group-title") || source.category;
     // The channels.country_code column is NOT NULL; PostgreSQL defaults do not apply when an explicit null is sent.
     const countryCode = source.countryCode || normalizeCountryCode(attribute(meta, "tvg-country"));
