@@ -29,3 +29,7 @@ The country-inference code passed the Deno type-check and the updated Edge Funct
 ## Read-only stream reachability sample
 
 The gated QA workflow `Read-only MILTVPLUS-QA stream reachability probe` samples up to 180 published stream URLs with low concurrency and short timeouts. It records only host, country/category, HTTP status, and response classification; it never writes catalog data or reports full URLs/tokens. A reachable HLS manifest is not treated as proof of sustained playback.
+
+## Cross-category playback mirror QA deployment
+
+The sync function now shares alternate stream URLs only between rows with an exact matching `tvg-id`, while retaining category-specific rows and existing stored URLs. Deploy via the QA-only gated workflow and require the read-only source preflight to pass before running the separate QA catalog sync. Production is not a target.
