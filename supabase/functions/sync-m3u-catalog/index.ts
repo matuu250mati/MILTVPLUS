@@ -342,6 +342,40 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Infer missing country metadata only from an exact tvg-id match to a
+  // country-specific playlist entry. Never guess from the channel title or URL.
+  // This lets a sports/news/etc. row retain its category while also carrying
+  // country metadata when the same channel is explicitly listed by country.
+  const countriesByTvgId = new Map<string, Set<string>>();
+  const tvgIdFromSourceKey = (value: unknown): string | null => {
+    const key = typeof value === "string" ? value : "";
+    if (!key.startsWith("m3u:") || key.startsWith("m3u:url:")) return null;
+    const match = key.match(/^m3u:(.*):category:[a-z0-9-]+$/);
+    return match?.[1] ? match[1] : null;
+  };
+  for (const row of selected) {
+    const countryCode = typeof row.country_code === "string" ? row.country_code : "";
+    if (!countryCode || countryCode === "ZZ") continue;
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const known = countriesByTvgId.get(tvgId) ?? new Set<string>();
+    known.add(countryCode);
+    countriesByTvgId.set(tvgId, known);
+  }
+  let inferredCountryRows = 0;
+  for (const row of selected) {
+    if (row.country_code !== "ZZ") continue;
+    const tvgId = tvgIdFromSourceKey(row.source_key);
+    if (!tvgId) continue;
+    const known = countriesByTvgId.get(tvgId);
+    // If metadata conflicts across country lists, leave it unknown rather than
+    // assigning a potentially incorrect country.
+    if (known?.size === 1) {
+      row.country_code = [...known][0];
+      inferredCountryRows++;
+    }
+  }
+
   if (!selected.length) {
     return json({
       ok: false,
@@ -358,6 +392,7 @@ Deno.serve(async (req) => {
       dryRun: true,
       writePerformed: false,
       candidateChannels: selected.length,
+      inferredCountryRows,
       failedSources: failedSources.length,
       warningSources: sourceResults.filter((source) => Boolean(source.warning)).length,
       sources: sourceResults,
@@ -410,6 +445,7 @@ Deno.serve(async (req) => {
         ok: false,
         imported,
         attempted: selected.length,
+        inferredCountryRows,
         sources: sourceResults,
         error: `Falló la importación por lotes: ${error.message}`,
       }, 502);
@@ -419,6 +455,7 @@ Deno.serve(async (req) => {
         ok: false,
         imported,
         attempted: selected.length,
+        inferredCountryRows,
         sources: sourceResults,
         error: `Verificación de escritura fallida: se esperaban ${batch.length} filas confirmadas y se recibieron ${data?.length ?? 0}.`,
       }, 502);
