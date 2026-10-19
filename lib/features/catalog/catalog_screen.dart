@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
-import 'catalog_player_screen.dart';
 import 'movie_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
