@@ -124,7 +124,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (widget.year != null) widget.year.toString(),
       if (widget.category.trim().isNotEmpty) widget.category.trim(),
       ...widget.genres,
-    ].toSet().toList(growable: false);
+    ];
 
     return Scaffold(
       backgroundColor: AppTheme.background,
