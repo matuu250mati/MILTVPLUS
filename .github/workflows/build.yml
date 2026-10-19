@@ -44,6 +44,52 @@ jobs:
       - name: Prepare Android project
         run: bash tool/bootstrap_android.sh
 
+      # Preinstall the exact NDK required by Flutter/Gradle. Retry cleanly if the
+      # runner receives a truncated/corrupt SDK ZIP (ZipException: not a ZIP archive).
+      - name: Install and verify Android NDK with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" && -d "$sdk_root" ]] || {
+            echo "::error::Android SDK root is unavailable; cannot install NDK."
+            exit 1
+          }
+          sdkmanager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager -print 2>/dev/null | sort -V | tail -n 1)"
+          [[ -x "$sdkmanager" ]] || {
+            echo "::error::sdkmanager was not found under the Android SDK command-line tools."
+            exit 1
+          }
+          ndk_version="27.0.12077973"
+          ndk_dir="$sdk_root/ndk/$ndk_version"
+          # GitHub's hosted images normally have licenses pre-accepted. This also
+          # handles images where sdkmanager still requests acceptance.
+          yes | "$sdkmanager" --sdk_root="$sdk_root" --licenses >/dev/null 2>&1 || true
+          installed=false
+          for attempt in 1 2 3; do
+            echo "Installing/verifying NDK $ndk_version (attempt $attempt/3)."
+            if [[ -d "$ndk_dir" ]] && grep -Fq "Pkg.Revision = $ndk_version" "$ndk_dir/source.properties" 2>/dev/null && [[ -x "$ndk_dir/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" ]]; then
+              installed=true
+              break
+            fi
+            # Remove only this NDK version so Gradle cannot reuse a partial archive.
+            rm -rf "$ndk_dir"
+            if "$sdkmanager" --sdk_root="$sdk_root" --install "ndk;$ndk_version" &&
+               grep -Fq "Pkg.Revision = $ndk_version" "$ndk_dir/source.properties" 2>/dev/null &&
+               [[ -x "$ndk_dir/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" ]]; then
+              installed=true
+              break
+            fi
+            echo "::warning::NDK $ndk_version install/verification failed on attempt $attempt."
+            rm -rf "$ndk_dir"
+            sleep "$attempt"
+          done
+          [[ "$installed" == true ]] || {
+            echo "::error::NDK $ndk_version could not be installed as a valid package after 3 attempts."
+            exit 1
+          }
+          echo "Verified NDK $ndk_version at $ndk_dir."
+
       - name: Add OTA installation permissions to Android manifest
         run: bash tool/patch_ota_manifest.sh
 
