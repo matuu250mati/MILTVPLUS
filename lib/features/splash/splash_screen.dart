@@ -29,8 +29,13 @@ class _SplashScreenState extends State<SplashScreen>
     CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
   );
 
+  late final AnimationController _glowController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..repeat(reverse: true);
+
   late final Animation<double> _glow = Tween<double>(begin: .35, end: 1).animate(
-    CurvedAnimation(parent: _controller, curve: const Interval(.08, .9, curve: Curves.easeOut)),
+    CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
   );
 
   @override
@@ -44,6 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
