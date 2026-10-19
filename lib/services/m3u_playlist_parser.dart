@@ -6,7 +6,8 @@ class M3uPlaylistParser {
   List<TvChannel> parse(String source) {
     final lines = source.replaceAll('\r', '').split('\n');
     final channels = <TvChannel>[];
-    final seen = <String>{};
+    final byChannelIdentity = <String, int>{};
+    final seenUrlsByChannel = <String, Set<String>>{};
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
@@ -32,19 +33,49 @@ class M3uPlaylistParser {
       if (streamUrl == null) continue;
       final uri = Uri.tryParse(streamUrl);
       if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
-          uri.scheme != 'https' || _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
+          !['http', 'https'].contains(uri.scheme.toLowerCase()) || _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
         continue;
       }
-      if (!seen.add(_streamIdentity(uri))) continue;
+      final groupTitle = _nonEmpty(attributes['group-title']);
+      final country = _nonEmpty(attributes['tvg-country']);
+      final tvgId = _nonEmpty(attributes['tvg-id']);
+      final identity = tvgId != null && tvgId.isNotEmpty
+          ? 'id:${tvgId.toLowerCase()}|${(groupTitle ?? '').toLowerCase()}'
+          : 'name:${name.trim().toLowerCase()}|${(groupTitle ?? '').toLowerCase()}|${(country ?? '').toLowerCase()}';
+      final normalizedUrl = _streamIdentity(uri);
+      final existingIndex = byChannelIdentity[identity];
+      if (existingIndex != null) {
+        final seen = seenUrlsByChannel[identity]!;
+        if (seen.add(normalizedUrl)) {
+          final existing = channels[existingIndex];
+          channels[existingIndex] = TvChannel(
+            name: existing.name,
+            streamUrl: existing.streamUrl,
+            groupTitle: existing.groupTitle ?? groupTitle,
+            country: existing.country ?? country,
+            language: existing.language ?? _nonEmpty(attributes['tvg-language']),
+            category: existing.category,
+            logoUrl: existing.logoUrl ?? _nonEmpty(attributes['tvg-logo']),
+            tvgId: existing.tvgId ?? tvgId,
+            backupStreamUrls: [...existing.backupStreamUrls, streamUrl]
+                .where((url) => url != existing.streamUrl)
+                .toSet()
+                .toList(growable: false),
+          );
+        }
+        continue;
+      }
 
+      byChannelIdentity[identity] = channels.length;
+      seenUrlsByChannel[identity] = {normalizedUrl};
       channels.add(TvChannel(
         name: name,
         streamUrl: streamUrl,
-        groupTitle: _nonEmpty(attributes['group-title']),
-        country: _nonEmpty(attributes['tvg-country']),
+        groupTitle: groupTitle,
+        country: country,
         language: _nonEmpty(attributes['tvg-language']),
         logoUrl: _nonEmpty(attributes['tvg-logo']),
-        tvgId: _nonEmpty(attributes['tvg-id']),
+        tvgId: tvgId,
       ));
     }
     return List<TvChannel>.unmodifiable(channels);
