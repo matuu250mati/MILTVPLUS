@@ -6,7 +6,7 @@ This branch preserves each channel's primary URL and ordered alternatives in `st
 - HTTP and HTTPS stream candidates are retained exactly as supplied (apart from URL parsing/serialization); credentials embedded in URLs and local hosts are rejected.
 - The Android app continues to keep cleartext traffic disabled. HTTP mirrors remain catalog data, but the Android/iOS/web player skips them and tries later secure mirrors.
 - HLS, DASH, extensionless endpoints, and other HTTP(S) candidates are not declared playable just because they were imported.
-- The read-only QA preflight may fetch and parse the configured public playlists, but it does not write catalog rows.
+- The read-only QA preflight may fetch and parse the configured public playlists, but it does not write catalog rows. Database import uses 100-row batches to keep URL lookups within request-size limits.
 - The `channels.stream_urls` migration must be applied to MILTVPLUS-QA and schema-verified before a live sync is authorized.
 - Production project, production database, and production app remain out of scope.
 
