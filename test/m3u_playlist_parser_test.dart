@@ -34,7 +34,7 @@ https://example.com/sports.m3u8
     expect(channels.single.language, 'spa');
   });
 
-  test('ignores non-HTTPS URLs and malformed playlist rows', () {
+  test('ignores unsupported file URLs and malformed playlist rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Invalid
@@ -64,7 +64,7 @@ https://example.com/other.m3u8
     expect(channels[2].name, 'Canal Dos');
   });
 
-  test('deduplicates equivalent host casing and URL fragments', () {
+  test('preserves different aliases with equivalent normalized stream URLs', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Original
@@ -73,8 +73,9 @@ https://EXAMPLE.com/live/../live.m3u8#first
 https://example.com/live.m3u8#second
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Original');
+    expect(channels, hasLength(2));
+    expect(channels.first.name, 'Original');
+    expect(channels.last.name, 'Duplicate');
   });
 
   test('rejects stream URLs with embedded user information', () {
