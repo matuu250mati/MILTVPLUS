@@ -225,8 +225,6 @@ jobs:
           fi
 
       - name: Build release APK
-        env:
-          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || (github.event_name != 'pull_request' && secrets.SUPABASE_ANON_KEY) }}
         shell: bash
         run: |
           set -euo pipefail
