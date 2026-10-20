@@ -132,15 +132,24 @@ class CatalogService {
   }
 
   Future<List<MovieModel>> getMovies() async {
-    // Keep published titles visible even when a stream URL has not been
-    // supplied yet. Playback is handled separately by the UI.
-    final response = await _supabase
-        .from('movies')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
+    // Keep published titles visible even without a stream URL. Page through
+    // the full table so the server's per-request row limit cannot hide titles.
+    const pageSize = 500;
+    final allRows = <dynamic>[];
+    var from = 0;
+    while (true) {
+      final page = await _supabase
+          .from('movies')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .range(from, from + pageSize - 1);
+      allRows.addAll(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
 
-    return (response as List<dynamic>)
+    return allRows
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
@@ -148,13 +157,22 @@ class CatalogService {
   }
 
   Future<List<SeriesModel>> getSeries() async {
-    final response = await _supabase
-        .from('series')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
+    const pageSize = 500;
+    final allRows = <dynamic>[];
+    var from = 0;
+    while (true) {
+      final page = await _supabase
+          .from('series')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true)
+          .range(from, from + pageSize - 1);
+      allRows.addAll(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
 
-    return (response as List<dynamic>)
+    return allRows
         .map((item) => SeriesModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
@@ -162,15 +180,24 @@ class CatalogService {
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
-    final response = await _supabase
-        .from('episodes')
-        .select()
-        .eq('series_id', seriesId)
-        .eq('is_published', true)
-        .order('season_number', ascending: true)
-        .order('episode_number', ascending: true);
+    const pageSize = 500;
+    final allRows = <dynamic>[];
+    var from = 0;
+    while (true) {
+      final page = await _supabase
+          .from('episodes')
+          .select()
+          .eq('series_id', seriesId)
+          .eq('is_published', true)
+          .order('season_number', ascending: true)
+          .order('episode_number', ascending: true)
+          .range(from, from + pageSize - 1);
+      allRows.addAll(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
 
-    return (response as List<dynamic>)
+    return allRows
         .map((item) => EpisodeModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
