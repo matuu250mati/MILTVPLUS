@@ -117,6 +117,7 @@ class OtaUpdateService {
         currentVersion: package.version,
         latestVersion: tag,
         sizeBytes: sizeBytes,
+        releaseNotes: body.trim(),
         message: versionIsNewer ? 'Hay una versión nueva disponible.' : 'MILTVPLUS está actualizado.',
       );
     } on DioException catch (error) {
