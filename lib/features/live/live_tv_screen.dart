@@ -75,17 +75,18 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     return labels[normalized] ?? (value ?? '').trim();
   }
 
-  String _streamIdentity(String value) {
-    final uri = Uri.tryParse(value.trim());
-    if (uri == null || uri.host.isEmpty) return value.trim();
-    return uri
-        .replace(
-          scheme: uri.scheme.toLowerCase(),
-          host: uri.host.toLowerCase(),
-          path: uri.normalizePath().path,
-          fragment: '',
-        )
-        .toString();
+  String _channelIdentity(TvChannel channel) {
+    final uri = Uri.tryParse(channel.streamUrl.trim());
+    final normalizedUrl = uri == null || uri.host.isEmpty
+        ? channel.streamUrl.trim()
+        : uri.replace(
+            scheme: uri.scheme.toLowerCase(),
+            host: uri.host.toLowerCase(),
+            path: uri.normalizePath().path,
+            fragment: '',
+          ).toString();
+    // Same URL can represent different named/category entries in an M3U.
+    return '${normalizedUrl}|${channel.name.trim().toLowerCase()}|${channel.liveSection.toLowerCase()}';
   }
 
   @override
@@ -104,7 +105,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
 
       void addUnique(TvChannel channel) {
-        final key = _streamIdentity(channel.streamUrl);
+        final key = _channelIdentity(channel);
         final existing = merged[key];
         if (existing == null) {
           merged[key] = channel;
