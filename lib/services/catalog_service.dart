@@ -117,6 +117,7 @@ class CatalogService {
       final page = await query
           .order('sort_order', ascending: true)
           .order('title', ascending: true)
+          .order('id', ascending: true)
           .range(from, from + pageSize - 1);
 
       allRows.addAll(page);
@@ -191,6 +192,7 @@ class CatalogService {
           .eq('is_published', true)
           .order('season_number', ascending: true)
           .order('episode_number', ascending: true)
+          .order('id', ascending: true)
           .range(from, from + pageSize - 1);
       allRows.addAll(page);
       if (page.length < pageSize) break;
