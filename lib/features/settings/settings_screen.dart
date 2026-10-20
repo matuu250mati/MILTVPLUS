@@ -186,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _importCustomPlaylist() async {
     final urls = _playlistUrlController.text
-        .split(RegExp(r'[\\r\\n]+'))
+        .split(RegExp(r'[\r\n]+'))
         .map((value) => value.trim())
         .where((value) => value.isNotEmpty)
         .toList(growable: false);
@@ -195,18 +195,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     if (_importingPlaylist) return;
-    var successCount = 0;
     for (var index = 0; index < urls.length; index++) {
-      final before = _importingPlaylist;
+      // Each successful list is persisted immediately, so a later failure
+      // cannot erase earlier imports.
       await _importPlaylist(urls[index], 'Lista ${index + 1}/${urls.length}');
-      if (mounted && before == false) {
-        // Each successful list is persisted immediately, so a later failure
-        // cannot erase earlier imports.
-        successCount++;
-      }
     }
     if (mounted && urls.length > 1) {
-      _showMessage('Proceso terminado: ${urls.length} listas procesadas. Las importaciones correctas quedan guardadas en este dispositivo.');
+      _showMessage('Proceso terminado: ${urls.length} listas intentadas. Cada lista que se pudo importar quedó guardada en este dispositivo.');
     }
   }
 
