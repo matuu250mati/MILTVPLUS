@@ -95,18 +95,36 @@ class CatalogService {
       ]);
     }
 
-    final query = _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true);
-    final filteredQuery = expandedCategories.isEmpty
-        ? query
-        : query.inFilter('category', expandedCategories.toList(growable: false));
-    final response = await filteredQuery
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+    // PostgREST/Supabase applies a server-side row limit to each request.
+    // Fetch in pages so the app can display the full published catalog rather
+    // than silently stopping at the first 1,000 rows.
+    const pageSize = 500;
+    final allRows = <dynamic>[];
+    var from = 0;
 
-    return (response as List<dynamic>)
+    while (true) {
+      var query = _supabase
+          .from('channels')
+          .select()
+          .eq('is_published', true);
+      if (expandedCategories.isNotEmpty) {
+        query = query.inFilter(
+          'category',
+          expandedCategories.toList(growable: false),
+        );
+      }
+
+      final page = await query
+          .order('sort_order', ascending: true)
+          .order('title', ascending: true)
+          .range(from, from + pageSize - 1);
+
+      allRows.addAll(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows
         .map((item) => ChannelModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
