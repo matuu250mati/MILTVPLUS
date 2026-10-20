@@ -96,9 +96,25 @@ class ChannelStorageService {
       'backupStreamUrls': channel.backupStreamUrls,
     }).toList(growable: false);
     final temporary = File('${file.path}.tmp');
+    final backup = File('${file.path}.bak');
     await temporary.writeAsString(jsonEncode(encoded), flush: true);
-    // Atomic replacement prevents a failed import from overwriting a valid list.
-    if (await file.exists()) await file.delete();
-    await temporary.rename(file.path);
+    var movedOriginal = false;
+    try {
+      if (await file.exists()) {
+        if (await backup.exists()) await backup.delete();
+        await file.rename(backup.path);
+        movedOriginal = true;
+      }
+      await temporary.rename(file.path);
+      if (await backup.exists()) await backup.delete();
+    } catch (_) {
+      // Restore the previous valid catalog if writing/replacing the new one fails.
+      if (movedOriginal && !await file.exists() && await backup.exists()) {
+        await backup.rename(file.path);
+      }
+      rethrow;
+    } finally {
+      if (await temporary.exists()) await temporary.delete();
+    }
   }
 }
