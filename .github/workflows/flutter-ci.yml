@@ -49,7 +49,7 @@ jobs:
             label: Linux desktop
             runner: ubuntu-latest
             artifact_path: build/linux/x64/release/bundle/**
-            command: flutter build linux --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
+            command: env CXXFLAGS=-Wno-error=deprecated-literal-operator flutter build linux --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
           - platform: macos
             label: macOS desktop
             runner: macos-latest
