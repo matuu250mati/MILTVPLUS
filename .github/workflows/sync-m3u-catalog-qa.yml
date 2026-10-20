@@ -32,8 +32,8 @@ jobs:
           test -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" || { echo "::error::Missing QA access token."; exit 1; }
           test -n "${SUPABASE_ANON_KEY//[[:space:]]/}" || { echo "::error::Missing QA anon/publishable key."; exit 1; }
           test -n "${SYNC_SECRET//[[:space:]]/}" || { echo "::error::Missing QA sync secret."; exit 1; }
-          normalized="https://uoqfovrnlyterjylpcqj.supabase.co"
-          [[ "$normalized" == "https://uoqfovrnlyterjylpcqj.supabase.co" ]] || {
+          normalized="https://uoqfovrynlyterjylpqj.supabase.co"
+          [[ "$normalized" == "https://uoqfovrynlyterjylpqj.supabase.co" ]] || {
             echo "::error::Refusing to sync: SUPABASE_QA_URL does not match the hardcoded QA project."
             exit 1
           }
@@ -56,7 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail-with-body --silent --show-error --max-time 180 \
-            -X POST "https://uoqfovrnlyterjylpcqj.supabase.co/functions/v1/sync-m3u-catalog" \
+            -X POST "https://uoqfovrynlyterjylpqj.supabase.co/functions/v1/sync-m3u-catalog" \
             -H 'Content-Type: application/json' \
             -H "x-sync-secret: $SYNC_SECRET" \
             --data '{"dry_run":true}' -o m3u-preflight.json
@@ -81,7 +81,7 @@ jobs:
           # Preserve the response body even for HTTP 4xx/5xx so the exact DB/API
           # error is visible in the job log and artifact instead of only "curl 22".
           http_status="$(curl --silent --show-error --max-time 300 --write-out '%{http_code}' \
-            -X POST "https://uoqfovrnlyterjylpcqj.supabase.co/functions/v1/sync-m3u-catalog" \
+            -X POST "https://uoqfovrynlyterjylpqj.supabase.co/functions/v1/sync-m3u-catalog" \
             -H 'Content-Type: application/json' \
             -H "x-sync-secret: $SYNC_SECRET" \
             --data '{"confirm_sync":"MILTVPLUS-QA"}' -o m3u-live-sync.json || true)"
