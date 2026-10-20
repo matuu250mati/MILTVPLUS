@@ -6,6 +6,7 @@ on:
     branches:
       - qa/deploy-m3u-sync-isolated-2026-10-18
       - qa/catalog-movie-details-favorites-2026-10-19
+      - qa/additional-m3u-sources-2026-10-20
 
 permissions:
   contents: read
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   sync-qa-only:
-    if: (github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' || github.ref == 'refs/heads/qa/catalog-movie-details-favorites-2026-10-19') && contains(github.event.head_commit.message, '[run-qa-catalog-sync]')
+    if: (github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' || github.ref == 'refs/heads/qa/catalog-movie-details-favorites-2026-10-19' || github.ref == 'refs/heads/qa/additional-m3u-sources-2026-10-20') && contains(github.event.head_commit.message, '[run-qa-catalog-sync]')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: miltvplus-qa
