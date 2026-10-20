@@ -29,8 +29,7 @@ void main() {
     await tester.pumpWidget(const MiltvPlusApp());
     expect(find.text('MILTVPLUS'), findsOneWidget);
 
-    // The skip action intentionally appears after three seconds.
-    await tester.pump(const Duration(seconds: 3));
+    // The intro remains brief, and its skip action is available immediately.
     await tester.pump();
     expect(find.text('OMITIR INTRO'), findsOneWidget);
     await tester.tap(find.text('OMITIR INTRO'));
