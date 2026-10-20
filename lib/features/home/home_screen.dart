@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -20,11 +21,22 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final CatalogService _catalog = CatalogService();
   late Future<_HomeData> _dataFuture;
+  DateTime _now = DateTime.now();
+  Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
     _dataFuture = _loadData();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
   }
 
   Future<_HomeData> _loadData() async {
@@ -95,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     compact: compact,
                     onNavigate: widget.onNavigate,
                     onMenu: () => Scaffold.of(context).openDrawer(),
+                    now: _now,
                   ),
                   SizedBox(height: compact ? 14 : 20),
                   _HeroBanner(
@@ -244,11 +257,17 @@ class _DashboardHeader extends StatelessWidget {
     required this.compact,
     required this.onNavigate,
     required this.onMenu,
+    required this.now,
   });
 
   final bool compact;
   final ValueChanged<int> onNavigate;
   final VoidCallback onMenu;
+  final DateTime now;
+
+  static String _weekday(int weekday) => const [
+        'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'
+      ][weekday - 1];
 
   @override
   Widget build(BuildContext context) {
@@ -298,10 +317,32 @@ class _DashboardHeader extends StatelessWidget {
             ),
           ),
         ),
+        if (!compact) ...[
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _weekday(now.weekday) + ', ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}',
+                style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+              ),
+              Text(
+                '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
         IconButton(
           tooltip: 'Buscar contenido',
           onPressed: () => onNavigate(8),
           icon: const Icon(Icons.search_rounded),
+        ),
+        IconButton(
+          tooltip: 'Notificaciones y actualizaciones',
+          onPressed: () => onNavigate(11),
+          icon: const Icon(Icons.notifications_none_rounded),
         ),
         IconButton(
           tooltip: 'Configuración',
