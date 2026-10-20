@@ -102,7 +102,7 @@ https://example.com/news.m3u8
     expect(channels.single.name, 'News');
   });
 
-  test('skips web-player pages that are not direct streams', () {
+  test('preserves web-player pages as catalog entries even if playback may fail', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,YouTube page
@@ -113,9 +113,11 @@ https://www.twitch.tv/examplechannel
 https://cdn.example.org/live/playlist.m3u8
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Direct HLS');
-    expect(channels.single.streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
+    expect(channels, hasLength(3));
+    expect(channels[0].name, 'YouTube page');
+    expect(channels[1].name, 'Twitch page');
+    expect(channels[2].name, 'Direct HLS');
+    expect(channels[2].streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
   });
 
   test('parses tvg-name, logo, id and quoted commas without breaking metadata', () {
@@ -134,7 +136,7 @@ https://example.com/news.m3u8
     expect(channels.single.liveSection, 'Noticias');
   });
 
-  test('skips web-player URLs instead of treating them as direct streams', () {
+  test('retains web-player URLs in the catalog instead of silently dropping them', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Player page
@@ -143,7 +145,8 @@ https://www.twitch.tv/example
 https://example.com/live.m3u8
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Direct stream');
+    expect(channels, hasLength(2));
+    expect(channels.first.name, 'Player page');
+    expect(channels.last.name, 'Direct stream');
   });
 }
