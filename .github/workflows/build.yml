@@ -81,6 +81,14 @@ jobs:
           echo "Bundled public M3U snapshot: $entries entries; existing Supabase catalog remains additive."
           echo "Bundled public IPTV snapshot: $entries entries" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate every bundled IPTV endpoint and HLS manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tool/validate_m3u_sources.py
+          test -s build/source-validation/source-validation.csv
+          test -s build/source-validation/source-validation-summary.json
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -370,6 +378,7 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
+            build/source-validation/*
           if-no-files-found: error
           retention-days: 14
 
