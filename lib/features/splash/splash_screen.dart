@@ -13,7 +13,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  bool _showSkip = false;
+  bool _showSkip = true;
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -37,14 +37,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _glow = Tween<double>(begin: .35, end: 1).animate(
     CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
   );
-
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _showSkip = true);
-    });
-  }
 
   @override
   void dispose() {
