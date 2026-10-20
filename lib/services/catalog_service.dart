@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -116,9 +118,12 @@ class CatalogService {
       // Offline mode deliberately continues with the APK-bundled snapshot.
     }
 
+    final snapshotChannels = (await _getBundledRows('channels'))
+        .map(ChannelModel.fromJson)
+        .toList(growable: false);
     final bundledChannels = await _getBundledChannels();
     final merged = <String, ChannelModel>{};
-    for (final channel in [...remoteChannels, ...bundledChannels]) {
+    for (final channel in [...remoteChannels, ...snapshotChannels, ...bundledChannels]) {
       final urlKey = channel.urlStream.trim().toLowerCase();
       final titleKey = channel.title.trim().toLowerCase();
       final key = urlKey.isNotEmpty ? urlKey : titleKey;
@@ -129,6 +134,21 @@ class CatalogService {
         final byOrder = a.sortOrder.compareTo(b.sortOrder);
         return byOrder != 0 ? byOrder : a.title.toLowerCase().compareTo(b.title.toLowerCase());
       });
+  }
+
+  Future<List<Map<String, dynamic>>> _getBundledRows(String table) async {
+    try {
+      final decoded = jsonDecode(
+        await rootBundle.loadString('assets/catalog/catalog_snapshot.json'),
+      );
+      if (decoded is! Map || decoded[table] is! List) return const [];
+      return (decoded[table] as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<List<ChannelModel>> _getBundledChannels() async {
@@ -187,49 +207,86 @@ class CatalogService {
   }
 
   Future<List<MovieModel>> getMovies() async {
-    final response = await _supabase
-        .from('movies')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
-
-    // Keep every published movie in the catalog, including entries whose
-    // playback URL is not available yet. The UI can show details and mark
-    // playback as unavailable instead of silently hiding the title.
-    return (response as List<dynamic>)
-        .map((item) => MovieModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    final remote = <MovieModel>[];
+    try {
+      final response = await _supabase
+          .from('movies')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true);
+      remote.addAll((response as List<dynamic>).map((item) =>
+          MovieModel.fromJson(Map<String, dynamic>.from(item as Map))));
+    } catch (_) {
+      // The APK snapshot remains available when the backend is unreachable.
+    }
+    final bundled = (await _getBundledRows('movies'))
+        .map(MovieModel.fromJson)
         .toList(growable: false);
+    final merged = <String, MovieModel>{};
+    for (final movie in [...remote, ...bundled]) {
+      final key = movie.id.isNotEmpty ? movie.id : movie.title.trim().toLowerCase();
+      if (key.isNotEmpty) merged.putIfAbsent(key, () => movie);
+    }
+    // Do not hide published titles just because a stream URL has not been set.
+    return merged.values.toList(growable: false)
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
   }
 
   Future<List<SeriesModel>> getSeries() async {
-    final response = await _supabase
-        .from('series')
-        .select()
-        .eq('is_published', true)
-        .order('title', ascending: true);
-
-    return (response as List<dynamic>)
-        .map((item) => SeriesModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    final remote = <SeriesModel>[];
+    try {
+      final response = await _supabase
+          .from('series')
+          .select()
+          .eq('is_published', true)
+          .order('title', ascending: true);
+      remote.addAll((response as List<dynamic>).map((item) =>
+          SeriesModel.fromJson(Map<String, dynamic>.from(item as Map))));
+    } catch (_) {
+      // Use the packaged snapshot in offline mode.
+    }
+    final bundled = (await _getBundledRows('series'))
+        .map(SeriesModel.fromJson)
         .toList(growable: false);
+    final merged = <String, SeriesModel>{};
+    for (final series in [...remote, ...bundled]) {
+      final key = series.id.isNotEmpty ? series.id : series.title.trim().toLowerCase();
+      if (key.isNotEmpty) merged.putIfAbsent(key, () => series);
+    }
+    return merged.values.toList(growable: false)
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
-    final response = await _supabase
-        .from('episodes')
-        .select()
-        .eq('series_id', seriesId)
-        .eq('is_published', true)
-        .order('season_number', ascending: true)
-        .order('episode_number', ascending: true);
-
-    return (response as List<dynamic>)
-        .map((item) => EpisodeModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    final remote = <EpisodeModel>[];
+    try {
+      final response = await _supabase
+          .from('episodes')
+          .select()
+          .eq('series_id', seriesId)
+          .eq('is_published', true)
+          .order('season_number', ascending: true)
+          .order('episode_number', ascending: true);
+      remote.addAll((response as List<dynamic>).map((item) =>
+          EpisodeModel.fromJson(Map<String, dynamic>.from(item as Map))));
+    } catch (_) {
+      // Fall back to episodes bundled with the published catalog snapshot.
+    }
+    final bundled = (await _getBundledRows('episodes'))
+        .where((row) => row['series_id']?.toString() == seriesId)
+        .map(EpisodeModel.fromJson)
         .toList(growable: false);
+    final merged = <String, EpisodeModel>{};
+    for (final episode in [...remote, ...bundled]) {
+      final key = episode.id.isNotEmpty
+          ? episode.id
+          : '${episode.seriesId}-${episode.seasonNumber}-${episode.episodeNumber}';
+      merged.putIfAbsent(key, () => episode);
+    }
+    return merged.values.toList(growable: false)
+      ..sort((a, b) {
+        final season = a.seasonNumber.compareTo(b.seasonNumber);
+        return season != 0 ? season : a.episodeNumber.compareTo(b.episodeNumber);
+      });
   }
 }
