@@ -33,7 +33,7 @@ class M3uPlaylistParser {
       final uri = Uri.tryParse(streamUrl);
       if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
           (uri.scheme != 'https' && uri.scheme != 'http') ||
-          _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
+          name.trim().isEmpty) {
         continue;
       }
       final identity = '${_streamIdentity(uri)}|name=${name.toLowerCase()}|group=${(attributes['group-title'] ?? '').trim().toLowerCase()}';
@@ -87,14 +87,5 @@ class M3uPlaylistParser {
     fragment: '',
   ).toString();
 
-  bool _isWebPageOnlyHost(String host) {
-    const hosts = <String>{
-      'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
-      'twitch.tv', 'www.twitch.tv', 'facebook.com', 'www.facebook.com',
-      'fb.watch', 'vimeo.com', 'www.vimeo.com', 'dailymotion.com',
-      'www.dailymotion.com', 'tiktok.com', 'www.tiktok.com',
-      'instagram.com', 'www.instagram.com',
-    };
-    return hosts.contains(host.toLowerCase());
-  }
+
 }
