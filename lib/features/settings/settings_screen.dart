@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const _providerUrlKey = 'miltv_provider_url_v1';
   static const _profilePhoneKey = 'miltv_profile_phone_v1';
   static const _profileAvatarKey = 'miltv_profile_avatar_v1';
+  static const _savedPlaylistUrlsKey = 'miltvplus_saved_playlist_urls_v1';
 
   final _phoneController = TextEditingController();
   int _avatarIndex = 0;
@@ -61,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
       _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
+      _playlistUrlController.text = (preferences.getStringList(_savedPlaylistUrlsKey) ?? const <String>[]).join('\n');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -163,6 +165,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         merged.putIfAbsent(_channelIdentity(channel), () => channel);
       }
       await _channelStorage.save(merged.values.toList(growable: false));
+      final preferences = await SharedPreferences.getInstance();
+      final savedUrls = preferences.getStringList(_savedPlaylistUrlsKey) ?? <String>[];
+      if (!savedUrls.contains(normalizedUrl)) {
+        savedUrls.add(normalizedUrl);
+        await preferences.setStringList(_savedPlaylistUrlsKey, savedUrls);
+      }
       _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
     } catch (error) {
       _showMessage('No se pudo cargar $title. Revisá la URL, el acceso a la lista y el formato M3U. Detalle: $error');
