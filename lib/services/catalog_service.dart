@@ -84,10 +84,6 @@ class CatalogService {
         default:
           if (category.trim().isNotEmpty) expandedCategories.add(category.trim());
       }
-      // Include generic database buckets as candidates. TvChannel.liveSection
-      // performs the final classification from category, group and channel
-      // name; otherwise a sports/news channel stored as "General" is never
-      // returned by Supabase and cannot be classified by the UI.
       expandedCategories.addAll([
         'General',
         'general',
@@ -98,8 +94,6 @@ class CatalogService {
       ]);
     }
 
-    // Keep the server catalog additive: the bundled public-channel snapshot is
-    // merged with published Supabase rows and is also available offline.
     final remoteChannels = <ChannelModel>[];
     try {
       final query = _supabase
@@ -122,8 +116,8 @@ class CatalogService {
         .map(ChannelModel.fromJson)
         .toList(growable: false);
     final bundledChannels = await _getBundledChannels();
-    final merged = <String, ChannelModel>{};
     final userSuppliedChannels = await _getBundledUserChannels();
+    final merged = <String, ChannelModel>{};
     for (final channel in [...remoteChannels, ...snapshotChannels, ...bundledChannels, ...userSuppliedChannels]) {
       final urlKey = channel.urlStream.trim().toLowerCase();
       final titleKey = channel.title.trim().toLowerCase();
@@ -141,6 +135,22 @@ class CatalogService {
     try {
       final decoded = jsonDecode(
         await rootBundle.loadString('assets/catalog/catalog_snapshot.json'),
+      );
+      if (decoded is! Map || decoded[table] is! List) return const [];
+      return (decoded[table] as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Offline metadata supplied by the user, kept separate from CI-refreshed snapshots.
+  Future<List<Map<String, dynamic>>> _getBundledVodRows(String table) async {
+    try {
+      final decoded = jsonDecode(
+        await rootBundle.loadString('assets/catalog/user_vod_metadata.json'),
       );
       if (decoded is! Map || decoded[table] is! List) return const [];
       return (decoded[table] as List)
@@ -203,7 +213,7 @@ class CatalogService {
           ? info.substring(comma + 1).trim()
           : 'Canal sin nombre';
       String attribute(String name) {
-        final match = RegExp('(?:^|\\s)$name="([^"]*)"').firstMatch(info);
+        final match = RegExp('(?:^|\\\\s)$name="([^"]*)"').firstMatch(info);
         return match?.group(1)?.trim() ?? '';
       }
       final group = attribute('group-title');
@@ -242,12 +252,15 @@ class CatalogService {
     final bundled = (await _getBundledRows('movies'))
         .map(MovieModel.fromJson)
         .toList(growable: false);
+    final userMetadata = (await _getBundledVodRows('movies'))
+        .map(MovieModel.fromJson)
+        .toList(growable: false);
     final merged = <String, MovieModel>{};
-    for (final movie in [...remote, ...bundled]) {
-      final key = movie.id.isNotEmpty ? movie.id : movie.title.trim().toLowerCase();
+    for (final movie in [...remote, ...bundled, ...userMetadata]) {
+      final key = movie.title.trim().toLowerCase();
       if (key.isNotEmpty) merged.putIfAbsent(key, () => movie);
     }
-    // Do not hide published titles just because a stream URL has not been set.
+    // Published titles remain visible even when no stream URL is set.
     return merged.values.toList(growable: false)
       ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
   }
@@ -268,9 +281,12 @@ class CatalogService {
     final bundled = (await _getBundledRows('series'))
         .map(SeriesModel.fromJson)
         .toList(growable: false);
+    final userMetadata = (await _getBundledVodRows('series'))
+        .map(SeriesModel.fromJson)
+        .toList(growable: false);
     final merged = <String, SeriesModel>{};
-    for (final series in [...remote, ...bundled]) {
-      final key = series.id.isNotEmpty ? series.id : series.title.trim().toLowerCase();
+    for (final series in [...remote, ...bundled, ...userMetadata]) {
+      final key = series.title.trim().toLowerCase();
       if (key.isNotEmpty) merged.putIfAbsent(key, () => series);
     }
     return merged.values.toList(growable: false)
