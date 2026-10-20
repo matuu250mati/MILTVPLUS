@@ -86,7 +86,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             fragment: '',
           ).toString();
     // Same URL can represent different named/category entries in an M3U.
-    return '${normalizedUrl}|${channel.name.trim().toLowerCase()}|${channel.liveSection.toLowerCase()}';
+    return '$normalizedUrl|${channel.name.trim().toLowerCase()}|${channel.liveSection.toLowerCase()}';
   }
 
   @override
