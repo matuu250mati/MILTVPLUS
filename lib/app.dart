@@ -67,7 +67,9 @@ class _IntroCoordinator extends StatefulWidget {
 class _IntroCoordinatorState extends State<_IntroCoordinator> {
   Timer? _introTimer;
   bool _introComplete = false;
-  static const _introDuration = Duration(seconds: 40);
+  // Keep the branded intro brief; a long fixed timer makes the app appear
+  // frozen on TV boxes and phones even when the app is ready.
+  static const _introDuration = Duration(milliseconds: 2200);
 
   @override
   void initState() {
@@ -76,7 +78,6 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
     unawaited(AppAccessibilitySettings.load().catchError((_) {}));
     _introTimer = Timer(_introDuration, _finishIntro);
   }
-
 
   void _finishIntro() {
     _introTimer?.cancel();
@@ -100,7 +101,6 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
     return const _AuthenticatedGate();
   }
 }
-
 
 class _AuthenticatedGate extends StatefulWidget {
   const _AuthenticatedGate();
