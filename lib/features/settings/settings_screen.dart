@@ -146,8 +146,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _importPlaylist(String url, String title) async {
     final normalizedUrl = url.trim();
     final uri = Uri.tryParse(normalizedUrl);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
-      _showMessage('Ingresá una URL HTTPS válida de una lista propia o autorizada.');
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+      _showMessage('Ingresá una URL HTTP/HTTPS válida de una lista propia o autorizada.');
       return;
     }
     if (_importingPlaylist) return;
@@ -156,31 +156,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final imported = await _playlistService.importFromUrl(normalizedUrl);
       final merged = <String, TvChannel>{};
       for (final channel in await _channelStorage.load()) {
-        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+        merged.putIfAbsent(_channelIdentity(channel), () => channel);
       }
       for (final channel in imported) {
-        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+        merged.putIfAbsent(_channelIdentity(channel), () => channel);
       }
       await _channelStorage.save(merged.values.toList(growable: false));
       _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
-    } catch (_) {
-      _showMessage('No se pudo cargar $title. Verificá que la lista sea pública, HTTPS y compatible con M3U.');
+    } catch (error) {
+      _showMessage('No se pudo cargar $title. Revisá la URL, el acceso a la lista y el formato M3U. Detalle: $error');
     } finally {
       if (mounted) setState(() => _importingPlaylist = false);
     }
   }
 
-  String _streamIdentity(String value) {
-    final uri = Uri.tryParse(value.trim());
-    if (uri == null || uri.host.isEmpty) return value.trim();
-    return uri.replace(scheme: uri.scheme.toLowerCase(), host: uri.host.toLowerCase(),
-        path: uri.normalizePath().path, fragment: '').toString();
+  String _channelIdentity(TvChannel channel) {
+    final uri = Uri.tryParse(channel.streamUrl.trim());
+    final normalizedUrl = uri == null || uri.host.isEmpty
+        ? channel.streamUrl.trim()
+        : uri.replace(
+            scheme: uri.scheme.toLowerCase(),
+            host: uri.host.toLowerCase(),
+            path: uri.normalizePath().path,
+            fragment: '',
+          ).toString();
+    // Preserve aliases that share a stream but belong to different categories.
+    return '${normalizedUrl}|${channel.name.trim().toLowerCase()}|${(channel.groupTitle ?? channel.category ?? '').trim().toLowerCase()}';
   }
 
   Future<void> _importCustomPlaylist() async {
     final url = _playlistUrlController.text.trim();
     if (url.isEmpty) {
-      _showMessage('Pegá primero la URL HTTPS de tu lista M3U.');
+      _showMessage('Pegá primero la URL HTTP/HTTPS de tu lista M3U.');
       return;
     }
     await _importPlaylist(url, 'Lista propia');
