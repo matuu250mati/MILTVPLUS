@@ -97,7 +97,7 @@ jobs:
           fi
           # This third-party header uses deprecated whitespace in user-defined literal operators.
           # Normalize only the generated CI copy; do not modify application code or suppress warnings.
-          sed -i -E 's/operator[[:space:]]+""[[:space:]]+_json_pointer/operator"" _json_pointer/g; s/operator[[:space:]]+""[[:space:]]+_json/operator"" _json/g' "$header"
+          sed -i -E 's/operator[[:space:]]+""[[:space:]]*_json_pointer/operator""_json_pointer/g; s/operator[[:space:]]+""[[:space:]]*_json/operator""_json/g' "$header"
 
       - name: Compile target
         shell: bash
