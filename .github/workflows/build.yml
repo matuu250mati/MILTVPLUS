@@ -78,7 +78,8 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Pull requests are always pinned to the known QA project; production builds use the repository production URL.
+          SUPABASE_URL: ${{ github.event_name == 'pull_request' && 'https://uoqfovrynlyterjylpqj.supabase.co' || secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
