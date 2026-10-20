@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, this.onSkip});
+
+  final VoidCallback? onSkip;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  final bool _showSkip = true;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1700),
@@ -25,13 +29,19 @@ class _SplashScreenState extends State<SplashScreen>
     CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
   );
 
+  late final AnimationController _glowController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..repeat(reverse: true);
+
   late final Animation<double> _glow = Tween<double>(begin: .35, end: 1).animate(
-    CurvedAnimation(parent: _controller, curve: const Interval(.08, .9, curve: Curves.easeOut)),
+    CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
   );
 
   @override
   void dispose() {
     _controller.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
@@ -162,6 +172,19 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
+              if (_showSkip && widget.onSkip != null)
+                Positioned(
+                  right: 20,
+                  bottom: 18,
+                  child: SafeArea(
+                    child: TextButton.icon(
+                      onPressed: widget.onSkip,
+                      icon: const Icon(Icons.skip_next_rounded),
+                      label: const Text('OMITIR INTRO'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                    ),
+                  ),
+                ),
             ],
           ),
           ),

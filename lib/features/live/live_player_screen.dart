@@ -352,8 +352,10 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+      // Reveal the playback overlay, but let Flutter's focus traversal move
+      // between its buttons. Returning handled here swallowed D-pad navigation.
       _showControls();
-      return KeyEventResult.handled;
+      return KeyEventResult.ignored;
     }
     return KeyEventResult.ignored;
   }

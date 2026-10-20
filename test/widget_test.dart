@@ -1,6 +1,8 @@
 import 'dart:ui' show Size;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:miltv_plus/app.dart';
+import 'package:miltv_plus/features/shell/app_shell.dart';
 import 'package:miltv_plus/core/supabase_config.dart';
 
 void main() {
@@ -15,7 +17,10 @@ void main() {
     expect(isValidSupabaseUrl('https://project-ref.supabase.co?apikey=test'), isFalse);
   });
 
-  testWidgets('MILTVPLUS requires Supabase configuration and authentication before opening the catalog', (tester) async {
+  testWidgets('guest can enter the catalog after skipping the intro', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'miltv_terms_accepted_v1': true,
+    });
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -23,13 +28,14 @@ void main() {
 
     await tester.pumpWidget(const MiltvPlusApp());
     expect(find.text('MILTVPLUS'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 2500));
+
+    // The intro remains brief, and its skip action is available immediately.
+    await tester.pump();
+    expect(find.text('OMITIR INTRO'), findsOneWidget);
+    await tester.tap(find.text('OMITIR INTRO'));
     await tester.pumpAndSettle();
 
-    // Tests run without production --dart-define values, so the auth gate must
-    // show a clear configuration error rather than exposing the catalog shell.
-    expect(find.textContaining('Falta SUPABASE_URL'), findsOneWidget);
-    expect(find.text('TV EN VIVO'), findsNothing);
-    expect(find.text('PELÍCULAS'), findsNothing);
+    // Guest catalog access must not require production Supabase credentials.
+    expect(find.byType(AppShell), findsOneWidget);
   });
 }

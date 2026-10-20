@@ -1,9 +1,11 @@
 name: Import M3U catalog to MILTVPLUS-QA
+# Safety: only the hardcoded QA project is targeted; read-only preflight must pass all configured sources before writes.
 
 on:
   push:
     branches:
       - qa/deploy-m3u-sync-isolated-2026-10-18
+      - qa/catalog-movie-details-favorites-2026-10-19
 
 permissions:
   contents: read
@@ -14,7 +16,7 @@ concurrency:
 
 jobs:
   sync-qa-only:
-    if: github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' && contains(github.event.head_commit.message, '[run-qa-catalog-sync]')
+    if: (github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' || github.ref == 'refs/heads/qa/catalog-movie-details-favorites-2026-10-19') && contains(github.event.head_commit.message, '[run-qa-catalog-sync]')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: miltvplus-qa
