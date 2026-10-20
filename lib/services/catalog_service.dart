@@ -118,11 +118,31 @@ class CatalogService {
     final bundledChannels = await _getBundledChannels();
     final userSuppliedChannels = await _getBundledUserChannels();
     final merged = <String, ChannelModel>{};
-    for (final channel in [...remoteChannels, ...snapshotChannels, ...bundledChannels, ...userSuppliedChannels]) {
+    final allChannels = [
+      ...remoteChannels,
+      ...snapshotChannels,
+      ...bundledChannels,
+      ...userSuppliedChannels,
+    ];
+    for (final channel in allChannels) {
       final urlKey = channel.urlStream.trim().toLowerCase();
       final titleKey = channel.title.trim().toLowerCase();
+      if (titleKey.isEmpty) continue;
+
+      // A metadata-only user entry must not create a second, non-playable card
+      // when the public/remote catalog already has a playable channel with the
+      // same normalized title. Keep the metadata entry only when no playable
+      // match exists. Never invent or infer a stream URL from a channel name.
+      if (urlKey.isEmpty &&
+          allChannels.any((candidate) =>
+              candidate.title.trim().toLowerCase() == titleKey &&
+              (candidate.urlStream.trim().isNotEmpty ||
+                  candidate.streamUrls.any((url) => url.trim().isNotEmpty)))) {
+        continue;
+      }
+
       final key = urlKey.isNotEmpty ? urlKey : titleKey;
-      if (key.isNotEmpty) merged.putIfAbsent(key, () => channel);
+      merged.putIfAbsent(key, () => channel);
     }
     return merged.values.toList(growable: false)
       ..sort((a, b) {
