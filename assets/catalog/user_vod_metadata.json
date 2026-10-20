@@ -1,0 +1,162 @@
+{
+  "movies": [
+    {
+      "id": "user-movie-john-wick",
+      "title": "John Wick",
+      "synopsis": "Ficha de catálogo. La disponibilidad de reproducción depende de una fuente autorizada.",
+      "category": "Acción",
+      "genres": [
+        "Acción",
+        "Thriller"
+      ],
+      "release_year": 2014,
+      "country_code": "US",
+      "is_published": true,
+      "url_stream": "",
+      "stream_urls": []
+    },
+    {
+      "id": "user-movie-deadpool-wolverine",
+      "title": "Deadpool & Wolverine",
+      "synopsis": "Ficha de catálogo. La disponibilidad de reproducción depende de una fuente autorizada.",
+      "category": "Acción",
+      "genres": [
+        "Acción",
+        "Comedia",
+        "Superhéroes"
+      ],
+      "release_year": 2024,
+      "country_code": "US",
+      "is_published": true,
+      "url_stream": "",
+      "stream_urls": []
+    },
+    {
+      "id": "user-movie-dune-part-two",
+      "title": "Duna: Parte Dos",
+      "synopsis": "Ficha de catálogo. La disponibilidad de reproducción depende de una fuente autorizada.",
+      "category": "Ciencia ficción",
+      "genres": [
+        "Ciencia ficción",
+        "Aventura"
+      ],
+      "release_year": 2024,
+      "country_code": "US",
+      "is_published": true,
+      "url_stream": "",
+      "stream_urls": []
+    }
+  ],
+  "series": [
+    {
+      "id": "user-series-breaking-bad",
+      "title": "Breaking Bad",
+      "synopsis": "Ficha de catálogo. No se incluye un enlace de reproducción sin verificar derechos y disponibilidad.",
+      "category": "Series",
+      "genres": [
+        "Drama",
+        "Crimen"
+      ],
+      "release_year": 2008,
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-last-of-us",
+      "title": "The Last of Us",
+      "synopsis": "Ficha de catálogo. No se incluye un enlace de reproducción sin verificar derechos y disponibilidad.",
+      "category": "Series",
+      "genres": [
+        "Drama",
+        "Ciencia ficción"
+      ],
+      "release_year": 2023,
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-el-chavo",
+      "title": "El Chavo del Ocho",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Comedia",
+        "Clásicos"
+      ],
+      "country_code": "MX",
+      "is_published": true
+    },
+    {
+      "id": "user-series-knight-rider",
+      "title": "El Auto Fantástico",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Acción",
+        "Aventura"
+      ],
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-a-team",
+      "title": "Los Magníficos",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Acción",
+        "Aventura"
+      ],
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-macgyver",
+      "title": "MacGyver",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Acción",
+        "Aventura"
+      ],
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-three-stooges",
+      "title": "Los 3 Chiflados",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Comedia",
+        "Clásicos"
+      ],
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-inspector-gadget",
+      "title": "Inspector Gadget",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Animación",
+        "Comedia"
+      ],
+      "country_code": "US",
+      "is_published": true
+    },
+    {
+      "id": "user-series-pink-panther",
+      "title": "La Pantera Rosa",
+      "synopsis": "Catálogo 24/7 solicitado por el usuario. Fuente de reproducción pendiente de validación.",
+      "category": "Clásicos 24/7",
+      "genres": [
+        "Animación",
+        "Comedia"
+      ],
+      "country_code": "US",
+      "is_published": true
+    }
+  ]
+}

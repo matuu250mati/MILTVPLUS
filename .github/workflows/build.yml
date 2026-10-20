@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: miltvplus-apk-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -67,6 +67,28 @@ jobs:
       - name: Validate Android TV manifest and security settings
         run: bash tool/validate_android_tv.sh
 
+      - name: Bundle a fresh public IPTV channel snapshot into the APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/catalog
+          curl --fail --location --silent --show-error --retry 3 --max-time 180 \
+            https://iptv-org.github.io/iptv/index.m3u \
+            --output assets/catalog/iptv.m3u
+          grep -q '^#EXTM3U' assets/catalog/iptv.m3u
+          entries="$(grep -c '^#EXTINF' assets/catalog/iptv.m3u || true)"
+          [[ "$entries" -gt 0 ]] || { echo "::error::Public M3U snapshot contains no entries."; exit 1; }
+          echo "Bundled public M3U snapshot: $entries entries; existing Supabase catalog remains additive."
+          echo "Bundled public IPTV snapshot: $entries entries" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate every bundled IPTV endpoint and HLS manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tool/validate_m3u_sources.py
+          test -s build/source-validation/source-validation.csv
+          test -s build/source-validation/source-validation-summary.json
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -78,8 +100,9 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Pull requests are always pinned to the known QA project; production builds use the repository production URL.
+          SUPABASE_URL: ${{ github.event_name == 'pull_request' && 'https://uoqfovrynlyterjylpqj.supabase.co' || secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || (github.event_name != 'pull_request' && secrets.SUPABASE_ANON_KEY) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -87,8 +110,12 @@ jobs:
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
           fi
-          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
-            echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
+          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" || "$SUPABASE_ANON_KEY" == "false" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+              echo "::error::Configure SUPABASE_QA_ANON_KEY with the QA project's publishable/anon key; production credentials are never used as a fallback."
+            else
+              echo "::error::Configure SUPABASE_ANON_KEY with the production project's publishable/anon key."
+            fi
             exit 1
           fi
           SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
@@ -108,7 +135,7 @@ jobs:
       - name: Verify required Supabase schema (diagnostic; APK build continues)
 
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || (github.event_name != 'pull_request' && secrets.SUPABASE_ANON_KEY) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -146,6 +173,59 @@ jobs:
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Snapshot the published QA/production catalog into the APK
+        env:
+          SUPABASE_URL: ${{ env.SUPABASE_URL_NORMALIZED }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || (github.event_name != 'pull_request' && secrets.SUPABASE_ANON_KEY) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          fetch_table() {
+            local table="$1"
+            local pages="$tmp/$table.pages"
+            local page="$tmp/$table.page.json"
+            local output="$tmp/$table.json"
+            local offset=0
+            local count=0
+            : > "$pages"
+            while true; do
+              local status
+              status="$(curl --silent --show-error --max-time 30 --retry 2 \
+                --output "$page" --write-out '%{http_code}' \
+                --header "apikey: $SUPABASE_ANON_KEY" \
+                --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                --header "Range-Unit: items" \
+                --header "Range: $offset-$((offset + 999))" \
+                "$SUPABASE_URL/rest/v1/$table?select=*&is_published=eq.true&order=id.asc" || true)"
+              if [[ ! "$status" =~ ^2[0-9][0-9]$ ]] || ! jq -e 'type == "array"' "$page" >/dev/null; then
+                echo "::warning::Could not snapshot published $table rows (HTTP ${status:-no-response}); preserving an empty local snapshot for this table."
+                echo '[]' > "$output"
+                return 0
+              fi
+              count="$(jq 'length' "$page")"
+              jq -c . "$page" >> "$pages"
+              if (( count < 1000 )); then break; fi
+              offset=$((offset + count))
+              if (( offset > 200000 )); then
+                echo "::error::Refusing to silently truncate $table after 200000 rows."
+                return 1
+              fi
+            done
+            jq -s 'add // []' "$pages" > "$output"
+            echo "Snapshotted $table: $(jq 'length' "$output") published rows"
+          }
+          for table in channels movies series episodes; do fetch_table "$table"; done
+          jq -n \
+            --slurpfile channels "$tmp/channels.json" \
+            --slurpfile movies "$tmp/movies.json" \
+            --slurpfile series "$tmp/series.json" \
+            --slurpfile episodes "$tmp/episodes.json" \
+            '{channels:$channels[0],movies:$movies[0],series:$series[0],episodes:$episodes[0]}' \
+            > assets/catalog/catalog_snapshot.json
+          jq -r '"Bundled published rows — channels: \(.channels|length), movies: \(.movies|length), series: \(.series|length), episodes: \(.episodes|length)"' \
+            assets/catalog/catalog_snapshot.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -208,7 +288,7 @@ jobs:
 
       - name: Build release APK
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || (github.event_name != 'pull_request' && secrets.SUPABASE_ANON_KEY) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -290,7 +370,7 @@ jobs:
 
       - name: Upload QA APK and checksum
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-qa-apk
           path: |
@@ -298,12 +378,13 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
+            build/source-validation/*
           if-no-files-found: error
           retention-days: 14
 
       - name: Upload verified production APK and checksum as workflow artifacts
         if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: MILTVPLUS-release-apk
           path: |

@@ -32,3 +32,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/catalog/iptv.m3u
+    - assets/catalog/catalog_snapshot.json
+    - assets/catalog/user_argentina_channels.json
+    - assets/catalog/user_vod_metadata.json
