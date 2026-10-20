@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${SUPABASE_QA_ANON_KEY//[[:space:]]/}" || { echo "::error::Missing SUPABASE_QA_ANON_KEY in miltvplus-qa environment"; exit 1; }
-          python3 scripts/qa/audit_m3u_catalog.py --url 'https://uoqfovrynlyterjylpqj.supabase.co' --output qa-catalog-audit.json
+          python3 scripts/qa/audit_m3u_catalog.py --url 'https://uoqfovrnlyterjylpcqj.supabase.co' --output qa-catalog-audit.json
 
       - name: Publish summary
         if: always()
