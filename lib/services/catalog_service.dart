@@ -132,27 +132,19 @@ class CatalogService {
   }
 
   Future<List<MovieModel>> getMovies() async {
+    // Keep published titles visible even when a stream URL has not been
+    // supplied yet. Playback is handled separately by the UI.
     final response = await _supabase
         .from('movies')
         .select()
         .eq('is_published', true)
         .order('title', ascending: true);
 
-    final movies = (response as List<dynamic>)
+    return (response as List<dynamic>)
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .where((movie) {
-          final url = movie.urlStream.trim();
-          final uri = Uri.tryParse(url);
-
-          return uri != null &&
-              (uri.scheme == 'http' || uri.scheme == 'https') &&
-              uri.host.isNotEmpty;
-        })
         .toList(growable: false);
-
-    return movies;
   }
 
   Future<List<SeriesModel>> getSeries() async {
