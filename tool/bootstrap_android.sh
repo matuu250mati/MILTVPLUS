@@ -41,7 +41,7 @@ trap 'rm -rf "$tmp_dir"' EXIT
 flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$tmp_dir/miltv-scaffold"
 mkdir -p "$root_dir/android"
 # -n evita sobrescribir cualquier archivo nativo que ya exista.
-cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+cp -R --update=none "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
 ensure_min_android_sdk
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
