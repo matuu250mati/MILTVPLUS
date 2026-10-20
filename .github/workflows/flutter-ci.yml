@@ -86,6 +86,19 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Fix deprecated C++ literal-operator syntax in Linux-only dependency
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          header="linux/flutter/ephemeral/.plugin_symlinks/flutter_secure_storage_linux/linux/include/json.hpp"
+          if [ ! -f "$header" ]; then
+            echo "Expected flutter_secure_storage_linux header not found: $header" >&2
+            exit 1
+          fi
+          # This third-party header uses deprecated whitespace in user-defined literal operators.
+          # Normalize only the generated CI copy; do not modify application code or suppress warnings.
+          sed -i -E 's/operator[[:space:]]+""[[:space:]]+_json_pointer/operator"" _json_pointer/g; s/operator[[:space:]]+""[[:space:]]+_json/operator"" _json/g' "$header"
+
       - name: Compile target
         shell: bash
         run: ${{ matrix.command }}
