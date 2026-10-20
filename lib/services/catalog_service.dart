@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase_config.dart';
@@ -95,22 +96,94 @@ class CatalogService {
       ]);
     }
 
-    final query = _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true);
-    final filteredQuery = expandedCategories.isEmpty
-        ? query
-        : query.inFilter('category', expandedCategories.toList(growable: false));
-    final response = await filteredQuery
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+    // Keep the server catalog additive: the bundled public-channel snapshot is
+    // merged with published Supabase rows and is also available offline.
+    final remoteChannels = <ChannelModel>[];
+    try {
+      final query = _supabase
+          .from('channels')
+          .select()
+          .eq('is_published', true);
+      final filteredQuery = expandedCategories.isEmpty
+          ? query
+          : query.inFilter('category', expandedCategories.toList(growable: false));
+      final response = await filteredQuery
+          .order('sort_order', ascending: true)
+          .order('title', ascending: true);
+      remoteChannels.addAll((response as List<dynamic>).map((item) =>
+          ChannelModel.fromJson(Map<String, dynamic>.from(item as Map))));
+    } catch (_) {
+      // Offline mode deliberately continues with the APK-bundled snapshot.
+    }
 
-    return (response as List<dynamic>)
-        .map((item) => ChannelModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
-        .toList(growable: false);
+    final bundledChannels = await _getBundledChannels();
+    final merged = <String, ChannelModel>{};
+    for (final channel in [...remoteChannels, ...bundledChannels]) {
+      final urlKey = channel.urlStream.trim().toLowerCase();
+      final titleKey = channel.title.trim().toLowerCase();
+      final key = urlKey.isNotEmpty ? urlKey : titleKey;
+      if (key.isNotEmpty) merged.putIfAbsent(key, () => channel);
+    }
+    return merged.values.toList(growable: false)
+      ..sort((a, b) {
+        final byOrder = a.sortOrder.compareTo(b.sortOrder);
+        return byOrder != 0 ? byOrder : a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      });
+  }
+
+  Future<List<ChannelModel>> _getBundledChannels() async {
+    String playlist;
+    try {
+      playlist = await rootBundle.loadString('assets/catalog/iptv.m3u');
+    } catch (_) {
+      return const [];
+    }
+    final channels = <ChannelModel>[];
+    String? pendingInfo;
+    for (final rawLine in playlist.split(RegExp(r'\\r?\\n'))) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith('#EXTINF')) {
+        pendingInfo = line;
+        continue;
+      }
+      if (line.startsWith('#')) continue;
+      final uri = Uri.tryParse(line);
+      if (pendingInfo == null ||
+          uri == null ||
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          uri.host.isEmpty) {
+        pendingInfo = null;
+        continue;
+      }
+      final info = pendingInfo;
+      pendingInfo = null;
+      final comma = info.lastIndexOf(',');
+      final title = comma >= 0 && comma + 1 < info.length
+          ? info.substring(comma + 1).trim()
+          : 'Canal sin nombre';
+      String attribute(String name) {
+        final match = RegExp('(?:^|\\\\s)$name="([^"]*)"').firstMatch(info);
+        return match?.group(1)?.trim() ?? '';
+      }
+      final group = attribute('group-title');
+      final logo = attribute('tvg-logo');
+      final country = attribute('tvg-country').split(RegExp(r'[,;\\s]+')).first;
+      final ext = uri.path.toLowerCase();
+      channels.add(ChannelModel(
+        id: 'bundle-${channels.length}',
+        title: title.isEmpty ? 'Canal sin nombre' : title,
+        category: group.isEmpty ? 'General' : group,
+        logo: logo.isEmpty ? null : logo,
+        urlStream: line,
+        streamUrls: [line],
+        streamFormat: ext.endsWith('.mpd') ? 'dash' : 'hls',
+        countryCode: country.length == 2 ? country.toUpperCase() : 'UN',
+        sortOrder: channels.length,
+        isPublished: true,
+      ));
+    }
+    return channels;
   }
 
   Future<List<MovieModel>> getMovies() async {
