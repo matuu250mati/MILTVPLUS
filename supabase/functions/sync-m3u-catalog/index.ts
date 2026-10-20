@@ -66,6 +66,14 @@ const SOURCES: Source[] = [
   { name: "IPTV-org Japón", url: "https://iptv-org.github.io/iptv/countries/jp.m3u", category: "TV Japón", countryCode: "JP" },
   { name: "IPTV-org Australia", url: "https://iptv-org.github.io/iptv/countries/au.m3u", category: "TV Australia", countryCode: "AU" },
   { name: "Free-TV lista general", url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", category: "TV en Vivo" },
+  // User-provided provider-authorized playlists; isolated QA validation required before live sync.
+  { name: "Proveedor adicional 1 (IP 138.59.227.20)", url: "http://138.59.227.20:8000/playlist.m3u8", category: "TV en Vivo" },
+  { name: "Proveedor adicional 2 (IP 45.5.118.152)", url: "http://45.5.118.152:8000/playlist.m3u8", category: "TV en Vivo" },
+  { name: "Proveedor adicional 3 (IP 190.238.43.117)", url: "http://190.238.43.117:9000/playlist.m3u8", category: "TV en Vivo" },
+  { name: "Proveedor adicional 4 (IP 138.36.253.106)", url: "http://138.36.253.106:8066/playlist.m3u?hls", category: "TV en Vivo" },
+  { name: "Proveedor adicional 5 (IP 181.13.252.102)", url: "http://181.13.252.102:8000/playlist.m3u?hls", category: "TV en Vivo" },
+  { name: "Proveedor adicional 6 (IP 181.224.255.210)", url: "http://181.224.255.210:8001/playlist.m3u?hls", category: "TV en Vivo" },
+  { name: "Proveedor adicional 7 (IP 181.119.185.32)", url: "http://181.119.185.32:8000/playlist.m3u?hls", category: "TV en Vivo" },
 ];
 
 // Keep the existing-row lookup URL below common proxy/PostgREST request-size limits.
