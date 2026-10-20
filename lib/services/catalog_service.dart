@@ -144,6 +144,7 @@ class CatalogService {
           .select()
           .eq('is_published', true)
           .order('title', ascending: true)
+          .order('id', ascending: true)
           .range(from, from + pageSize - 1);
       allRows.addAll(page);
       if (page.length < pageSize) break;
@@ -167,6 +168,7 @@ class CatalogService {
           .select()
           .eq('is_published', true)
           .order('title', ascending: true)
+          .order('id', ascending: true)
           .range(from, from + pageSize - 1);
       allRows.addAll(page);
       if (page.length < pageSize) break;
