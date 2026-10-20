@@ -185,12 +185,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _importCustomPlaylist() async {
-    final url = _playlistUrlController.text.trim();
-    if (url.isEmpty) {
-      _showMessage('Pegá primero la URL HTTP/HTTPS de tu lista M3U.');
+    final urls = _playlistUrlController.text
+        .split(RegExp(r'[\\r\\n]+'))
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    if (urls.isEmpty) {
+      _showMessage('Pegá una o más URL HTTP/HTTPS, una por línea.');
       return;
     }
-    await _importPlaylist(url, 'Lista propia');
+    if (_importingPlaylist) return;
+    var successCount = 0;
+    for (var index = 0; index < urls.length; index++) {
+      final before = _importingPlaylist;
+      await _importPlaylist(urls[index], 'Lista ${index + 1}/${urls.length}');
+      if (mounted && before == false) {
+        // Each successful list is persisted immediately, so a later failure
+        // cannot erase earlier imports.
+        successCount++;
+      }
+    }
+    if (mounted && urls.length > 1) {
+      _showMessage('Proceso terminado: ${urls.length} listas procesadas. Las importaciones correctas quedan guardadas en este dispositivo.');
+    }
   }
 
   void _clearImageCache() {
@@ -454,11 +471,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: _playlistUrlController,
                 keyboardType: TextInputType.url,
-                minLines: 1,
-                maxLines: 2,
+                minLines: 3,
+                maxLines: 5,
                 decoration: const InputDecoration(
-                  labelText: 'Mi lista M3U/M3U8 (HTTPS)',
-                  hintText: 'https://servidor/mi-lista.m3u',
+                  labelText: 'URL de listas M3U/M3U8 (una por línea)',
+                  hintText: 'https://servidor/lista-argentina.m3u\nhttps://servidor/lista-deportes.m3u',
                   prefixIcon: Icon(Icons.link_rounded),
                 ),
               ),
