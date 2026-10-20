@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - qa/deploy-m3u-sync-isolated-2026-10-18
+      - qa/catalog-movie-details-favorites-2026-10-19
   workflow_dispatch:
     inputs:
       confirm_qa_project:
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   deploy-qa-only:
-    if: github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' && ((github.event_name == 'workflow_dispatch' && inputs.confirm_qa_project == 'MILTVPLUS-QA') || (github.event_name == 'push' && contains(github.event.head_commit.message, '[run-qa-preflight]')))
+    if: (github.ref == 'refs/heads/qa/deploy-m3u-sync-isolated-2026-10-18' || github.ref == 'refs/heads/qa/catalog-movie-details-favorites-2026-10-19') && ((github.event_name == 'workflow_dispatch' && inputs.confirm_qa_project == 'MILTVPLUS-QA') || (github.event_name == 'push' && contains(github.event.head_commit.message, '[run-qa-preflight]')))
     runs-on: ubuntu-latest
     environment: miltvplus-qa
     steps:
