@@ -46,10 +46,11 @@ def check(row):
         with urllib.request.urlopen(req, timeout=TIMEOUT) as response:
             status = response.status
             content_type = response.headers.get("Content-Type", "")
-            data = response.read(262144)
+            is_hls = parsed.path.lower().endswith((".m3u8", ".m3u")) or "mpegurl" in content_type.lower()
+            # Read only a tiny sample for media URLs; do not download stream segments.
+            data = response.read(8192 if is_hls else 1)
         row["http_status"] = status
         row["content_type"] = content_type
-        is_hls = parsed.path.lower().endswith((".m3u8", ".m3u")) or "mpegurl" in content_type.lower()
         if not 200 <= status < 300:
             row.update(status="http_error", detail=f"HTTP {status} on {safe_host}")
         elif is_hls and b"#EXTM3U" not in data[:8192]:
