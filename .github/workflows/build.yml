@@ -162,6 +162,59 @@ jobs:
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Snapshot the published QA/production catalog into the APK
+        env:
+          SUPABASE_URL: ${{ env.SUPABASE_URL_NORMALIZED }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          fetch_table() {
+            local table="$1"
+            local pages="$tmp/$table.pages"
+            local page="$tmp/$table.page.json"
+            local output="$tmp/$table.json"
+            local offset=0
+            local count=0
+            : > "$pages"
+            while true; do
+              local status
+              status="$(curl --silent --show-error --max-time 30 --retry 2 \
+                --output "$page" --write-out '%{http_code}' \
+                --header "apikey: $SUPABASE_ANON_KEY" \
+                --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                --header "Range-Unit: items" \
+                --header "Range: $offset-$((offset + 999))" \
+                "$SUPABASE_URL/rest/v1/$table?select=*&is_published=eq.true&order=id.asc" || true)"
+              if [[ ! "$status" =~ ^2[0-9][0-9]$ ]] || ! jq -e 'type == "array"' "$page" >/dev/null; then
+                echo "::warning::Could not snapshot published $table rows (HTTP ${status:-no-response}); preserving an empty local snapshot for this table."
+                echo '[]' > "$output"
+                return 0
+              fi
+              count="$(jq 'length' "$page")"
+              jq -c . "$page" >> "$pages"
+              if (( count < 1000 )); then break; fi
+              offset=$((offset + count))
+              if (( offset > 200000 )); then
+                echo "::error::Refusing to silently truncate $table after 200000 rows."
+                return 1
+              fi
+            done
+            jq -s 'add // []' "$pages" > "$output"
+            echo "Snapshotted $table: $(jq 'length' "$output") published rows"
+          }
+          for table in channels movies series episodes; do fetch_table "$table"; done
+          jq -n \
+            --slurpfile channels "$tmp/channels.json" \
+            --slurpfile movies "$tmp/movies.json" \
+            --slurpfile series "$tmp/series.json" \
+            --slurpfile episodes "$tmp/episodes.json" \
+            '{channels:$channels[0],movies:$movies[0],series:$series[0],episodes:$episodes[0]}' \
+            > assets/catalog/catalog_snapshot.json
+          jq -r '"Bundled published rows — channels: \(.channels|length), movies: \(.movies|length), series: \(.series|length), episodes: \(.episodes|length)"' \
+            assets/catalog/catalog_snapshot.json | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
