@@ -102,8 +102,12 @@ jobs:
             echo "::error::Configure the SUPABASE_URL repository secret."
             exit 1
           fi
-          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
-            echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
+          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" || "$SUPABASE_ANON_KEY" == "false" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+              echo "::error::Configure SUPABASE_QA_ANON_KEY with the QA project's publishable/anon key; production credentials are never used as a fallback."
+            else
+              echo "::error::Configure SUPABASE_ANON_KEY with the production project's publishable/anon key."
+            fi
             exit 1
           fi
           SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
