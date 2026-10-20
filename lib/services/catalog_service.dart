@@ -140,7 +140,7 @@ class CatalogService {
     }
     final channels = <ChannelModel>[];
     String? pendingInfo;
-    for (final rawLine in playlist.split(RegExp(r'\\r?\\n'))) {
+    for (final rawLine in playlist.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
       if (line.startsWith('#EXTINF')) {
@@ -163,12 +163,12 @@ class CatalogService {
           ? info.substring(comma + 1).trim()
           : 'Canal sin nombre';
       String attribute(String name) {
-        final match = RegExp('(?:^|\\\\s)$name="([^"]*)"').firstMatch(info);
+        final match = RegExp('(?:^|\\s)$name="([^"]*)"').firstMatch(info);
         return match?.group(1)?.trim() ?? '';
       }
       final group = attribute('group-title');
       final logo = attribute('tvg-logo');
-      final country = attribute('tvg-country').split(RegExp(r'[,;\\s]+')).first;
+      final country = attribute('tvg-country').split(RegExp(r'[,;\s]+')).first;
       final ext = uri.path.toLowerCase();
       channels.add(ChannelModel(
         id: 'bundle-${channels.length}',
