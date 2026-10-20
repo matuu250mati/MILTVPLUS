@@ -126,9 +126,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_checkingUpdates) return;
     setState(() => _checkingUpdates = true);
     try {
-      final result = await OtaUpdateService().checkAndInstall();
+      final updater = OtaUpdateService();
+      final info = await updater.checkForUpdate();
       if (!mounted) return;
-      _showMessage(result.message);
+      if (!info.updateAvailable) {
+        _showMessage(info.message);
+        return;
+      }
+
+      final install = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.system_update_alt_rounded, color: AppTheme.accent),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Nueva actualización ${info.latestVersion}')),
+            ],
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Versión instalada: ${info.currentVersion}'),
+                  const SizedBox(height: 6),
+                  Text('Tamaño del paquete: ${info.formattedSize}'),
+                  if (info.mandatory) ...[
+                    const SizedBox(height: 10),
+                    const Text('Esta versión está marcada como actualización requerida.',
+                        style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w700)),
+                  ],
+                  const SizedBox(height: 16),
+                  const Text('Novedades', style: TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text(info.releaseNotes.isEmpty
+                      ? 'El desarrollador no publicó una descripción detallada para esta versión.'
+                      : info.releaseNotes),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'La descarga se verifica mediante SHA-256. Android puede pedirte confirmar la instalación; la aplicación no puede instalarse silenciosamente.',
+                    style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Más tarde'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.download_rounded),
+              label: const Text('Descargar e instalar'),
+            ),
+          ],
+        ),
+      );
+      if (install != true || !mounted) return;
+      final result = await updater.checkAndInstall();
+      if (mounted) _showMessage(result.message);
     } catch (_) {
       if (mounted) {
         _showMessage('No se pudo comprobar la actualización. Revisá la conexión e intentá otra vez.');
