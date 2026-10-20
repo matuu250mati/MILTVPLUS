@@ -1,0 +1,74 @@
+name: Deploy and verify TMDB catalog function (QA only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-tmdb-qa-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: miltvplus-qa
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_QA_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+      SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate isolated QA target and runtime credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_URL SUPABASE_ANON_KEY SYNC_SECRET; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Missing required QA secret: $name"
+              exit 1
+            fi
+          done
+          normalized="${SUPABASE_URL%/}"
+          expected="uoqfovrynlyterjylpqj"
+          if [[ "$normalized" != "https://${expected}.supabase.co" ]]; then
+            echo "::error::Safety stop: SUPABASE_QA_URL does not match the expected MILTVPLUS-QA project."
+            exit 1
+          fi
+          echo "QA target URL validated without printing secrets."
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy function to QA only
+        run: supabase functions deploy sync-tmdb-catalog --project-ref uoqfovrynlyterjylpqj
+
+      - name: Verify QA runtime secrets exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets list --project-ref uoqfovrynlyterjylpqj > /tmp/qa-secrets-list.txt
+          grep -q 'TMDB_API_KEY' /tmp/qa-secrets-list.txt || { echo "::error::TMDB_API_KEY is not configured in QA Supabase function secrets."; exit 1; }
+          grep -q 'SYNC_SECRET' /tmp/qa-secrets-list.txt || { echo "::error::SYNC_SECRET is not configured in QA Supabase function secrets."; exit 1; }
+          echo "Required QA runtime secret names are present. Values were not printed."
+
+      - name: Smoke test metadata sync in QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --silent --show-error --fail-with-body \
+            --request POST "${SUPABASE_URL%/}/functions/v1/sync-tmdb-catalog" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header "Content-Type: application/json" \
+            --header "x-sync-secret: $SYNC_SECRET" \
+            --data '{"pages":1,"includeMovies":true,"includeSeries":true}')"
+          echo "$response"
+          echo "$response" | grep -q '"ok":true' || { echo "::error::QA TMDB smoke test did not report success."; exit 1; }
