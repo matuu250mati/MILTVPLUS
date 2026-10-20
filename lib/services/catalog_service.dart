@@ -213,7 +213,7 @@ class CatalogService {
           ? info.substring(comma + 1).trim()
           : 'Canal sin nombre';
       String attribute(String name) {
-        final match = RegExp('(?:^|\\\\s)$name="([^"]*)"').firstMatch(info);
+        final match = RegExp('$name="([^"]*)"').firstMatch(info);
         return match?.group(1)?.trim() ?? '';
       }
       final group = attribute('group-title');
