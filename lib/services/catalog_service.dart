@@ -123,7 +123,8 @@ class CatalogService {
         .toList(growable: false);
     final bundledChannels = await _getBundledChannels();
     final merged = <String, ChannelModel>{};
-    for (final channel in [...remoteChannels, ...snapshotChannels, ...bundledChannels]) {
+    final userSuppliedChannels = await _getBundledUserChannels();
+    for (final channel in [...remoteChannels, ...snapshotChannels, ...bundledChannels, ...userSuppliedChannels]) {
       final urlKey = channel.urlStream.trim().toLowerCase();
       final titleKey = channel.title.trim().toLowerCase();
       final key = urlKey.isNotEmpty ? urlKey : titleKey;
@@ -145,6 +146,25 @@ class CatalogService {
       return (decoded[table] as List)
           .whereType<Map>()
           .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Metadata from the user-supplied M3U is bundled independently of the
+  /// public IPTV-ORG snapshot so CI refreshes cannot overwrite it. Stream URLs
+  /// are intentionally absent until each source is verified and authorized.
+  Future<List<ChannelModel>> _getBundledUserChannels() async {
+    try {
+      final decoded = jsonDecode(
+        await rootBundle.loadString('assets/catalog/user_argentina_channels.json'),
+      );
+      if (decoded is! Map || decoded['channels'] is! List) return const [];
+      return (decoded['channels'] as List)
+          .whereType<Map>()
+          .map((row) => ChannelModel.fromJson(Map<String, dynamic>.from(row)))
+          .where((channel) => channel.title.trim().isNotEmpty)
           .toList(growable: false);
     } catch (_) {
       return const [];
