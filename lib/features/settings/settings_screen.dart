@@ -136,6 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   static const _playlistSources = <({String title, String url})>[
+    (title: 'Lista principal MILTVPLUS', url: 'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT'),
     (title: 'Deportes internacionales', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u'),
     (title: 'Canales de Argentina', url: 'https://iptv-org.github.io/iptv/countries/ar.m3u'),
     (title: 'Canales en español', url: 'https://iptv-org.github.io/iptv/languages/spa.m3u'),
@@ -182,6 +183,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ).toString();
     // Preserve aliases that share a stream but belong to different categories.
     return '${normalizedUrl}|${channel.name.trim().toLowerCase()}|${(channel.groupTitle ?? channel.category ?? '').trim().toLowerCase()}';
+  }
+
+  Future<void> _importAllPlaylists() async {
+    if (_importingPlaylist) return;
+    for (var index = 0; index < _playlistSources.length; index++) {
+      if (!mounted) return;
+      final source = _playlistSources[index];
+      await _importPlaylist(source.url, '${source.title} (${index + 1}/${_playlistSources.length})');
+    }
+    if (mounted) {
+      _showMessage('Proceso de carga finalizado. Las listas que respondieron correctamente quedaron guardadas localmente.');
+    }
   }
 
   Future<void> _importCustomPlaylist() async {
@@ -448,6 +461,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text(
                 'Administrá las listas desde acá para que TV en vivo y Deportes tengan todo el espacio disponible. Solo se importan señales públicas o que estés autorizado a usar.',
                 style: TextStyle(color: AppTheme.muted, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _importingPlaylist ? null : _importAllPlaylists,
+                  icon: _importingPlaylist
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.playlist_add_check_circle_rounded),
+                  label: Text(_importingPlaylist ? 'GUARDANDO LISTAS…' : 'CARGAR TODAS LAS LISTAS'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Cada lista se guarda al terminar. Si una fuente falla, las listas anteriores no se borran.',
+                style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
               ),
               const SizedBox(height: 12),
               for (final source in _playlistSources)
