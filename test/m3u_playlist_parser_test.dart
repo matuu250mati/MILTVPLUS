@@ -4,7 +4,7 @@ import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 void main() {
   const parser = M3uPlaylistParser();
 
-  test('parses named HTTPS channels and skips metadata and HTTP rows', () {
+  test('parses named HTTP and HTTPS channels while skipping metadata rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1 tvg-id="one" tvg-name="Canal Uno" group-title="Argentina",Canal Uno
@@ -14,10 +14,11 @@ https://example.com/live/one.m3u8
 http://example.com/two/index.m3u8?token=abc
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Canal Uno');
-    expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
-    expect(channels.single.groupTitle, 'Argentina');
+    expect(channels, hasLength(2));
+    expect(channels.first.name, 'Canal Uno');
+    expect(channels.first.streamUrl, 'https://example.com/live/one.m3u8');
+    expect(channels.first.groupTitle, 'Argentina');
+    expect(channels.last.streamUrl, 'http://example.com/two/index.m3u8?token=abc');
   });
 
   test('extracts category, country, and language metadata from M3U', () {
@@ -46,7 +47,7 @@ https://example.com/live.m3u8
     expect(channels.single.name, 'Valid');
   });
 
-  test('removes duplicate stream URLs while preserving the first channel label', () {
+  test('removes exact duplicate stream rows while preserving aliases and categories', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1,Canal Uno
@@ -57,9 +58,10 @@ https://example.com/live.m3u8
 https://example.com/other.m3u8
 ''');
 
-    expect(channels, hasLength(2));
+    expect(channels, hasLength(3));
     expect(channels[0].name, 'Canal Uno');
-    expect(channels[1].name, 'Canal Dos');
+    expect(channels[1].name, 'Alias duplicado');
+    expect(channels[2].name, 'Canal Dos');
   });
 
   test('deduplicates equivalent host casing and URL fragments', () {
