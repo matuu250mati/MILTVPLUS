@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_player_screen.dart';
+import '../catalog/teatrix_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -106,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     compact: compact,
                     width: width,
                     onNavigate: widget.onNavigate,
+                    onOpenTeatrix: _openTeatrix,
                   ),
                   SizedBox(height: compact ? 20 : 26),
                   _SectionHeader(
@@ -204,6 +206,12 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       // The section-level empty/error states remain visible and retryable.
     }
+  }
+
+  Future<void> _openTeatrix() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const TeatrixScreen()),
+    );
   }
 
   Future<void> _openMovie(MovieModel movie) async {
@@ -445,11 +453,13 @@ class _CategoryStrip extends StatelessWidget {
     required this.compact,
     required this.width,
     required this.onNavigate,
+    required this.onOpenTeatrix,
   });
 
   final bool compact;
   final double width;
   final ValueChanged<int> onNavigate;
+  final VoidCallback onOpenTeatrix;
 
   static const _categories = <_CategoryInfo>[
     _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF18CFFF), 0),
@@ -457,12 +467,13 @@ class _CategoryStrip extends StatelessWidget {
     _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
     _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
     _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF674F), 4),
+    _CategoryInfo('Teatrix', Icons.theater_comedy_rounded, Color(0xFFFFB547), -1),
   ];
 
   @override
   Widget build(BuildContext context) {
     final cardWidth = compact
-        ? ((width - 50) / 5).clamp(58.0, 78.0).toDouble()
+        ? ((width - 50) / 6).clamp(58.0, 78.0).toDouble()
         : width >= 1200 ? 108.0 : 98.0;
     return SizedBox(
       height: compact ? 92 : 116,
@@ -481,7 +492,7 @@ class _CategoryStrip extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
                 focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
                 hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
-                onTap: () => onNavigate(item.route),
+                onTap: () => item.route == -1 ? onOpenTeatrix() : onNavigate(item.route),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
                   decoration: BoxDecoration(
