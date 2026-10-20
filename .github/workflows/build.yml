@@ -126,7 +126,7 @@ jobs:
         env:
           SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_QA_URL: https://uoqfovrnlyterjylpcqj.supabase.co
+          SUPABASE_QA_URL: https://uoqfovrynlyterjylpqj.supabase.co
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
         shell: bash
         run: |
@@ -134,7 +134,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_REF" == refs/heads/qa/* ]]; then
             SUPABASE_URL="$SUPABASE_QA_URL"
             SUPABASE_ANON_KEY="$SUPABASE_QA_ANON_KEY"
-            expected_ref="uoqfovrnlyterjylpcqj"
+            expected_ref="uoqfovrynlyterjylpqj"
           else
             SUPABASE_URL="$SUPABASE_PRODUCTION_URL"
             SUPABASE_ANON_KEY="$SUPABASE_PRODUCTION_ANON_KEY"
