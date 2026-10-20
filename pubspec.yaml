@@ -35,3 +35,4 @@ flutter:
   assets:
     - assets/catalog/iptv.m3u
     - assets/catalog/catalog_snapshot.json
+    - assets/catalog/user_argentina_channels.json
