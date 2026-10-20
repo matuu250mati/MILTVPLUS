@@ -27,8 +27,8 @@ class M3uPlaylistService {
     if (uri == null ||
         uri.host.isEmpty ||
         uri.userInfo.isNotEmpty ||
-        uri.scheme != 'https') {
-      throw const FormatException('Ingresá una URL HTTPS válida para la lista M3U.');
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw const FormatException('Ingresá una URL HTTP o HTTPS válida para la lista M3U.');
     }
 
     final response = await _dio.get<ResponseBody>(uri.toString());
@@ -39,13 +39,13 @@ class M3uPlaylistService {
 
     // Global IPTV playlists can exceed 20 MB. A strict 20 MB ceiling made
     // the repository playlist fail before the UI could show any channels.
-    const maxPlaylistBytes = 50 * 1024 * 1024;
+    const maxPlaylistBytes = 120 * 1024 * 1024;
     final bytes = BytesBuilder(copy: false);
     var receivedBytes = 0;
     await for (final chunk in responseBody.stream) {
       receivedBytes += chunk.length;
       if (receivedBytes > maxPlaylistBytes) {
-        throw const FormatException('La lista supera el límite seguro de 50 MB.');
+        throw const FormatException('La lista supera el límite seguro de 120 MB; dividila en listas más pequeñas para evitar falta de memoria en el dispositivo.');
       }
       bytes.add(chunk);
     }
@@ -57,7 +57,7 @@ class M3uPlaylistService {
     final channels = _parser.parse(body);
     if (channels.isEmpty) {
       throw const FormatException(
-        'La URL respondió, pero no se encontraron señales HTTPS en formato M3U.',
+        'La URL respondió, pero no se encontraron señales HTTP/HTTPS en formato M3U.',
       );
     }
     return channels;
