@@ -182,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             fragment: '',
           ).toString();
     // Preserve aliases that share a stream but belong to different categories.
-    return '${normalizedUrl}|${channel.name.trim().toLowerCase()}|${(channel.groupTitle ?? channel.category ?? '').trim().toLowerCase()}';
+    return '$normalizedUrl|${channel.name.trim().toLowerCase()}|${(channel.groupTitle ?? channel.category ?? '').trim().toLowerCase()}';
   }
 
   Future<void> _importAllPlaylists() async {
