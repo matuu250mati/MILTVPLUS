@@ -1,4 +1,5 @@
 name: Deploy M3U sync to MILTVPLUS-QA
+# [run-qa-preflight] Explicitly verify QA project access before deploy; no catalog import.
 # Safety: this workflow only targets the hardcoded MILTVPLUS-QA project; production is never selected.
 
 on:
