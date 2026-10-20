@@ -32,10 +32,12 @@ class M3uPlaylistParser {
       if (streamUrl == null) continue;
       final uri = Uri.tryParse(streamUrl);
       if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
-          uri.scheme != 'https' || _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
+          (uri.scheme != 'https' && uri.scheme != 'http') ||
+          _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
         continue;
       }
-      if (!seen.add(_streamIdentity(uri))) continue;
+      final identity = '${_streamIdentity(uri)}|name=${name.toLowerCase()}|group=${(attributes['group-title'] ?? '').trim().toLowerCase()}';
+      if (!seen.add(identity)) continue;
 
       channels.add(TvChannel(
         name: name,
