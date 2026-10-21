@@ -117,18 +117,26 @@ Deno.serve(async (req) => {
     for (const source of totals.movieSources) {
       for (let page = 1; page <= pages; page++) {
         const data = await api(`${source}?page=${page}`);
-        const rows = (data.results ?? []).map((item: any) => ({
-          tmdb_id: Number(item.id),
-          title: String(item.title ?? item.original_title ?? "").trim(),
-          synopsis: String(item.overview ?? ""),
-          category: "Películas",
-          genres: (item.genre_ids ?? []).map((id: number) => movieGenres.get(id)).filter(Boolean),
-          logo: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
-          backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-          release_year: item.release_date ? Number(String(item.release_date).slice(0, 4)) || null : null,
-          duration_seconds: null,
-          country_code: "AR",
-        })).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
+        const rows = (data.results ?? []).map((item: any) => {
+          const title = String(item.title ?? item.original_title ?? "").trim();
+          const synopsis = String(item.overview ?? "").trim();
+          const genres = (item.genre_ids ?? [])
+            .map((id: number) => movieGenres.get(id))
+            .filter((name: string | undefined): name is string => Boolean(name));
+          const releaseYear = item.release_date
+            ? Number(String(item.release_date).slice(0, 4)) || null
+            : null;
+          return {
+            tmdb_id: Number(item.id),
+            title,
+            category: "Películas",
+            ...(synopsis ? { synopsis } : {}),
+            ...(genres.length ? { genres } : {}),
+            ...(item.poster_path ? { logo: `https://image.tmdb.org/t/p/w500${item.poster_path}` } : {}),
+            ...(item.backdrop_path ? { backdrop_url: `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` } : {}),
+            ...(releaseYear ? { release_year: releaseYear } : {}),
+          };
+        }).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
         const saved = await saveMetadata("movies", rows, true);
         totals.moviesInserted += saved.inserted;
         totals.moviesUpdated += saved.updated;
@@ -138,17 +146,26 @@ Deno.serve(async (req) => {
     for (const source of totals.seriesSources) {
       for (let page = 1; page <= pages; page++) {
         const data = await api(`${source}?page=${page}`);
-        const rows = (data.results ?? []).map((item: any) => ({
-          tmdb_id: Number(item.id),
-          title: String(item.name ?? item.original_name ?? "").trim(),
-          synopsis: String(item.overview ?? ""),
-          category: "Series",
-          genres: (item.genre_ids ?? []).map((id: number) => tvGenres.get(id)).filter(Boolean),
-          logo: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
-          backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-          release_year: item.first_air_date ? Number(String(item.first_air_date).slice(0, 4)) || null : null,
-          country_code: "AR",
-        })).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
+        const rows = (data.results ?? []).map((item: any) => {
+          const title = String(item.name ?? item.original_name ?? "").trim();
+          const synopsis = String(item.overview ?? "").trim();
+          const genres = (item.genre_ids ?? [])
+            .map((id: number) => tvGenres.get(id))
+            .filter((name: string | undefined): name is string => Boolean(name));
+          const releaseYear = item.first_air_date
+            ? Number(String(item.first_air_date).slice(0, 4)) || null
+            : null;
+          return {
+            tmdb_id: Number(item.id),
+            title,
+            category: "Series",
+            ...(synopsis ? { synopsis } : {}),
+            ...(genres.length ? { genres } : {}),
+            ...(item.poster_path ? { logo: `https://image.tmdb.org/t/p/w500${item.poster_path}` } : {}),
+            ...(item.backdrop_path ? { backdrop_url: `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` } : {}),
+            ...(releaseYear ? { release_year: releaseYear } : {}),
+          };
+        }).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
         const saved = await saveMetadata("series", rows, false);
         totals.seriesInserted += saved.inserted;
         totals.seriesUpdated += saved.updated;
