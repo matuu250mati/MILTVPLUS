@@ -46,3 +46,9 @@ String? get supabaseConfigurationError {
 }
 
 bool get isSupabaseConfigured => supabaseConfigurationError == null;
+
+
+/// Runtime status is separate from compile-time configuration: a valid URL/key
+/// does not guarantee that client initialization completed successfully.
+bool supabaseClientInitialized = false;
+String? supabaseInitializationFailure;
