@@ -181,4 +181,26 @@ https://example.com/live.m3u8
     expect(channels, hasLength(1));
     expect(channels.single.name, 'Direct stream');
   });
+
+  test('stream parser matches integrity counts without buffering the full playlist', () async {
+    final report = await parser.parseStream(Stream<String>.fromIterable([
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-name="Canal Uno" group-title="Argentina",Canal Uno',
+      '#EXTVLCOPT:http-user-agent=Example',
+      'https://example.com/live.m3u8',
+      '#EXTINF:-1,Duplicado',
+      'https://example.com/live.m3u8',
+      '#EXTINF:-1,URL HTTP no compatible',
+      'http://example.com/live.m3u8',
+      '#EXTINF:-1,Entrada incompleta',
+    ]));
+
+    expect(report.totalEntries, 4);
+    expect(report.imported, 1);
+    expect(report.duplicates, 1);
+    expect(report.unsupported, 1);
+    expect(report.incomplete, 1);
+    expect(report.channels.single.name, 'Canal Uno');
+    expect(report.channels.single.groupTitle, 'Argentina');
+  });
 }
