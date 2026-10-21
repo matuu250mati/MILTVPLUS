@@ -54,7 +54,7 @@ class M3uPlaylistService {
     }
 
     final lines = const LineSplitter().bind(
-      Utf8Decoder(allowMalformed: true).bind(limitedChunks()),
+      const Utf8Decoder(allowMalformed: true).bind(limitedChunks()),
     );
     final report = await _parser.parseStream(lines);
     if (receivedBytes == 0 || report.totalEntries == 0) {
