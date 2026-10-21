@@ -1,0 +1,90 @@
+name: Sync TMDB catalog metadata to QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: "Pages per TMDB discovery source (1-5)"
+        required: false
+        default: "5"
+        type: choice
+        options: ["1", "2", "3", "4", "5"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-tmdb-catalog-sync-qa
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: miltvplus-qa
+    steps:
+      - name: Validate QA configuration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SYNC_SECRET: ${{ secrets.MILTVPLUS_QA_CATALOG_SYNC_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_ANON_KEY SYNC_SECRET; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Missing QA environment secret: $name. Configure it in GitHub Environment miltvplus-qa; no sync was run."
+              exit 1
+            fi
+          done
+          if [[ ! "$SUPABASE_ANON_KEY" =~ ^(eyJ[^[:space:]]+|sb_publishable_[^[:space:]]+)$ ]]; then
+            echo "::error::SUPABASE_QA_ANON_KEY is not a recognized public anon/publishable key."
+            exit 1
+          fi
+          echo "QA configuration is present. This workflow is restricted to project uoqfovrynlyterjylpqj."
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy catalog sync function to QA only
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+        run: supabase functions deploy sync-tmdb-catalog --project-ref uoqfovrynlyterjylpqj
+
+      - name: Sync movies and series metadata in QA
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SYNC_SECRET: ${{ secrets.MILTVPLUS_QA_CATALOG_SYNC_SECRET }}
+          REQUESTED_PAGES: ${{ inputs.pages || '5' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
+          status="$(curl --silent --show-error --max-time 180 \
+            --output "$body_file" --write-out '%{http_code}' \
+            --request POST "https://uoqfovrynlyterjylpqj.supabase.co/functions/v1/sync-tmdb-catalog" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header "Content-Type: application/json" \
+            --header "x-sync-secret: $SYNC_SECRET" \
+            --data "{\"pages\":$REQUESTED_PAGES,\"includeMovies\":true,\"includeSeries\":true}")" || {
+              echo "::error::Could not reach the QA catalog sync endpoint."
+              cat "$body_file"
+              exit 1
+            }
+          cat "$body_file"
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error::QA catalog sync failed with HTTP $status. Check TMDB_API_KEY, SYNC_SECRET and SUPABASE_SERVICE_ROLE_KEY in the QA Supabase Edge Function secrets. Production was not touched."
+            exit 1
+          fi
+          grep -q '"ok":true' "$body_file" || {
+            echo "::error::The QA sync endpoint returned HTTP success without an ok=true result."
+            exit 1
+          }
+          echo "QA movie and series metadata synchronization completed."
