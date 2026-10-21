@@ -174,6 +174,10 @@ https://example.com/news.m3u8
 #EXTM3U
 #EXTINF:-1,Player page
 https://www.twitch.tv/example
+#EXTINF:-1,Mobile Twitch subdomain
+https://m.twitch.tv/example
+#EXTINF:-1,Embedded Vimeo subdomain
+https://player.vimeo.com/video/123
 #EXTINF:-1,Direct stream
 https://example.com/live.m3u8
 ''');
