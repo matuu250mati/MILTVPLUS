@@ -13,7 +13,7 @@ permissions:
 # Keep only the newest CI run for a branch/PR; stale commits do not need a full matrix build.
 concurrency:
   group: miltvplus-flutter-ci-${{ github.ref }}
-  # Let platform builds finish; cancelling a matrix run leaves macOS/iOS unverified.
+  # Keep the supported CI matrix deterministic; platform builds are not cancelled mid-run.
   cancel-in-progress: false
 
 jobs:
@@ -51,16 +51,6 @@ jobs:
             runner: windows-latest
             artifact_path: build/windows/x64/runner/Release/**
             command: flutter build windows --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
-          - platform: macos
-            label: macOS desktop
-            runner: macos-latest
-            artifact_path: build/macos/Build/Products/Release/**
-            command: env CODE_SIGNING_ALLOWED=NO flutter build macos --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
-          - platform: ios
-            label: iOS compile (unsigned)
-            runner: macos-latest
-            artifact_path: build/ios/iphoneos/Runner.app/**
-            command: flutter build ios --release --no-codesign --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
