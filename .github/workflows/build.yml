@@ -79,57 +79,67 @@ jobs:
       - name: Validate Supabase configuration
         id: supabase
         env:
-          # Use the project URL paired with SUPABASE_ANON_KEY; never hard-code the QA project into production builds.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | xargs)"
-          # Trim accidental copy/paste whitespace without printing either secret.
+          SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           SUPABASE_ANON_KEY="$(printf '%s' "${SUPABASE_ANON_KEY:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
-          while [[ "$SUPABASE_URL" == */ ]]; do
-            SUPABASE_URL="${SUPABASE_URL%/}"
-          done
+          while [[ "$SUPABASE_URL" == */ ]]; do SUPABASE_URL="${SUPABASE_URL%/}"; done
+          if [[ "$SUPABASE_URL" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
+            SUPABASE_URL="${BASH_REMATCH[1]}"
+          fi
+
           url_valid=false
           key_valid=false
-          [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] && url_valid=true
+          url_project_ref=""
+          key_project_ref=""
+          key_role=""
+          if [[ "$SUPABASE_URL" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
+            url_valid=true
+            url_project_ref="${BASH_REMATCH[1]}"
+          fi
+
           if [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             if [[ "$SUPABASE_ANON_KEY" == *.*.* ]]; then
-              key_role="$(python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; p += "=" * (-len(p) % 4); print(json.loads(base64.urlsafe_b64decode(p)).get("role",""))' "$SUPABASE_ANON_KEY" 2>/dev/null || true)"
-              [[ "$key_role" == "anon" ]] && key_valid=true
+              jwt_claims="$(python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; p += "=" * (-len(p) % 4); d=json.loads(base64.urlsafe_b64decode(p)); print(d.get("ref","")+"|"+d.get("role",""))' "$SUPABASE_ANON_KEY" 2>/dev/null || true)"
+              IFS='|' read -r key_project_ref key_role <<< "$jwt_claims"
+              if [[ -n "$key_project_ref" && "$key_role" == "anon" ]]; then key_valid=true; fi
             elif [[ "$SUPABASE_ANON_KEY" == sb_publishable_* ]]; then
               key_valid=true
             fi
           fi
+
           echo "url_format_valid=$url_valid" >> "$GITHUB_OUTPUT"
           echo "key_format_valid=$key_valid" >> "$GITHUB_OUTPUT"
 
-          if [[ "$url_valid" == true && "$key_valid" == true ]]; then
+          if [[ "$url_valid" == true && "$key_valid" == true && ( -z "$key_project_ref" || "$key_project_ref" == "$url_project_ref" ) ]]; then
             echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
             echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "Supabase configuration format validated."
-          elif [[ "$IS_PULL_REQUEST" == true ]]; then
-            # PR builds are isolated QA packages. Do not fake a backend: build with
-            # empty defines so the app reports that Supabase is not configured.
+            echo "Supabase URL/key format validated."
+          elif [[ "$IS_FORK_PR" == true && -z "$SUPABASE_URL" && -z "$SUPABASE_ANON_KEY" ]]; then
             echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=" >> "$GITHUB_ENV"
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            if [[ "$url_valid" != true && "$key_valid" != true ]]; then
-              echo "::warning::SUPABASE_URL format is invalid or missing, and SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
-            elif [[ "$url_valid" != true ]]; then
-              echo "::warning::SUPABASE_URL is missing or must match https://<project-ref>.supabase.co. QA-only APK will be built without Supabase."
-            else
-              echo "::warning::SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
-            fi
+            echo "::warning::Fork pull request has no secrets; building offline QA only. Backend validation is intentionally unavailable."
             {
-              echo "### Supabase configuration: QA-only"
-              echo "This pull-request APK is compiled without backend credentials because the repository secrets are absent or malformed. Login and database-backed catalogs are not expected to work in this QA build."
+              echo "### Supabase configuration: offline QA only"
+              echo "This is a fork pull request with no secrets. Backend-dependent features have not been validated."
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::error::Production builds require SUPABASE_URL exactly like https://<project-ref>.supabase.co and a non-empty SUPABASE_ANON_KEY without whitespace."
+            if [[ "$url_valid" == true && "$key_valid" == true && -n "$key_project_ref" && "$key_project_ref" != "$url_project_ref" ]]; then
+              echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY refer to different Supabase projects."
+            elif [[ "$url_valid" != true ]]; then
+              echo "::error::SUPABASE_URL is missing or malformed. Expected https://<project-ref>.supabase.co; /rest/v1 is normalized automatically."
+            elif [[ "$key_valid" != true ]]; then
+              echo "::error::SUPABASE_ANON_KEY is missing, unsupported, or not a public anon/publishable key. Privileged service_role keys are rejected."
+            else
+              echo "::error::Supabase configuration is invalid. Refusing to build with an unverified backend."
+            fi
             exit 1
           fi
 
@@ -170,15 +180,8 @@ jobs:
             fi
           done
           if [[ "$failed" -ne 0 ]]; then
-            if [[ "$IS_PULL_REQUEST" != true ]]; then
-              echo "::error::Supabase schema/API-key validation failed. Refusing to publish a production APK with a backend that has not passed validation."
-              exit 1
-            fi
-            {
-              echo "### Supabase schema validation: QA warning"
-              echo "The pull-request APK is for isolated QA only. One or more Supabase requests failed; backend-dependent features are not verified and may not work."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Supabase schema/API-key validation failed. Refusing to mark this build successful while required tables or columns are inaccessible."
+            exit 1
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
