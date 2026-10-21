@@ -131,6 +131,16 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         if (_matchesCategoryFilter(channel)) addUnique(channel);
       }
 
+      // Render the on-device cache immediately. Network refreshes below must
+      // not block users from seeing channels that were already available.
+      if (mounted) {
+        setState(() {
+          channels
+            ..clear()
+            ..addAll(merged.values);
+        });
+      }
+
       try {
         final remoteChannels = await catalogService.getChannels(
           categories: widget.categoryFilter,
@@ -150,6 +160,13 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           }
         }
         remoteLoaded = true;
+        if (mounted) {
+          setState(() {
+            channels
+              ..clear()
+              ..addAll(merged.values);
+          });
+        }
       } catch (_) {
         // Keep local channels usable when Supabase is offline or the user is signed out.
       }
@@ -163,8 +180,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           if (_matchesCategoryFilter(channel)) addUnique(channel);
         }
         publicFallbackLoaded = repositoryChannels.isNotEmpty;
-        if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
-          await channelStorage.save(merged.values.toList(growable: false));
+        if (mounted) {
+          setState(() {
+            channels
+              ..clear()
+              ..addAll(merged.values);
+          });
         }
       } catch (_) {
         // Continue with Supabase and cached channels when GitHub Raw is offline.
@@ -217,7 +238,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           'argentina',
           'free-tv-argentina',
           'spanish',
-          'sports',
           'global-index',
           'free-tv-global',
         ]);
@@ -254,9 +274,6 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                 ..clear()
                 ..addAll(merged.values);
             });
-          }
-          if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
-            await channelStorage.save(merged.values.toList(growable: false));
           }
         } catch (_) {
           // Una lista pública puede estar caída o geobloqueada; conservamos las demás fuentes.
