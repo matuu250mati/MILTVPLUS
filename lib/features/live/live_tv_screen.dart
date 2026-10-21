@@ -301,7 +301,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         await channelStorage.save(merged.values.toList(growable: false));
       }
 
-      if (showFeedback) {
+      if (showFeedback && mounted) {
         final message = publicFallbackLoaded
             ? 'Lista pública inicial cargada: ${channels.length} señales. La reproducción se verifica al abrir cada canal.'
             : remoteLoaded
