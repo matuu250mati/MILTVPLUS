@@ -194,11 +194,11 @@ jobs:
           )
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
-          status="$(jq -n --arg query "$sql" '{query:$query}' | curl --silent --show-error --max-time 30 \\
-            --output "$response_file" --write-out '%{http_code}' \\
-            --request POST "https://api.supabase.com/v1/projects/uoqfovrynlyterjylpqj/database/query" \\
-            --header "Authorization: Bearer $SUPABASE_QA_ACCESS_TOKEN" \\
-            --header "Content-Type: application/json" \\
+          status="$(jq -n --arg query "$sql" '{query:$query}' | curl --silent --show-error --max-time 30 \
+            --output "$response_file" --write-out '%{http_code}' \
+            --request POST "https://api.supabase.com/v1/projects/uoqfovrynlyterjylpqj/database/query" \
+            --header "Authorization: Bearer $SUPABASE_QA_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
             --data-binary @-)" || {
               echo "::error::Supabase Management API could not apply the QA compatibility migration."
               exit 1
