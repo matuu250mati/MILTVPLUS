@@ -13,7 +13,8 @@ permissions:
 # Keep only the newest CI run for a branch/PR; stale commits do not need a full matrix build.
 concurrency:
   group: miltvplus-flutter-ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Let platform builds finish; cancelling a matrix run leaves macOS/iOS unverified.
+  cancel-in-progress: false
 
 jobs:
   analyze-and-test:
