@@ -44,6 +44,10 @@ jobs:
             exit 1
           fi
           SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+          if [[ "$SUPABASE_PROJECT_ID" != "mkdubrwdgorpobbrxdzy" ]]; then
+            echo "::error::Production migration workflow is restricted to project mkdubrwdgorpobbrxdzy; refusing to touch $SUPABASE_PROJECT_ID."
+            exit 1
+          fi
           echo "SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID" >> "$GITHUB_ENV"
 
       - name: Validate migration filenames
@@ -100,6 +104,7 @@ jobs:
               --output /tmp/supabase-schema-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL/rest/v1/$table?$query" || true)"
             if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
               detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
