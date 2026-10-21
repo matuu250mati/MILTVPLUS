@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
     return await response.json();
   };
 
-  // Existing records are refreshed only with descriptive metadata. Playback URLs,
-  // stream mirrors, and the owner's publication decision are deliberately omitted.
+  // Merge with existing rows before upsert. This keeps every object in a batch
+  // schema-identical and preserves owner-managed URLs, publication flags, runtime,
+  // and manually curated fields when TMDB omits optional metadata.
   const saveMetadata = async (
     table: "movies" | "series",
     rows: Array<Record<string, unknown>>,
@@ -68,29 +69,43 @@ Deno.serve(async (req) => {
     const ids = rows.map((row) => Number(row.tmdb_id)).filter((id) => Number.isInteger(id) && id > 0);
     const { data: existingRows, error: lookupError } = await supabase
       .from(table)
-      .select("tmdb_id")
+      .select("*")
       .in("tmdb_id", ids);
     if (lookupError) throw new Error(`Supabase ${table} lookup failed: ${lookupError.message}`);
 
-    const existingIds = new Set((existingRows ?? []).map((row: { tmdb_id: number | string }) => Number(row.tmdb_id)));
-    const existing = rows.filter((row) => existingIds.has(Number(row.tmdb_id)));
-    const fresh = rows
-      .filter((row) => !existingIds.has(Number(row.tmdb_id)))
-      .map((row) => ({
-        ...row,
-        ...(hasStreamUrl ? { url_stream: "", stream_urls: [] } : {}),
-        is_published: true,
-      }));
+    const existingById = new Map<number, Record<string, any>>(
+      (existingRows ?? []).map((row: Record<string, any>) => [Number(row.tmdb_id), row]),
+    );
+    const prepared = rows.map((row) => {
+      const existing = existingById.get(Number(row.tmdb_id));
+      const incomingSynopsis = String(row.synopsis ?? "").trim();
+      const incomingGenres = Array.isArray(row.genres) ? row.genres : [];
+      const merged: Record<string, unknown> = {
+        tmdb_id: row.tmdb_id,
+        title: row.title,
+        category: row.category,
+        synopsis: incomingSynopsis || existing?.synopsis || "",
+        genres: incomingGenres.length ? incomingGenres : existing?.genres ?? [],
+        logo: row.logo ?? existing?.logo ?? null,
+        backdrop_url: row.backdrop_url ?? existing?.backdrop_url ?? null,
+        release_year: row.release_year ?? existing?.release_year ?? null,
+        country_code: existing?.country_code ?? "AR",
+        is_published: existing ? Boolean(existing.is_published) : true,
+      };
+      if (hasStreamUrl) {
+        merged.url_stream = existing?.url_stream ?? "";
+        merged.stream_urls = existing?.stream_urls ?? [];
+        merged.duration_seconds = existing?.duration_seconds ?? null;
+      }
+      return merged;
+    });
 
-    if (existing.length) {
-      const { error } = await supabase.from(table).upsert(existing, { onConflict: "tmdb_id" });
-      if (error) throw new Error(`Supabase ${table} metadata update failed: ${error.message}`);
-    }
-    if (fresh.length) {
-      const { error } = await supabase.from(table).insert(fresh);
-      if (error) throw new Error(`Supabase ${table} metadata insert failed: ${error.message}`);
-    }
-    return { inserted: fresh.length, updated: existing.length };
+    const { error } = await supabase.from(table).upsert(prepared, { onConflict: "tmdb_id" });
+    if (error) throw new Error(`Supabase ${table} metadata upsert failed: ${error.message}`);
+    return {
+      inserted: prepared.filter((row) => !existingById.has(Number(row.tmdb_id))).length,
+      updated: prepared.filter((row) => existingById.has(Number(row.tmdb_id))).length,
+    };
   };
 
   try {
@@ -130,11 +145,11 @@ Deno.serve(async (req) => {
             tmdb_id: Number(item.id),
             title,
             category: "Películas",
-            ...(synopsis ? { synopsis } : {}),
-            ...(genres.length ? { genres } : {}),
-            ...(item.poster_path ? { logo: `https://image.tmdb.org/t/p/w500${item.poster_path}` } : {}),
-            ...(item.backdrop_path ? { backdrop_url: `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` } : {}),
-            ...(releaseYear ? { release_year: releaseYear } : {}),
+            synopsis,
+            genres,
+            logo: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+            backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
+            release_year: releaseYear,
           };
         }).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
         const saved = await saveMetadata("movies", rows, true);
@@ -159,11 +174,11 @@ Deno.serve(async (req) => {
             tmdb_id: Number(item.id),
             title,
             category: "Series",
-            ...(synopsis ? { synopsis } : {}),
-            ...(genres.length ? { genres } : {}),
-            ...(item.poster_path ? { logo: `https://image.tmdb.org/t/p/w500${item.poster_path}` } : {}),
-            ...(item.backdrop_path ? { backdrop_url: `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` } : {}),
-            ...(releaseYear ? { release_year: releaseYear } : {}),
+            synopsis,
+            genres,
+            logo: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+            backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
+            release_year: releaseYear,
           };
         }).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
         const saved = await saveMetadata("series", rows, false);
