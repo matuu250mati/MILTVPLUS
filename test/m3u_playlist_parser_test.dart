@@ -28,7 +28,7 @@ http://example.com/two/index.m3u8?token=abc
 ''');
     expect(report.totalEntries, 2);
     expect(report.imported, 1);
-    expect(report.unsupported, 2);
+    expect(report.unsupported, 1);
   });
 
   test('reports imported, duplicate, incomplete and unsupported entries', () {
@@ -51,7 +51,7 @@ https://www.twitch.tv/example
     expect(report.imported, 1);
     expect(report.duplicates, 1);
     expect(report.incomplete, 2);
-    expect(report.unsupported, 1);
+    expect(report.unsupported, 2);
     expect(report.channels.single.streamUrl, 'https://example.com/live.m3u8?token=keep');
     expect(report.imported + report.duplicates + report.incomplete + report.unsupported,
         report.totalEntries);
