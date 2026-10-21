@@ -105,8 +105,7 @@ jobs:
             url_project_ref="${BASH_REMATCH[1]}"
           fi
           if [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
-            # Legacy anon JWTs expose project ref and role; reject cross-project keys
-            # and privileged service_role keys before they can enter a Flutter APK.
+            # Legacy JWTs expose project ref and role; only the anon role is allowed in a Flutter APK.
             if [[ "$SUPABASE_ANON_KEY" == *.*.* ]]; then
               jwt_claims="$(python3 - "$SUPABASE_ANON_KEY" <<'PY'
 import base64, json, sys
@@ -114,13 +113,20 @@ try:
     segment = sys.argv[1].split('.')[1]
     segment += '=' * (-len(segment) % 4)
     payload = json.loads(base64.urlsafe_b64decode(segment.encode()))
-    print(payload.get('ref', '') + '\\n' + payload.get('role', ''))
+    print(payload.get('ref', '') + '|' + payload.get('role', ''))
 except Exception:
-    print('\\n')
+    print('|')
 PY
 )"
-              key_project_ref="${jwt_claims%%
-
+              IFS='|' read -r key_project_ref key_role <<< "$jwt_claims"
+              if [[ -n "$key_project_ref" && "$key_role" == "anon" ]]; then
+                key_valid=true
+              fi
+            elif [[ "$SUPABASE_ANON_KEY" == sb_publishable_* ]]; then
+              # New publishable keys are opaque and do not expose a project ref.
+              key_valid=true
+            fi
+          fi
           echo "url_format_valid=$url_valid" >> "$GITHUB_OUTPUT"
           echo "key_format_valid=$key_valid" >> "$GITHUB_OUTPUT"
 
@@ -175,6 +181,7 @@ PY
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
               --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
