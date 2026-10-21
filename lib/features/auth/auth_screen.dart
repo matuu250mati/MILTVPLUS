@@ -89,7 +89,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final phone = _pendingPhone ??
             '+549${_phone.text.replaceAll(RegExp(r'\D'), '')}';
         if (!_otpSent) {
-          await auth.signInWithOtp(phone: phone);
+          await auth.signInWithOtp(phone: phone).timeout(const Duration(seconds: 20));
           if (!mounted) return;
           setState(() {
             _pendingPhone = phone;
@@ -102,14 +102,14 @@ class _AuthScreenState extends State<AuthScreen> {
             type: OtpType.sms,
             phone: phone,
             token: _otp.text.trim(),
-          );
+          ).timeout(const Duration(seconds: 20));
           if (mounted) widget.onAuthenticated?.call();
         }
       } else if (_register) {
         final response = await auth.signUp(
           email: _email.text.trim(),
           password: _password.text,
-        );
+        ).timeout(const Duration(seconds: 20));
         if (!mounted) return;
         setState(() {
           _error = false;
@@ -122,7 +122,7 @@ class _AuthScreenState extends State<AuthScreen> {
         await auth.signInWithPassword(
           email: _email.text.trim(),
           password: _password.text,
-        );
+        ).timeout(const Duration(seconds: 20));
         if (mounted) widget.onAuthenticated?.call();
       }
     } on AuthException catch (e) {
@@ -132,11 +132,18 @@ class _AuthScreenState extends State<AuthScreen> {
           _message = e.message;
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final detail = error.toString().toLowerCase();
+        final isNetworkError = detail.contains('socket') ||
+            detail.contains('network') || detail.contains('connection') ||
+            detail.contains('timed out') || detail.contains('timeout') ||
+            detail.contains('host lookup') || detail.contains('clientexception');
         setState(() {
           _error = true;
-          _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
+          _message = isNetworkError
+              ? 'No hay conexión con el servicio. Revisá tu internet e intentá nuevamente.'
+              : 'No se pudo completar la operación. Tus datos no se confirmaron; revisá el mensaje e intentá de nuevo.';
         });
       }
     } finally {
@@ -180,7 +187,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured || !supabaseClientInitialized) {
       return Scaffold(
         body: Center(child: Padding(
           padding: const EdgeInsets.all(28),
@@ -192,8 +199,8 @@ class _AuthScreenState extends State<AuthScreen> {
               const Text('MILTVPLUS', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
               Text(
-                supabaseConfigurationError ??
-                    'La configuración de Supabase no está disponible.',
+                supabaseInitializationFailure ?? supabaseConfigurationError ??
+                    'El servicio de acceso no se pudo inicializar.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: AppTheme.muted, height: 1.5),
               ),
