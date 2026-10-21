@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     request = {};
   }
   const requestedPages = Number(request.pages ?? 5);
-  const pages = Math.max(1, Math.min(Number.isFinite(requestedPages) ? Math.floor(requestedPages) : 5, 10));
+  const pages = Math.max(1, Math.min(Number.isFinite(requestedPages) ? Math.floor(requestedPages) : 5, 5));
   const includeMovies = request.includeMovies !== false;
   const includeSeries = request.includeSeries !== false;
   if (!includeMovies && !includeSeries) return json({ error: "Select movies, series, or both." }, 400);
@@ -103,16 +103,17 @@ Deno.serve(async (req) => {
 
     const totals = {
       pagesPerSource: pages,
-      movieSources: includeMovies ? ["movie/popular", "movie/top_rated"] : [],
-      seriesSources: includeSeries ? ["tv/popular", "tv/top_rated"] : [],
+      movieSources: includeMovies ? ["movie/popular", "movie/top_rated", "movie/now_playing", "movie/upcoming"] : [],
+      seriesSources: includeSeries ? ["tv/popular", "tv/top_rated", "tv/on_the_air", "tv/airing_today"] : [],
       moviesInserted: 0,
       moviesUpdated: 0,
       seriesInserted: 0,
       seriesUpdated: 0,
     };
 
-    // Two complementary lists per type widen discovery without a huge, brittle
-    // one-shot import. Upserts are idempotent by TMDB ID.
+    // Four complementary lists per type widen discovery across popular, acclaimed,
+    // currently released, and upcoming/on-air titles. Five pages per list caps
+    // the run at 40 media-list requests plus genre lookups. Upserts are idempotent.
     for (const source of totals.movieSources) {
       for (let page = 1; page <= pages; page++) {
         const data = await api(`${source}?page=${page}`);
