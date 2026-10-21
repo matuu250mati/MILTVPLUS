@@ -82,12 +82,9 @@ jobs:
       - name: Validate Supabase configuration
         id: supabase
         env:
-          # Prefer separate project-specific secrets; generic secrets remain a compatibility fallback.
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Project URLs are public identifiers and are selected explicitly below.
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
-          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_PRODUCTION_URL }}
           SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_PRODUCTION_ANON_KEY }}
           IS_PRODUCTION_BUILD: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) }}
           IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
@@ -95,12 +92,12 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$IS_PRODUCTION_BUILD" == "true" ]]; then
-            SUPABASE_URL="${SUPABASE_PRODUCTION_URL:-${SUPABASE_URL:-}}"
+            SUPABASE_URL="https://mkdubrwdgorpobbrxdzy.supabase.co"
             SUPABASE_ANON_KEY="${SUPABASE_PRODUCTION_ANON_KEY:-${SUPABASE_ANON_KEY:-}}"
             expected_project_ref="mkdubrwdgorpobbrxdzy"
             target_environment="production"
           else
-            SUPABASE_URL="${SUPABASE_QA_URL:-${SUPABASE_URL:-}}"
+            SUPABASE_URL="https://uoqfovrynlyterjylpqj.supabase.co"
             SUPABASE_ANON_KEY="${SUPABASE_QA_ANON_KEY:-${SUPABASE_ANON_KEY:-}}"
             expected_project_ref="uoqfovrynlyterjylpqj"
             target_environment="QA"
