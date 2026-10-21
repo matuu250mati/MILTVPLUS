@@ -1,6 +1,11 @@
 name: Sync TMDB catalog metadata
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-tmdb-catalog.yml'
+      - 'supabase/functions/sync-tmdb-catalog/**'
   workflow_dispatch:
     inputs:
       pages:
@@ -77,13 +82,14 @@ jobs:
       - name: Sync movies and series metadata
         if: steps.config.outputs.configured == 'true'
         env:
-          SUPABASE_URL: ${{ env.SUPABASE_URL_NORMALIZED }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
           REQUESTED_PAGES: ${{ inputs.pages || '2' }}
         shell: bash
         run: |
           set -euo pipefail
+          SUPABASE_URL="${SUPABASE_URL%/}"
           pages="$REQUESTED_PAGES"
           case "$pages" in
             1|2|3|4|5) ;;
@@ -98,7 +104,7 @@ jobs:
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
             --header "x-sync-secret: $SYNC_SECRET" \
-            --data "{\"pages\":$pages,\"includeMovies\":true,\"includeSeries\":true}" )" || {
+            --data "{\"pages\":$pages,\"includeMovies\":true,\"includeSeries\":true}")" || {
               echo "::error::Could not reach Supabase Edge Function endpoint."
               cat "$body_file"
               exit 1
