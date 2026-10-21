@@ -225,9 +225,10 @@ class M3uPlaylistParser {
   ).toString();
 
   bool _isWebPageOnlyHost(String host) {
-    final normalized = host.toLowerCase().replaceFirst(RegExp(r'\\.
-}
-), '');
+    var normalized = host.toLowerCase();
+    if (normalized.endsWith('.')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
     const domains = <String>{
       'twitch.tv',
       'facebook.com',
