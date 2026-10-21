@@ -132,15 +132,97 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
   }
 
+  KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final controller = _controller;
+    final value = controller?.value;
+    if (controller == null || value == null || !value.isInitialized) {
+      if (event.logicalKey == LogicalKeyboardKey.escape ||
+          event.logicalKey == LogicalKeyboardKey.backspace) {
+        _closePlayer();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.select ||
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      if (value.isPlaying) {
+        controller.pause();
+      } else {
+        controller.play();
+      }
+      if (!_showControls && mounted) setState(() => _showControls = true);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      final delta = event.logicalKey == LogicalKeyboardKey.arrowLeft
+          ? const Duration(seconds: -10)
+          : const Duration(seconds: 10);
+      final target = value.position + delta;
+      final duration = value.duration;
+      final bounded = target < Duration.zero
+          ? Duration.zero
+          : target > duration
+              ? duration
+              : target;
+      controller.seekTo(bounded);
+      if (!_showControls && mounted) setState(() => _showControls = true);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (!_showControls && mounted) setState(() => _showControls = true);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape ||
+        event.logicalKey == LogicalKeyboardKey.backspace) {
+      _closePlayer();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  Offset? _lastDoubleTapPosition;
+
+  void _handleDoubleTapSeek() {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final position = _lastDoubleTapPosition;
+    if (position == null) return;
+    final width = MediaQuery.sizeOf(context).width;
+    final delta = position.dx < width / 2
+        ? const Duration(seconds: -10)
+        : const Duration(seconds: 10);
+    final target = controller.value.position + delta;
+    final duration = controller.value.duration;
+    final bounded = target < Duration.zero
+        ? Duration.zero
+        : target > duration
+            ? duration
+            : target;
+    controller.seekTo(bounded);
+    if (!_showControls && mounted) setState(() => _showControls = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
     final ready = controller?.value.isInitialized == true;
-    return PopScope(
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) _restoreSystemUi();
-      },
-      child: Scaffold(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleRemoteKey,
+      child: PopScope(
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) _restoreSystemUi();
+        },
+        child: Scaffold(
         backgroundColor: Colors.black,
         body: SizedBox.expand(
           child: _loading
@@ -177,6 +259,10 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                   : GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () => setState(() => _showControls = !_showControls),
+                      onDoubleTapDown: (details) {
+                        _lastDoubleTapPosition = details.localPosition;
+                      },
+                      onDoubleTap: _handleDoubleTapSeek,
                       child: Stack(
                         fit: StackFit.expand,
                         alignment: Alignment.center,
@@ -270,6 +356,7 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
                         ],
                       ),
                     ),
+          ),
         ),
       ),
     );
