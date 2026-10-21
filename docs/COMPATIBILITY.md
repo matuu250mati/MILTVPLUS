@@ -10,7 +10,7 @@ Esta matriz distingue entre una compilación correcta y una reproducción valida
 | Android TV / Google TV | Manifiesto de TV y navegación D-pad existentes | Probar mando físico, foco visible, retorno, reproducción HLS y diferentes resoluciones |
 | Fire TV / TV Box Android | Puede ejecutar el APK si la versión del sistema y sus servicios son compatibles | Validar por modelo; Fire OS y los códecs disponibles varían |
 | Navegador web | Se agrega compilación Flutter Web de verificación | Configurar Supabase, CORS, URLs de retorno y alojamiento de la app; la página informativa no es por sí misma el reproductor web |
-| Windows | Se habilita backend de vídeo de escritorio y compilación CI | Probar HLS/MP4, códecs, teclado, ratón, pantalla completa y empaquetado de distribución |
+| Windows / macOS / Linux desktop | Fuera del alcance actual; no se compilan ni validan como objetivos de escritorio | Reabrir únicamente cuando el proyecto lo priorice expresamente; Linux desktop queda excluido según la decisión actual |
 | macOS | Fuera de la matriz CI actual; no validado | Reincorporar cuando se necesite distribuir para Mac y haya un runner macOS operativo; luego firmar/notarizar y probar en equipo físico |
 | iOS | Fuera de la matriz CI actual; no validado | Reincorporar cuando se necesite distribuir para iPhone/iPad y haya un runner macOS operativo; luego firmar y probar en equipo físico |
 | Samsung Tizen / LG webOS / Roku | No son destinos nativos de este APK Flutter | Requieren clientes específicos para cada sistema o un reproductor web compatible aprobado por la plataforma; no deben anunciarse como compatibles hasta tenerlos y probarlos |
@@ -19,7 +19,7 @@ Esta matriz distingue entre una compilación correcta y una reproducción valida
 
 La subida de artefactos usa `actions/upload-artifact@v6`, que ejecuta en Node.js 24 y evita la advertencia de runtime Node.js 20 de la versión anterior. La desaparición de avisos de dependencias se confirma en los registros de la siguiente ejecución; no se da por hecha antes de correr CI.
 
-El flujo **Flutter CI** valida análisis y pruebas Dart/Flutter, además de compilar Web y Windows. macOS e iOS se excluyeron temporalmente de esta matriz porque los trabajos de GitHub Actions fueron cancelados repetidamente antes de asignarles un runner (sin `runner_id` ni logs disponibles); insistir en reintentos no corregía la causa observable y dejaba el estado global en fallo. Estas plataformas quedan explícitamente **no validadas**, no se declara que compilen. Linux de escritorio queda excluido permanentemente; `ubuntu-latest` se usa para análisis, pruebas y compilación Web, no como objetivo Linux. El APK Android se valida mediante el flujo Android existente.
+El flujo **Flutter CI** valida análisis y pruebas Dart/Flutter y compila Web como comprobación complementaria. Las compilaciones de escritorio para Windows, macOS y Linux quedan fuera del alcance actual; Linux desktop permanece excluido. `ubuntu-latest` se usa para análisis, pruebas y compilación Web, no como objetivo Linux. La prioridad de validación de producto es Android móvil/tablet, Android TV/Google TV y TV Box compatibles. El APK Android se valida mediante el flujo Android existente.
 
 Las compilaciones de verificación usan valores ficticios de Supabase y no deben distribuirse. La publicación real debe usar la URL del proyecto y la clave pública/anon correspondientes mediante configuración segura; nunca se debe incluir una clave `service_role` en una app cliente.
 
