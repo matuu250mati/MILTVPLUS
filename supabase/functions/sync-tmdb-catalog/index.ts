@@ -52,9 +52,36 @@ Deno.serve(async (req) => {
     const url = new URL(`https://api.themoviedb.org/3/${path}`);
     url.searchParams.set("api_key", tmdbKey);
     url.searchParams.set("language", "es-ES");
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!response.ok) throw new Error(`TMDB request failed (${response.status}) for ${path.split("?")[0]}`);
-    return await response.json();
+    let lastError = "unknown error";
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(15000),
+        });
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : "network request failed";
+        if (attempt === 3) break;
+        await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** attempt)));
+        continue;
+      }
+
+      if (response.ok) return await response.json();
+      lastError = `TMDB request failed (${response.status}) for ${path.split("?")[0]}`;
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable) throw new Error(lastError);
+      if (attempt === 3) break;
+
+      const retryAfterSeconds = Number(response.headers.get("retry-after"));
+      const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ? Math.min(retryAfterSeconds * 1000, 10000)
+        : 500 * (2 ** attempt);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    throw new Error(lastError);
   };
 
   // Merge with existing rows before upsert. This keeps every object in a batch
