@@ -18,21 +18,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate configuration
-        id: config
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
+        shell: bash
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$SYNC_SECRET" ]; then
-            echo "::warning::Catalog sync skipped. Configure SUPABASE_URL, SUPABASE_ANON_KEY, and MILTVPLUS_CATALOG_SYNC_SECRET repository secrets."
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          set -euo pipefail
+          for name in SUPABASE_URL SUPABASE_ANON_KEY SYNC_SECRET; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Catalog sync cannot run: required secret $name is missing. No metadata was imported."
+              exit 1
+            fi
+          done
+          normalized="${SUPABASE_URL%/}"
+          if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co. No metadata was imported."
+            exit 1
           fi
-          echo "configured=true" >> "$GITHUB_OUTPUT"
+          project_ref="${BASH_REMATCH[1]}"
+          if [[ "$project_ref" != "mkdubrwdgorpobbrxdzy" ]]; then
+            echo "::error::Catalog metadata sync is production-only and must target project mkdubrwdgorpobbrxdzy; got $project_ref. No metadata was imported."
+            exit 1
+          fi
+          echo "Validated required sync secrets and production project target."
 
       - name: Sync movies and series metadata
-        if: steps.config.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
