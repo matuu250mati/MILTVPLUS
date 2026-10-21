@@ -37,9 +37,15 @@ class ChannelStorageService {
     }
     final channels = _decodeChannels(decodedLegacy);
     if (channels.isNotEmpty) {
-      // Preserve the old entries unless the new cache was written successfully.
-      await save(channels);
-      await preferences.remove(_legacyStorageKey);
+      // Preserve legacy entries if the target platform cannot persist the new
+      // cache (for example, a browser storage quota has been reached).
+      try {
+        await save(channels);
+        await preferences.remove(_legacyStorageKey);
+      } catch (_) {
+        // Returning the recovered channels is still better than a blank TV
+        // screen; the legacy copy remains available for a later migration.
+      }
     }
     return channels;
   }
