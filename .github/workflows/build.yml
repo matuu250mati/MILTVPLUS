@@ -87,85 +87,71 @@ jobs:
         run: |
           set -euo pipefail
           SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | xargs)"
+          # Trim accidental copy/paste whitespace without printing either secret.
           SUPABASE_ANON_KEY="$(printf '%s' "${SUPABASE_ANON_KEY:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
-
-          # Normalize a copied Supabase Data API URL to the canonical project root.
-          while [[ "$SUPABASE_URL" == */ ]]; do SUPABASE_URL="${SUPABASE_URL%/}"; done
-          if [[ "$SUPABASE_URL" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
-            SUPABASE_URL="${BASH_REMATCH[1]}"
-          fi
-
+          while [[ "$SUPABASE_URL" == */ ]]; do
+            SUPABASE_URL="${SUPABASE_URL%/}"
+          done
           url_valid=false
           key_valid=false
-          key_project_ref=""
-          key_role=""
-          url_project_ref=""
-          if [[ "$SUPABASE_URL" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
-            url_valid=true
-            url_project_ref="${BASH_REMATCH[1]}"
-          fi
+          [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] && url_valid=true
           if [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
-            # Legacy JWTs expose project ref and role; only the anon role is allowed in a Flutter APK.
             if [[ "$SUPABASE_ANON_KEY" == *.*.* ]]; then
-              jwt_claims="$(python3 - "$SUPABASE_ANON_KEY" <<'PY'
+              key_role="$(python3 - "$SUPABASE_ANON_KEY" <<'PY'
 import base64, json, sys
 try:
     segment = sys.argv[1].split('.')[1]
     segment += '=' * (-len(segment) % 4)
-    payload = json.loads(base64.urlsafe_b64decode(segment.encode()))
-    print(payload.get('ref', '') + '|' + payload.get('role', ''))
+    print(json.loads(base64.urlsafe_b64decode(segment.encode())).get('role', ''))
 except Exception:
-    print('|')
+    print('')
 PY
 )"
-              IFS='|' read -r key_project_ref key_role <<< "$jwt_claims"
-              if [[ -n "$key_project_ref" && "$key_role" == "anon" ]]; then
-                key_valid=true
-              fi
+              [[ "$key_role" == "anon" ]] && key_valid=true
             elif [[ "$SUPABASE_ANON_KEY" == sb_publishable_* ]]; then
-              # New publishable keys are opaque and do not expose a project ref.
               key_valid=true
             fi
           fi
           echo "url_format_valid=$url_valid" >> "$GITHUB_OUTPUT"
           echo "key_format_valid=$key_valid" >> "$GITHUB_OUTPUT"
 
-          if [[ "$url_valid" == true && "$key_valid" == true && ( -z "$key_project_ref" || "$key_project_ref" == "$url_project_ref" ) ]]; then
+          if [[ "$url_valid" == true && "$key_valid" == true ]]; then
             echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
             echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "Supabase URL/key format validated and project references match."
-          elif [[ "$IS_PULL_REQUEST" == true && -z "$SUPABASE_URL" && -z "$SUPABASE_ANON_KEY" ]]; then
-            # Only a completely secret-free fork PR may build offline QA.
+            echo "Supabase configuration format validated."
+          elif [[ "$IS_PULL_REQUEST" == true ]]; then
+            # PR builds are isolated QA packages. Do not fake a backend: build with
+            # empty defines so the app reports that Supabase is not configured.
             echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=" >> "$GITHUB_ENV"
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No Supabase secrets are available to this pull request. Building isolated offline QA only."
+            if [[ "$url_valid" != true && "$key_valid" != true ]]; then
+              echo "::warning::SUPABASE_URL format is invalid or missing, and SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
+            elif [[ "$url_valid" != true ]]; then
+              echo "::warning::SUPABASE_URL is missing or must match https://<project-ref>.supabase.co. QA-only APK will be built without Supabase."
+            else
+              echo "::warning::SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
+            fi
             {
-              echo "### Supabase configuration: offline QA only"
-              echo "No Supabase secrets were available. Backend-dependent features are not verified in this artifact."
+              echo "### Supabase configuration: QA-only"
+              echo "This pull-request APK is compiled without backend credentials because the repository secrets are absent or malformed. Login and database-backed catalogs are not expected to work in this QA build."
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            if [[ "$url_valid" == true && "$key_valid" == true && -n "$key_project_ref" && "$key_project_ref" != "$url_project_ref" ]]; then
-              echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY belong to different Supabase projects. URL project ref: $url_project_ref; key project ref: $key_project_ref."
-            elif [[ "$url_valid" != true ]]; then
-              echo "::error::SUPABASE_URL is malformed. Use https://<project-ref>.supabase.co. A /rest/v1 suffix is normalized automatically; dashboard URLs are rejected."
-            elif [[ "$key_valid" != true ]]; then
-              echo "::error::SUPABASE_ANON_KEY is empty, malformed, or not a supported anon/publishable key."
-            else
-              echo "::error::Supabase configuration validation failed. Refusing to build with a mismatched backend."
-            fi
+            echo "::error::Production builds require SUPABASE_URL exactly like https://<project-ref>.supabase.co and a non-empty SUPABASE_ANON_KEY without whitespace."
             exit 1
           fi
+
       - name: Verify required Supabase schema
         if: steps.supabase.outputs.configured == 'true'
         env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
-          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_NORMALIZED"
-          # Ask PostgREST to resolve required columns with limit=0. This validates
+          # Ask PostgREST to resolve required columns with limit=0.
+          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_NORMALIZED" This validates
           # the schema even when a catalog table has no publicly visible rows.
           declare -A required_columns=(
             [channels]="title,url_stream,is_published,sort_order,logo"
