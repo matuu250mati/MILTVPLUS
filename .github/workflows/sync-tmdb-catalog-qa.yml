@@ -1,6 +1,12 @@
 name: Sync TMDB catalog metadata to QA
 
 on:
+  # Changes to the QA sync workflow/function refresh QA only; production is never targeted.
+  push:
+    branches: [codex/m3u-integrity-report]
+    paths:
+      - '.github/workflows/sync-tmdb-catalog-qa.yml'
+      - 'supabase/functions/sync-tmdb-catalog/**'
   workflow_dispatch:
     inputs:
       pages:
