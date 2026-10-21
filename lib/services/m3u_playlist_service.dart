@@ -3,10 +3,9 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import '../models/tv_channel.dart';
 import 'm3u_playlist_parser.dart';
 
-/// Downloads and parses a user-provided M3U/M3U8 playlist.
+/// Downloads and diagnoses a user-provided M3U/M3U8 playlist.
 class M3uPlaylistService {
   M3uPlaylistService({Dio? dio})
       : _dio = dio ??
@@ -22,11 +21,13 @@ class M3uPlaylistService {
   final Dio _dio;
   final M3uPlaylistParser _parser = const M3uPlaylistParser();
 
-  Future<List<TvChannel>> importFromUrl(String value) async {
+  /// Compatibility method retained for existing callers.
+  Future<List<dynamic>> importFromUrl(String value) async =>
+      (await importReportFromUrl(value)).channels;
+
+  Future<M3uParseReport> importReportFromUrl(String value) async {
     final uri = Uri.tryParse(value.trim());
-    if (uri == null ||
-        uri.host.isEmpty ||
-        uri.userInfo.isNotEmpty ||
+    if (uri == null || uri.host.isEmpty || uri.userInfo.isNotEmpty ||
         uri.scheme != 'https') {
       throw const FormatException('Ingresá una URL HTTPS válida para la lista M3U.');
     }
@@ -37,15 +38,13 @@ class M3uPlaylistService {
       throw const FormatException('La respuesta no contiene una lista M3U.');
     }
 
-    // Global IPTV playlists can exceed 20 MB. A strict 20 MB ceiling made
-    // the repository playlist fail before the UI could show any channels.
-    const maxPlaylistBytes = 50 * 1024 * 1024;
+    const maxPlaylistBytes = 120 * 1024 * 1024;
     final bytes = BytesBuilder(copy: false);
     var receivedBytes = 0;
     await for (final chunk in responseBody.stream) {
       receivedBytes += chunk.length;
       if (receivedBytes > maxPlaylistBytes) {
-        throw const FormatException('La lista supera el límite seguro de 50 MB.');
+        throw const FormatException('La lista supera el límite configurado de 120 MB.');
       }
       bytes.add(chunk);
     }
@@ -54,12 +53,10 @@ class M3uPlaylistService {
       throw const FormatException('La lista recibida está vacía.');
     }
 
-    final channels = _parser.parse(body);
-    if (channels.isEmpty) {
-      throw const FormatException(
-        'La URL respondió, pero no se encontraron señales HTTPS en formato M3U.',
-      );
+    final report = _parser.parseWithReport(body);
+    if (report.totalEntries == 0) {
+      throw const FormatException('La respuesta no contiene entradas #EXTINF de una lista M3U.');
     }
-    return channels;
+    return report;
   }
 }
