@@ -98,15 +98,15 @@ jobs:
           if [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             if [[ "$SUPABASE_ANON_KEY" == *.*.* ]]; then
               key_role="$(python3 - "$SUPABASE_ANON_KEY" <<'PY'
-import base64, json, sys
-try:
-    segment = sys.argv[1].split('.')[1]
-    segment += '=' * (-len(segment) % 4)
-    print(json.loads(base64.urlsafe_b64decode(segment.encode())).get('role', ''))
-except Exception:
-    print('')
-PY
-)"
+          import base64, json, sys
+          try:
+              segment = sys.argv[1].split('.')[1]
+              segment += '=' * (-len(segment) % 4)
+              print(json.loads(base64.urlsafe_b64decode(segment.encode())).get('role', ''))
+          except Exception:
+              print('')
+          PY
+          )"
               [[ "$key_role" == "anon" ]] && key_valid=true
             elif [[ "$SUPABASE_ANON_KEY" == sb_publishable_* ]]; then
               key_valid=true
