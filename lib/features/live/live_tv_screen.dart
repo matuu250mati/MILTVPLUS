@@ -99,6 +99,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     setState(() => _loadingChannels = true);
     var remoteLoaded = false;
     var publicFallbackLoaded = false;
+    var cacheSaveFailed = false;
     try {
       final saved = await channelStorage.load();
       final merged = <String, TvChannel>{};
@@ -320,15 +321,22 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       // Persist the final merged result only after all configured public sources
       // have been attempted, so the next launch retains the expanded channel set.
       if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
-        await channelStorage.save(merged.values.toList(growable: false));
+        try {
+          await channelStorage.save(merged.values.toList(growable: false));
+        } catch (_) {
+          // Keep the successfully loaded channels visible even if persistence fails.
+          cacheSaveFailed = true;
+        }
       }
 
       if (showFeedback && mounted) {
-        final message = publicFallbackLoaded
-            ? 'Lista pública inicial cargada: ${channels.length} señales. La reproducción se verifica al abrir cada canal.'
-            : remoteLoaded
-                ? 'Lista recargada: ${channels.length} señales disponibles.'
-                : 'Lista local recargada. No se pudo actualizar el catálogo remoto.';
+        final message = cacheSaveFailed
+            ? 'Canales cargados: ${channels.length}. No se pudo guardar la caché local.'
+            : publicFallbackLoaded
+                ? 'Lista pública inicial cargada: ${channels.length} señales. La reproducción se verifica al abrir cada canal.'
+                : remoteLoaded
+                    ? 'Lista recargada: ${channels.length} señales disponibles.'
+                    : 'Lista local recargada. No se pudo actualizar el catálogo remoto.';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
