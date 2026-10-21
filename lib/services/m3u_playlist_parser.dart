@@ -144,7 +144,6 @@ class M3uPlaylistParser {
 
   bool _isWebPageOnlyHost(String host) {
     const hosts = <String>{
-      'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
       'twitch.tv', 'www.twitch.tv', 'facebook.com', 'www.facebook.com',
       'fb.watch', 'vimeo.com', 'www.vimeo.com', 'dailymotion.com',
       'www.dailymotion.com', 'tiktok.com', 'www.tiktok.com',
