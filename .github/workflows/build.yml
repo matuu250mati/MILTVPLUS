@@ -117,10 +117,11 @@ jobs:
             exit 1
           fi
 
-      - name: Verify required Supabase schema (diagnostic; APK build continues)
+      - name: Verify required Supabase schema
         if: steps.supabase.outputs.configured == 'true'
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -150,9 +151,13 @@ jobs:
             fi
           done
           if [[ "$failed" -ne 0 ]]; then
+            if [[ "$IS_PULL_REQUEST" != true ]]; then
+              echo "::error::Supabase schema/API-key validation failed. Refusing to publish a production APK with a backend that has not passed validation."
+              exit 1
+            fi
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
+              echo "### Supabase schema validation: QA warning"
+              echo "The pull-request APK is for isolated QA only. One or more Supabase requests failed; backend-dependent features are not verified and may not work."
               echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
             } >> "$GITHUB_STEP_SUMMARY"
           else
