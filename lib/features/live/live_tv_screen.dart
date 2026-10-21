@@ -206,6 +206,16 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         }
       }
 
+      // The default TV screen must load Argentina sources too; previously
+      // these playlists were fetched only for explicitly filtered categories,
+      // which left Telefe/C5N absent from the normal TV-in-live entry point.
+      if (requested.isEmpty) {
+        sourceIds.addAll(['argentina', 'free-tv-argentina']);
+      }
+      if (requested.any((value) => ['noticias', 'news', 'tv argentina', 'argentina'].contains(value))) {
+        sourceIds.add('free-tv-argentina');
+      }
+
       for (final item in _publicPlaylistSources.where((source) => sourceIds.contains(source.id))) {
         try {
           final additionalChannels = await m3uPlaylistService.importFromUrl(item.url);
@@ -228,6 +238,30 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         } catch (_) {
           // Una lista pública puede estar caída o geobloqueada; conservamos las demás fuentes.
         }
+      }
+
+      // Provide official web-player fallbacks when a public M3U omits a
+      // broadcaster or its direct stream is unavailable. The player opens only
+      // these broadcasters' own public pages; it does not fabricate an HLS URL.
+      if (!merged.values.any((channel) => channel.name.toLowerCase().contains('telefe'))) {
+        addUnique(const TvChannel(
+          name: 'Telefe (oficial)',
+          streamUrl: 'https://mitelefe.com/telefe-en-vivo',
+          groupTitle: 'Argentina',
+          country: 'AR',
+          language: 'spa',
+          category: 'TV Argentina',
+        ));
+      }
+      if (!merged.values.any((channel) => channel.name.toLowerCase().contains('c5n'))) {
+        addUnique(const TvChannel(
+          name: 'C5N (oficial)',
+          streamUrl: 'https://www.youtube.com/c/c5n/live',
+          groupTitle: 'Noticias',
+          country: 'AR',
+          language: 'spa',
+          category: 'Noticias',
+        ));
       }
 
       if (!mounted) return;
@@ -272,6 +306,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       title: 'Argentina',
       subtitle: 'IPTV-org · canales catalogados por país',
       url: 'https://iptv-org.github.io/iptv/countries/ar.m3u',
+    ),
+    (
+      id: 'free-tv-argentina',
+      title: 'Argentina (señales oficiales adicionales)',
+      subtitle: 'Free-TV/IPTV · incluye reproductores oficiales públicos',
+      url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_argentina.m3u8',
     ),
     (
       id: 'spanish',
