@@ -143,7 +143,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       // Some broadcasters publish their official live signal as a YouTube
       // live page instead of a direct HLS URL. Keep this limited to YouTube
       // hosts; arbitrary web pages are still rejected by the playlist parser.
-      if (_isYoutubeUrl(uri)) {
+      if (_isSupportedWebPlayerUrl(uri)) {
         try {
           final web = WebViewController()
             ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -213,8 +213,10 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     });
   }
 
-  bool _isYoutubeUrl(Uri uri) {
-    const hosts = <String>{
+  bool _isSupportedWebPlayerUrl(Uri uri) {
+    if (uri.scheme != 'https') return false;
+    final host = uri.host.toLowerCase();
+    const youtubeHosts = <String>{
       'youtube.com',
       'www.youtube.com',
       'm.youtube.com',
@@ -222,7 +224,11 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       'youtube-nocookie.com',
       'www.youtube-nocookie.com',
     };
-    return uri.scheme == 'https' && hosts.contains(uri.host.toLowerCase());
+    // Telefe's own live page hosts its player on mitelefe.com. Allow only
+    // that broadcaster domain and YouTube, not arbitrary web pages.
+    return youtubeHosts.contains(host) ||
+        host == 'mitelefe.com' ||
+        host.endsWith('.mitelefe.com');
   }
 
   void _handleControllerUpdate(VideoPlayerController controller, int request) {
