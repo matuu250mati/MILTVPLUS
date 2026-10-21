@@ -225,12 +225,20 @@ class M3uPlaylistParser {
   ).toString();
 
   bool _isWebPageOnlyHost(String host) {
-    const hosts = <String>{
-      'twitch.tv', 'www.twitch.tv', 'facebook.com', 'www.facebook.com',
-      'fb.watch', 'vimeo.com', 'www.vimeo.com', 'dailymotion.com',
-      'www.dailymotion.com', 'tiktok.com', 'www.tiktok.com',
-      'instagram.com', 'www.instagram.com',
+    final normalized = host.toLowerCase().replaceFirst(RegExp(r'\\.
+}
+), '');
+    const domains = <String>{
+      'twitch.tv',
+      'facebook.com',
+      'fb.watch',
+      'vimeo.com',
+      'dailymotion.com',
+      'tiktok.com',
+      'instagram.com',
     };
-    return hosts.contains(host.toLowerCase());
+    return domains.any(
+      (domain) => normalized == domain || normalized.endsWith('.$domain'),
+    );
   }
 }
