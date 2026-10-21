@@ -91,7 +91,7 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
   Widget build(BuildContext context) {
     if (!_introComplete) return const SplashScreen();
 
-    if (!isSupabaseConfigured) return const AuthScreen();
+    if (!isSupabaseConfigured || !supabaseClientInitialized) return const AuthScreen();
 
     final auth = Supabase.instance.client.auth;
     return StreamBuilder<AuthState>(
