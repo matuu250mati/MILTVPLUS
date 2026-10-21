@@ -232,8 +232,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       // which left Telefe/C5N absent from the normal TV-in-live entry point.
       if (requested.isEmpty) {
         // Load every user-supplied public playlist in the unified TV screen:
-        // repository master list, sports, Argentina, Spanish, global index and
-        // Free-TV. Genre classification still routes sports into Deportes.
+        // repository master list, Argentina, Spanish, global index and Free-TV.
+        // The dedicated Deportes screen loads its sports category separately.
         sourceIds.addAll([
           'argentina',
           'free-tv-argentina',
@@ -283,25 +283,30 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       // Provide official web-player fallbacks when a public M3U omits a
       // broadcaster or its direct stream is unavailable. The player opens only
       // these broadcasters' own public pages; it does not fabricate an HLS URL.
-      if (!merged.values.any((channel) => channel.name.toLowerCase().contains('telefe'))) {
-        addUnique(const TvChannel(
-          name: 'Telefe (oficial)',
-          streamUrl: 'https://mitelefe.com/telefe-en-vivo',
-          groupTitle: 'Argentina',
-          country: 'AR',
-          language: 'spa',
-          category: 'TV Argentina',
-        ));
+      const telefeFallback = TvChannel(
+        name: 'Telefe (oficial)',
+        streamUrl: 'https://mitelefe.com/telefe-en-vivo',
+        groupTitle: 'Argentina',
+        country: 'AR',
+        language: 'spa',
+        category: 'TV Argentina',
+      );
+      if (_matchesCategoryFilter(telefeFallback) &&
+          !merged.values.any((channel) => channel.name.toLowerCase().contains('telefe'))) {
+        addUnique(telefeFallback);
       }
-      if (!merged.values.any((channel) => channel.name.toLowerCase().contains('c5n'))) {
-        addUnique(const TvChannel(
-          name: 'C5N (oficial)',
-          streamUrl: 'https://www.youtube.com/c/c5n/live',
-          groupTitle: 'Noticias',
-          country: 'AR',
-          language: 'spa',
-          category: 'Noticias',
-        ));
+
+      const c5nFallback = TvChannel(
+        name: 'C5N (oficial)',
+        streamUrl: 'https://www.youtube.com/c/c5n/live',
+        groupTitle: 'Noticias',
+        country: 'AR',
+        language: 'spa',
+        category: 'Noticias',
+      );
+      if (_matchesCategoryFilter(c5nFallback) &&
+          !merged.values.any((channel) => channel.name.toLowerCase().contains('c5n'))) {
+        addUnique(c5nFallback);
       }
 
       if (!mounted) return;
