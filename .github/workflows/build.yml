@@ -87,14 +87,17 @@ jobs:
         run: |
           set -euo pipefail
           SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | xargs)"
-          SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
+          # Trim accidental copy/paste whitespace without printing either secret.
+          SUPABASE_ANON_KEY="$(printf '%s' "${SUPABASE_ANON_KEY:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
           url_valid=false
           key_valid=false
           [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] && url_valid=true
-          [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]] && key_valid=true
+          [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]] && key_valid=true
+          echo "url_format_valid=$url_valid" >> "$GITHUB_OUTPUT"
+          echo "key_format_valid=$key_valid" >> "$GITHUB_OUTPUT"
 
           if [[ "$url_valid" == true && "$key_valid" == true ]]; then
             echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
@@ -107,7 +110,13 @@ jobs:
             echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=" >> "$GITHUB_ENV"
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Supabase secrets are missing or malformed. Continuing only with an unconfigured QA APK; authentication and catalog features will not work until valid settings are supplied."
+            if [[ "$url_valid" != true && "$key_valid" != true ]]; then
+              echo "::warning::SUPABASE_URL format is invalid or missing, and SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
+            elif [[ "$url_valid" != true ]]; then
+              echo "::warning::SUPABASE_URL is missing or must match https://<project-ref>.supabase.co. QA-only APK will be built without Supabase."
+            else
+              echo "::warning::SUPABASE_ANON_KEY is empty or contains internal whitespace. QA-only APK will be built without Supabase."
+            fi
             {
               echo "### Supabase configuration: QA-only"
               echo "This pull-request APK is compiled without backend credentials because the repository secrets are absent or malformed. Login and database-backed catalogs are not expected to work in this QA build."
