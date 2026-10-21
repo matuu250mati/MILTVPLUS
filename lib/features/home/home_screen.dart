@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .map((url) => url.trim())
         .where((url) => url.isNotEmpty)
         .toSet()
-        .toList(growable: false);
+        .toList();
     if (urls.isEmpty && channel.urlStream.trim().isNotEmpty) {
       urls.add(channel.urlStream.trim());
     }
