@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: miltvplus-apk-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
