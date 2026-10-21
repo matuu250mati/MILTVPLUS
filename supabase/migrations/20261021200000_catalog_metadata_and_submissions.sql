@@ -192,6 +192,34 @@ alter table public.series enable row level security;
 alter table public.episodes enable row level security;
 alter table public.content_submissions enable row level security;
 
+-- Remove legacy permissive policies on these catalog tables before creating
+-- the intended policies. PostgreSQL combines permissive policies with OR, so
+-- simply adding a restrictive-looking policy would not neutralize an old one.
+do $
+declare
+  existing_policy record;
+begin
+  for existing_policy in
+    select tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in ('channels', 'movies', 'series', 'episodes', 'content_submissions')
+  loop
+    execute format(
+      'drop policy %I on public.%I',
+      existing_policy.policyname,
+      existing_policy.tablename
+    );
+  end loop;
+end
+$;
+
+revoke insert, update, delete, truncate, references, trigger
+  on public.channels, public.movies, public.series, public.episodes
+  from anon, authenticated;
+revoke update, delete, truncate, references, trigger
+  on public.content_submissions from anon, authenticated;
+
 grant select on public.channels, public.movies, public.series, public.episodes,
   public.content_submissions to anon, authenticated;
 grant insert on public.content_submissions to authenticated;
