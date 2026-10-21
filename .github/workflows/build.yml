@@ -25,7 +25,7 @@ jobs:
   build:
     # Use environment-level secrets for the matching Supabase project.
     environment:
-      name: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing)) && 'production' || 'qa' }}
+      name: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing)) && 'production' || 'miltvplus-qa' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
