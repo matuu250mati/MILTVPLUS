@@ -12,8 +12,8 @@ import 'core/supabase_config.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Keep the official video_player backend on Android/iOS/web, and register
-  // the compatible native backend on Windows, macOS and Linux.
-  fvp.registerWith(options: const {'platforms': ['windows', 'macos', 'linux']});
+  // the compatible native backend only on supported desktop targets.
+  fvp.registerWith(options: const {'platforms': ['windows', 'macos']});
 
   // Render Flutter immediately. Preferences and Supabase must not prevent the
   // first frame from appearing.
