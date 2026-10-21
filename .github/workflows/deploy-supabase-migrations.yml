@@ -98,7 +98,7 @@ jobs:
           set -euo pipefail
           declare -A required_columns=(
             [channels]="title,url_stream,is_published,sort_order,logo"
-            [movies]="title,url_stream,is_published,created_at"
+            [movies]="title,url_stream,stream_urls,is_published,created_at"
             [series]="title,is_published"
             [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
             [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
