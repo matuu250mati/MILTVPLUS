@@ -69,6 +69,13 @@ class M3uPlaylistParser {
         incomplete++;
         continue;
       }
+      // Android blocks cleartext traffic and iOS does not allow arbitrary HTTP
+      // endpoints without domain-specific exceptions. Do not count these as
+      // imported when the player cannot safely play them.
+      if (uri.scheme != 'https') {
+        unsupported++;
+        continue;
+      }
       if (_isWebPageOnlyHost(uri.host)) {
         unsupported++;
         continue;

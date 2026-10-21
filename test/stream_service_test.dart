@@ -49,7 +49,7 @@ void m3uParserTests() {
   const parser = M3uPlaylistParser();
 
   group('M3uPlaylistParser URL validation', () {
-    test('keeps HTTP and HTTPS channels but filters credential URLs', () {
+    test('keeps HTTPS channels and rejects HTTP or credential URLs', () {
       const playlist = '''
 #EXTM3U
 #EXTINF:-1,HTTPS News
@@ -61,12 +61,10 @@ https://user:pass@stream.example/private.m3u8
 ''';
       final channels = parser.parse(playlist);
 
-      expect(channels, hasLength(2));
+      expect(channels, hasLength(1));
       expect(channels.first, isA<TvChannel>());
       expect(channels.first.name, 'HTTPS News');
       expect(channels.first.streamUrl, 'https://stream.example/news/index.m3u8');
-      expect(channels.last.name, 'HTTP Legacy');
-      expect(channels.last.streamUrl, 'http://legacy.example/live.m3u8');
     });
 
     test('deduplicates stream URLs that differ only by fragment', () {

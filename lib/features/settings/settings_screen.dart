@@ -166,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _showMessage(
         '$title — entradas: ${report.totalEntries}; importadas: ${report.imported}; '
         'duplicadas en la lista: ${report.duplicates}; incompletas: ${report.incomplete}; '
-        'páginas no reproducibles directamente: ${report.unsupported}; '
+        'fuentes no compatibles: ${report.unsupported}; '
         'total único local: ${merged.length}.',
       );
     } catch (_) {
