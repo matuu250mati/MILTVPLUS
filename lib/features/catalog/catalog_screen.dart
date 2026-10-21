@@ -523,7 +523,12 @@ class _CatalogDetailScreenState extends State<_CatalogDetailScreen> {
   bool _liked = false;
   bool _preferencesLoaded = false;
 
-  String get _key => widget.entry.title.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  String get _key {
+    final entry = widget.entry;
+    if (entry.seriesId != null) return 'series:${entry.seriesId}';
+    final normalizedTitle = entry.title.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    return '${entry.category.trim().toLowerCase()}:$normalizedTitle';
+  }
 
   @override
   void initState() {
