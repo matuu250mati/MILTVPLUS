@@ -46,11 +46,6 @@ jobs:
             runner: ubuntu-latest
             artifact_path: build/web/**
             command: flutter build web --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
-          - platform: windows
-            label: Windows desktop
-            runner: windows-latest
-            artifact_path: build/windows/x64/runner/Release/**
-            command: flutter build windows --release --dart-define=SUPABASE_URL=https://build-only.supabase.co --dart-define=SUPABASE_ANON_KEY=build-only-placeholder
 
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
