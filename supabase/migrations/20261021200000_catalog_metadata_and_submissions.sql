@@ -135,6 +135,14 @@ create index if not exists movies_published_idx on public.movies (is_published, 
 create index if not exists series_published_idx on public.series (is_published, title);
 create index if not exists episodes_series_order_idx on public.episodes (series_id, season_number, episode_number);
 
+-- Repair malformed legacy mirror values before enforcing the array invariant.
+update public.movies
+set stream_urls = '[]'::jsonb
+where jsonb_typeof(stream_urls) is distinct from 'array';
+update public.channels
+set stream_urls = '[]'::jsonb
+where jsonb_typeof(stream_urls) is distinct from 'array';
+
 alter table public.movies drop constraint if exists movies_stream_urls_array_check;
 alter table public.movies add constraint movies_stream_urls_array_check
   check (jsonb_typeof(stream_urls) = 'array');
