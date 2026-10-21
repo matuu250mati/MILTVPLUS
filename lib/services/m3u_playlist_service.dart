@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../models/tv_channel.dart';
 import 'm3u_playlist_parser.dart';
 
 /// Downloads and diagnoses a user-provided M3U/M3U8 playlist.
@@ -22,7 +23,7 @@ class M3uPlaylistService {
   final M3uPlaylistParser _parser = const M3uPlaylistParser();
 
   /// Compatibility method retained for existing callers.
-  Future<List<dynamic>> importFromUrl(String value) async =>
+  Future<List<TvChannel>> importFromUrl(String value) async =>
       (await importReportFromUrl(value)).channels;
 
   Future<M3uParseReport> importReportFromUrl(String value) async {
