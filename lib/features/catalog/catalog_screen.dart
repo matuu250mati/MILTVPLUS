@@ -74,16 +74,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<List<_CatalogEntry>> _loadEntries() async {
     if (widget.category == 'SERIES') {
-      final results = await Future.wait<dynamic>([
-        _catalogService.getSeries(),
-        _loadApprovedSubmissions('episode'),
-      ]);
-      final series = results[0] as List<SeriesModel>;
-      final submittedEpisodes = results[1] as List<Map<String, dynamic>>;
-      return <_CatalogEntry>[
-        ...series.map(_CatalogEntry.fromSeries),
-        ...submittedEpisodes.map(_CatalogEntry.fromSubmission),
-      ];
+      // Keep the series index strictly at series level. Episodes belong inside
+      // their parent series detail and are loaded from the episodes relation;
+      // orphan community episode submissions must not appear as fake series.
+      final series = await _catalogService.getSeries();
+      final entries = series.map(_CatalogEntry.fromSeries).toList(growable: false);
+      return entries;
     }
 
     final results = await Future.wait<dynamic>([
