@@ -230,6 +230,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Settings detail pages contain dense forms and help text. Clamp only the
+    // inherited system text scale here so extreme Android font settings cannot
+    // overflow cards or make the page impossible to scroll, while retaining a
+    // modest accessibility increase and the app's own text-size preference.
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: media.copyWith(
+        textScaler: media.textScaler.clamp(maxScaleFactor: 1.2),
+      ),
+      child: _buildSettingsContent(context),
+    );
+  }
+
+  Widget _buildSettingsContent(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
 
