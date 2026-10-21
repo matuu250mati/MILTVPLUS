@@ -79,7 +79,8 @@ jobs:
       - name: Validate Supabase configuration
         id: supabase
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Project URL is public configuration, not a secret; pin it to the configured MILTVPLUS Supabase project.
+          SUPABASE_URL: https://uoqfovrynlyterjylpqj.supabase.co
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         shell: bash
