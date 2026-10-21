@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../models/tv_channel.dart';
 import '../../services/hls_variant_service.dart';
@@ -24,6 +25,8 @@ class LivePlayerScreen extends StatefulWidget {
 class _LivePlayerScreenState extends State<LivePlayerScreen> {
   final _variantService = HlsVariantService();
   VideoPlayerController? _controller;
+  WebViewController? _webController;
+  bool _webMode = false;
   List<HlsVariant> _variants = const [];
   int _index = 0;
   int _requestId = 0;
@@ -107,6 +110,8 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
 
     final previous = _controller;
     _controller = null;
+    _webController = null;
+    _webMode = false;
     setState(() {
       _index = index;
       _loading = true;
@@ -133,6 +138,33 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           uri.scheme != 'https') {
         lastFailure = 'Se omitió una URL de transmisión no válida.';
         continue;
+      }
+
+      // Some broadcasters publish their official live signal as a YouTube
+      // live page instead of a direct HLS URL. Keep this limited to YouTube
+      // hosts; arbitrary web pages are still rejected by the playlist parser.
+      if (_isYoutubeUrl(uri)) {
+        try {
+          final web = WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..setBackgroundColor(Colors.black);
+          await web.loadRequest(uri).timeout(const Duration(seconds: 12));
+          if (!mounted || request != _requestId) return;
+          _webController = web;
+          _webMode = true;
+          _activeStreamIndex = candidateIndex;
+          setState(() {
+            _loading = false;
+            _error = null;
+            _recovering = false;
+          });
+          _showControls();
+          return;
+        } catch (_) {
+          if (!mounted || request != _requestId) return;
+          lastFailure = 'No se pudo abrir el reproductor oficial de YouTube.';
+          continue;
+        }
       }
 
       final next = VideoPlayerController.networkUrl(
@@ -179,6 +211,18 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           ? 'Este canal todavía no tiene una URL de transmisión publicada.'
           : 'No se pudo reproducir esta señal con las fuentes disponibles. $lastFailure';
     });
+  }
+
+  bool _isYoutubeUrl(Uri uri) {
+    const hosts = <String>{
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'youtu.be',
+      'youtube-nocookie.com',
+      'www.youtube-nocookie.com',
+    };
+    return uri.scheme == 'https' && hosts.contains(uri.host.toLowerCase());
   }
 
   void _handleControllerUpdate(VideoPlayerController controller, int request) {
@@ -280,11 +324,13 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
         backgroundColor: Colors.black,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _showControls,
+          onTap: _webMode ? null : _showControls,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (ready)
+              if (_webMode && _webController != null)
+                WebViewWidget(controller: _webController!)
+              else if (ready)
                 Center(
                   child: AspectRatio(
                     aspectRatio: controller!.value.aspectRatio > 0
