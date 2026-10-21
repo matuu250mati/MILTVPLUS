@@ -111,7 +111,7 @@ alter table public.content_submissions enable row level security;
 revoke insert, update, delete, truncate, references, trigger
   on public.channels, public.movies, public.series, public.episodes
   from anon, authenticated;
-revoke update, delete, truncate, references, trigger
+revoke insert, update, delete, truncate, references, trigger
   on public.content_submissions from anon, authenticated;
 
 grant select on public.channels, public.movies, public.series, public.episodes,
