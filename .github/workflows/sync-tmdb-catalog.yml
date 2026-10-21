@@ -1,6 +1,11 @@
 name: Sync TMDB catalog metadata
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-tmdb-catalog.yml'
+      - 'supabase/functions/sync-tmdb-catalog/**'
   workflow_dispatch:
     inputs:
       pages:
@@ -13,55 +18,113 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: miltvplus-tmdb-catalog-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Validate configuration
+        id: config
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
-          for name in SUPABASE_URL SUPABASE_ANON_KEY SYNC_SECRET; do
-            if [[ -z "${!name//[[:space:]]/}" ]]; then
-              echo "::error::Catalog sync cannot run: required secret $name is missing. No metadata was imported."
-              exit 1
-            fi
-          done
+          missing=()
+          [[ -n "${SUPABASE_URL//[[:space:]]/}" ]] || missing+=("SUPABASE_URL")
+          [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" ]] || missing+=("SUPABASE_ANON_KEY")
+          [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]] || missing+=("SUPABASE_ACCESS_TOKEN")
+          [[ -n "${SYNC_SECRET//[[:space:]]/}" ]] || missing+=("MILTVPLUS_CATALOG_SYNC_SECRET")
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Catalog sync cannot run. Missing repository secrets: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
           normalized="${SUPABASE_URL%/}"
           if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co. No metadata was imported."
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co."
             exit 1
           fi
           project_ref="${BASH_REMATCH[1]}"
           if [[ "$project_ref" != "mkdubrwdgorpobbrxdzy" ]]; then
-            echo "::error::Catalog metadata sync is production-only and must target project mkdubrwdgorpobbrxdzy; got $project_ref. No metadata was imported."
+            echo "::error::Catalog sync is production-only and must target project mkdubrwdgorpobbrxdzy; got $project_ref."
             exit 1
           fi
+          echo "SUPABASE_PROJECT_ID=$project_ref" >> "$GITHUB_ENV"
           echo "SUPABASE_URL_NORMALIZED=$normalized" >> "$GITHUB_ENV"
-          echo "Validated required sync secrets and production project target."
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/checkout@v5
+
+      - name: Install Supabase CLI
+        if: steps.config.outputs.configured == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy catalog sync function to production
+        if: steps.config.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy sync-tmdb-catalog --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Sync movies and series metadata
+        if: steps.config.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
           REQUESTED_PAGES: ${{ inputs.pages || '5' }}
+        shell: bash
         run: |
+          set -euo pipefail
           pages="$REQUESTED_PAGES"
           case "$pages" in
             1|2|3|4|5) ;;
-            *) echo "pages must be between 1 and 5"; exit 2 ;;
+            *) echo "::error::pages must be between 1 and 5"; exit 2 ;;
           esac
-          response="$(curl --fail-with-body --silent --show-error \
+
+          body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
+          status="$(curl --silent --show-error --max-time 180 \
+            --output "$body_file" --write-out '%{http_code}' \
             --request POST "$SUPABASE_URL_NORMALIZED/functions/v1/sync-tmdb-catalog" \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
             --header "x-sync-secret: $SYNC_SECRET" \
-            --data "{\"pages\":$pages,\"includeMovies\":true,\"includeSeries\":true}")"
-          echo "$response"
-          echo "$response" | grep -q '"ok":true' || { echo "Catalog sync did not report success"; exit 1; }
+            --data "{\"pages\":$pages,\"includeMovies\":true,\"includeSeries\":true}")" || {
+              echo "::error::Could not reach Supabase Edge Function endpoint."
+              cat "$body_file"
+              exit 1
+            }
+          cat "$body_file"
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            if [[ "$status" == "404" ]]; then
+              echo "::error::Supabase returned 404 after deployment. Confirm the URL and function deployment."
+            elif [[ "$status" == "401" ]]; then
+              echo "::error::Supabase rejected the sync request. Check SUPABASE_ANON_KEY and ensure the repository sync secret matches the Edge Function SYNC_SECRET."
+            elif [[ "$status" == "500" ]]; then
+              echo "::error::The function may be missing TMDB_API_KEY, SYNC_SECRET, or the server-side Supabase service-role key."
+            else
+              echo "::error::Catalog sync endpoint returned HTTP $status."
+            fi
+            exit 1
+          fi
+          grep -q '"ok":true' "$body_file" || {
+            echo "::error::Catalog sync returned HTTP success without an ok=true result."
+            exit 1
+          }
+          echo "Catalog metadata synchronization completed successfully."
