@@ -97,10 +97,10 @@ jobs:
         run: |
           set -euo pipefail
           declare -A required_columns=(
-            [channels]="title,url_stream,is_published,sort_order,logo"
-            [movies]="title,url_stream,stream_urls,is_published,created_at"
-            [series]="title,is_published"
-            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [channels]="title,url_stream,stream_urls,category,country_code,is_published,sort_order,logo"
+            [movies]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,url_stream,stream_urls,release_year,duration_seconds,country_code,is_published,created_at,updated_at"
+            [series]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,release_year,country_code,is_published,created_at,updated_at"
+            [episodes]="series_id,title,synopsis,logo,url_stream,duration_seconds,is_published,season_number,episode_number,created_at"
             [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
           )
           failed=0
