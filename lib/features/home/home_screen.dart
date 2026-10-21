@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
-import '../catalog/catalog_player_screen.dart';
+import '../catalog/catalog_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -177,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (item.releaseYear != null) item.releaseYear.toString(),
                         item.category,
                       ].join(' · '),
-                      onTap: (item) => widget.onNavigate(3),
+                      onTap: (item) => CatalogScreen.openSeriesDetail(context, item),
                     ),
                   if (snapshot.hasError) ...[
                     const SizedBox(height: 12),
@@ -206,20 +206,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _openMovie(MovieModel movie) async {
-    if (movie.urlStream.trim().isEmpty) {
-      widget.onNavigate(2);
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CatalogPlayerScreen(
-          title: movie.title,
-          streamUrl: movie.urlStream,
-        ),
-      ),
-    );
-  }
+  Future<void> _openMovie(MovieModel movie) =>
+      CatalogScreen.openMovieDetail(context, movie);
 }
 
 class _HomeData {
