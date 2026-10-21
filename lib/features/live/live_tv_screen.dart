@@ -695,6 +695,7 @@ class _ChannelList extends StatelessWidget {
     required this.onSelect,
     this.loading = false,
   });
+
   final List<TvChannel> channels;
   final int selected;
   final String query;
@@ -720,115 +721,169 @@ class _ChannelList extends StatelessWidget {
                 (channels[i].groupTitle?.toLowerCase().contains(normalizedQuery) ?? false) ||
                 (channels[i].country?.toLowerCase().contains(normalizedQuery) ?? false)) &&
             (selectedGroup == 'Todos' || channels[i].liveSection == selectedGroup) &&
-            (selectedCountry == 'Todos' || _normalizeCountry(channels[i].country) == _normalizeCountry(selectedCountry)))
+            (selectedCountry == 'Todos' ||
+                _normalizeCountry(channels[i].country) ==
+                    _normalizeCountry(selectedCountry)))
           i,
     ];
+
     return ColoredBox(
       color: AppTheme.panel.withValues(alpha: .35),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(padding: EdgeInsets.fromLTRB(8, 10, 8, 8),
-              child: Text('CANALES', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-            child: TextField(
-              controller: searchController,
-              onChanged: onQueryChanged,
-              decoration: InputDecoration(
-                hintText: 'Buscar canal o país...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: query.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Borrar búsqueda',
-                        onPressed: () {
-                          searchController.clear();
-                          onQueryChanged('');
-                        },
-                        icon: const Icon(Icons.close_rounded),
+      child: CustomScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        slivers: [
+          // Search and filters are part of the same vertical scroll as the
+          // channel rows; they are not pinned and cannot cover the list.
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(8, 10, 8, 8),
+                  child: Text(
+                    'CANALES',
+                    style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: onQueryChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar canal o país...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: query.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Borrar búsqueda',
+                              onPressed: () {
+                                searchController.clear();
+                                onQueryChanged('');
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+                    ),
+                  ),
+                ),
+                if (groups.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(6, 8, 6, 4),
+                    child: Text(
+                      'CATEGORÍA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.muted,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 42,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      children: [
+                        for (final value in <String>['Todos', ...groups])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ChoiceChip(
+                              label: Text('${_categoryIcon(value)} $value'),
+                              selected: selectedGroup == value,
+                              autofocus: selectedGroup == value,
+                              onSelected: (_) => onGroupChanged(value),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (countries.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(6, 6, 6, 4),
+                    child: Text(
+                      'PAÍS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.muted,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 42,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      children: [
+                        for (final value in <String>['Todos', ...countries])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ChoiceChip(
+                              label: Text('${_countryFlag(value)} $value'),
+                              selected: selectedCountry == value,
+                              onSelected: (_) => onCountryChanged(value),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                const Divider(height: 1, color: Color(0x223FFFFF)),
+              ],
             ),
           ),
-          if (groups.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(6, 8, 6, 4),
-              child: Text('CATEGORÍA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
-            ),
-            SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                children: [
-                  for (final value in <String>['Todos', ...groups])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text('${_categoryIcon(value)} $value'),
-                        selected: selectedGroup == value,
-                        autofocus: selectedGroup == value,
-                        onSelected: (_) => onGroupChanged(value),
-                      ),
-                    ),
-                ],
+          if (channels.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: loading
+                      ? const CircularProgressIndicator()
+                      : const Text(
+                          'Todavía no hay canales. Elegí una fuente pública o importá tu lista M3U.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.muted, height: 1.5),
+                        ),
+                ),
               ),
-            ),
-          ],
-          if (countries.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(6, 6, 6, 4),
-              child: Text('PAÍS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.muted)),
-            ),
-            SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                children: [
-                  for (final value in <String>['Todos', ...countries])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text('${_countryFlag(value)} $value'),
-                        selected: selectedCountry == value,
-                        onSelected: (_) => onCountryChanged(value),
-                      ),
-                    ),
-                ],
+            )
+          else if (filteredIndices.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Text(
+                    'No se encontraron canales con esa búsqueda.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.muted),
+                  ),
+                ),
               ),
-            ),
-          ],
-          const Divider(height: 1, color: Color(0x223FFFFF)),
-          Expanded(
-            child: channels.isEmpty
-                ? loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : const Center(child: Padding(padding: EdgeInsets.all(18),
-                        child: Text('Todavía no hay canales. Elegí una fuente pública o importá tu lista M3U.',
-                            textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, height: 1.5))))
-                : filteredIndices.isEmpty
-                    ? const Center(child: Padding(padding: EdgeInsets.all(18),
-                        child: Text('No se encontraron canales con esa búsqueda.',
-                            textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted))))
-                    : ListView.separated(
-                        itemCount: filteredIndices.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0x1AFFFFFF)),
-                        itemBuilder: (context, index) {
-                          final channelIndex = filteredIndices[index];
-                          final channel = channels[channelIndex];
-                          return ListTile(
-                            // Native Flutter focus support for Android TV / TV Box D-pad.
-                            // Keep the existing layout; only expose a visible focus highlight.
-                            autofocus: index == 0,
-                            focusColor: AppTheme.accent.withValues(alpha: .16),
-                            selected: selected == channelIndex,
-                            selectedTileColor: AppTheme.accent.withValues(alpha: .08),
-                            onTap: () => onSelect(channelIndex),
-                            leading: channel.logoUrl?.isNotEmpty == true
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final channelIndex = filteredIndices[index];
+                  final channel = channels[channelIndex];
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        // Native Flutter focus support for Android TV / TV Box D-pad.
+                        autofocus: index == 0,
+                        focusColor: AppTheme.accent.withValues(alpha: .16),
+                        selected: selected == channelIndex,
+                        selectedTileColor: AppTheme.accent.withValues(alpha: .08),
+                        onTap: () => onSelect(channelIndex),
+                        leading: channel.logoUrl?.isNotEmpty == true
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: Image.network(
@@ -838,26 +893,46 @@ class _ChannelList extends StatelessWidget {
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, __, ___) => Icon(
                                     Icons.live_tv_rounded,
-                                    color: selected == channelIndex ? AppTheme.accent : AppTheme.muted,
+                                    color: selected == channelIndex
+                                        ? AppTheme.accent
+                                        : AppTheme.muted,
                                   ),
                                 ),
                               )
-                            : Icon(Icons.live_tv_rounded, size: 22, color: selected == channelIndex ? AppTheme.accent : AppTheme.muted),
-                            title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(
-                              [
-                                if (channel.groupTitle?.isNotEmpty == true) channel.groupTitle!,
-                                if (channel.country?.isNotEmpty == true) '${_countryFlag(channel.country!)} ${channel.country!}',
-                                if (channel.groupTitle == null && channel.country == null) 'TV EN VIVO',
-                              ].join(' · '),
-                              style: const TextStyle(color: AppTheme.muted, fontSize: 10),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        },
+                            : Icon(
+                                Icons.live_tv_rounded,
+                                size: 22,
+                                color: selected == channelIndex
+                                    ? AppTheme.accent
+                                    : AppTheme.muted,
+                              ),
+                        title: Text(
+                          channel.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          [
+                            if (channel.groupTitle?.isNotEmpty == true)
+                              channel.groupTitle!,
+                            if (channel.country?.isNotEmpty == true)
+                              '${_countryFlag(channel.country!)} ${channel.country!}',
+                            if (channel.groupTitle == null && channel.country == null)
+                              'TV EN VIVO',
+                          ].join(' · '),
+                          style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-          ),
+                      if (index != filteredIndices.length - 1)
+                        const Divider(height: 1, color: Color(0x1AFFFFFF)),
+                    ],
+                  );
+                },
+                childCount: filteredIndices.length,
+              ),
+            ),
         ],
       ),
     );
