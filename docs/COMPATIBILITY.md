@@ -8,6 +8,7 @@ Esta matriz distingue entre una compilación correcta y una reproducción valida
 | --- | --- | --- |
 | Android móvil/tablet | Plataforma principal; APK y autenticación existentes | Pruebas en dispositivos reales, inicio/cierre de sesión, enlaces profundos y reproducción de las fuentes autorizadas |
 | Android TV / Google TV | Manifiesto de TV y navegación D-pad existentes | Probar mando físico, foco visible, retorno, reproducción HLS y diferentes resoluciones |
+| Emuladores Android | El mismo APK Android es el artefacto de prueba; no requiere cliente separado | Probar versiones/API de Android, tamaños y densidades de pantalla, teclado/D-pad, aceleración de vídeo, códecs y reproducción; el resultado solo cubre las imágenes y configuraciones probadas |
 | Fire TV / TV Box Android | Puede ejecutar el APK si la versión del sistema y sus servicios son compatibles | Validar por modelo; Fire OS y los códecs disponibles varían |
 | Navegador web | Se agrega compilación Flutter Web de verificación | Configurar Supabase, CORS, URLs de retorno y alojamiento de la app; la página informativa no es por sí misma el reproductor web |
 | Windows / macOS / Linux desktop | Fuera del alcance actual; no se compilan ni validan como objetivos de escritorio | Reabrir únicamente cuando el proyecto lo priorice expresamente; Linux desktop queda excluido según la decisión actual |
@@ -27,11 +28,12 @@ Las compilaciones de verificación usan valores ficticios de Supabase y no deben
 
 1. El build de esa plataforma termina correctamente.
 2. La app arranca y la autenticación funciona con el proyecto Supabase real.
-3. El catálogo carga datos publicados con políticas RLS correctas.
-4. Se reproduce al menos una fuente HLS y una MP4 autorizadas; se comprueban CORS, HTTPS, redirecciones y códecs.
-5. Se verifica navegación, foco, retroceso, orientación y recuperación tras perder la conexión.
-6. Se prueba en un equipo físico representativo y se registra modelo, versión del sistema y resultado.
-7. El paquete final está firmado cuando la plataforma lo requiere y tiene checksum de publicación.
+3. En emuladores, registrar la imagen/API, resolución, configuración gráfica y dispositivo virtual; no generalizar el resultado a todos los emuladores.
+4. El catálogo carga datos publicados con políticas RLS correctas.
+5. Se reproduce al menos una fuente HLS y una MP4 autorizadas; se comprueban CORS, HTTPS, redirecciones y códecs.
+6. Se verifica navegación, foco, retroceso, orientación y recuperación tras perder la conexión.
+7. Se prueba en un equipo físico representativo y se registra modelo, versión del sistema y resultado.
+8. El paquete final está firmado cuando la plataforma lo requiere y tiene checksum de publicación.
 
 ## Límites importantes
 
