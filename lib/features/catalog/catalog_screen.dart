@@ -482,7 +482,8 @@ class _CatalogCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
           ),
-          if (entry.streamUrl == null || entry.streamUrl!.trim().isEmpty) ...[
+          if (entry.seriesId == null &&
+              (entry.streamUrl == null || entry.streamUrl!.trim().isEmpty)) ...[
             const SizedBox(height: 4),
             const Text(
               'SIN ENLACE DE REPRODUCCIÓN',
