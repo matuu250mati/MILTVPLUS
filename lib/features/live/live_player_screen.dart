@@ -337,7 +337,15 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
             fit: StackFit.expand,
             children: [
               if (_webMode && _webController != null)
-                WebViewWidget(controller: _webController!)
+                Listener(
+                  // Pointer listeners do not claim the gesture, so the web
+                  // player remains tappable while a hidden app overlay can be
+                  // brought back with a touch.
+                  onPointerDown: (_) {
+                    if (!_controlsVisible) _showControls();
+                  },
+                  child: WebViewWidget(controller: _webController!),
+                )
               else if (ready)
                 Center(
                   child: AspectRatio(
