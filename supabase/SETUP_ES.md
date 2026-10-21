@@ -12,11 +12,11 @@ Se agregó la migración no destructiva `supabase/migrations/20261014090000_chan
 
 ## Estado de la última comprobación automática
 
-**Actualizado el 15/10/2026:** la ejecución de GitHub Actions más reciente consultó las columnas requeridas de `channels`, `movies`, `series`, `episodes` y `content_submissions`; las cinco devolvieron HTTP 200 y resolvieron las columnas solicitadas.
+**Comprobación automática de CI (21/10/2026):** el flujo de QA consultó las columnas requeridas de `channels`, `movies`, `series`, `episodes` y `content_submissions`; las cinco devolvieron HTTP 200. Esta validación corresponde al proyecto QA seleccionado por el workflow, no certifica por sí sola el proyecto de producción.
 
 El registro del 14/10/2026 había detectado nombres heredados en `channels` y un HTTP 404 para `content_submissions`. Esos hallazgos son históricos y no deben tomarse como el estado actual sin repetir la comprobación. Conservamos la migración de compatibilidad por si se configura otro proyecto o reaparece una diferencia de esquema.
 
-La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de columna usados en la consulta de diagnóstico. **No garantiza** que existan filas visibles para el rol anónimo, que las políticas RLS permitan cada operación de lectura/escritura ni que todos los flujos de cuenta y moderación funcionen. Verificá esas operaciones con pruebas funcionales y políticas del proyecto correcto antes de dar Supabase por cerrado.
+La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de columna usados en la consulta de diagnóstico. **No garantiza** que existan filas visibles para el rol anónimo, que las políticas RLS permitan cada operación de lectura/escritura ni que todos los flujos de cuenta y moderación funcionen. Antes de dar Supabase por cerrado, repetí la verificación en producción y probá autenticación, lectura como anon y authenticated, envíos de contenido y moderación.
 
 ## Despliegue automatizado de migraciones
 
@@ -27,7 +27,7 @@ El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que s
 - `SUPABASE_URL`: URL raíz `https://<project-ref>.supabase.co`.
 - `SUPABASE_ANON_KEY`: clave pública anon/publishable correspondiente al proyecto.
 
-El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. En este repositorio ya se validó que `SUPABASE_URL` y `SUPABASE_ANON_KEY` están disponibles para compilar; lo que falta para desplegar es configurar `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD`.
+El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. Que el APK compile no demuestra que `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD` estén configurados para el entorno `production`. Confirmá que los cuatro secretos estén presentes en el entorno de GitHub Actions `production`; no los pegues en el chat. El workflow ahora rechaza explícitamente cualquier proyecto cuyo ref no sea el de producción esperado.
 
 No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
 
@@ -100,7 +100,7 @@ Confirmá que la consulta de verificación devuelva exactamente una cuenta con e
 
 ## 5. Verificar las políticas del catálogo
 
-Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. El esquema base `supabase/schema.sql` incluye esas políticas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
+Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. **Atención: hay una diferencia histórica de intención en el repositorio:** `supabase/schema.sql` y las migraciones `20261013090000`/`20261013090100` permiten lectura anónima de filas publicadas, mientras que `20261014143100_require_auth_for_catalog.sql` cambia el acceso de canales, películas, series y episodios a `authenticated` solamente. La política efectiva después de aplicar todas las migraciones es la última, salvo cambios manuales posteriores. Antes de publicar, decidí y verificá el requisito real: catálogo visible antes de iniciar sesión o catálogo solo para usuarios autenticados. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
 ## 6. Prueba de aceptación
 
