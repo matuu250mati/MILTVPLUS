@@ -20,7 +20,7 @@ create table if not exists public.channels (
 
 create table if not exists public.movies (
   id uuid primary key default gen_random_uuid(),
-  tmdb_id bigint unique,
+  tmdb_id bigint,
   title text not null,
   synopsis text not null default '',
   category text not null default 'Películas',
@@ -39,7 +39,7 @@ create table if not exists public.movies (
 
 create table if not exists public.series (
   id uuid primary key default gen_random_uuid(),
-  tmdb_id bigint unique,
+  tmdb_id bigint,
   title text not null,
   synopsis text not null default '',
   category text not null default 'Series',
