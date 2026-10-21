@@ -153,7 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_importingPlaylist) return;
     setState(() => _importingPlaylist = true);
     try {
-      final imported = await _playlistService.importFromUrl(normalizedUrl);
+      final report = await _playlistService.importReportFromUrl(normalizedUrl);
+      final imported = report.channels;
       final merged = <String, TvChannel>{};
       for (final channel in await _channelStorage.load()) {
         merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
@@ -162,7 +163,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
       }
       await _channelStorage.save(merged.values.toList(growable: false));
-      _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
+      _showMessage(
+        '$title — entradas: ${report.totalEntries}; importadas: ${report.imported}; '
+        'duplicadas en la lista: ${report.duplicates}; incompletas: ${report.incomplete}; '
+        'páginas no reproducibles directamente: ${report.unsupported}; '
+        'total único local: ${merged.length}.',
+      );
     } catch (_) {
       _showMessage('No se pudo cargar $title. Verificá que la lista sea pública, HTTPS y compatible con M3U.');
     } finally {
