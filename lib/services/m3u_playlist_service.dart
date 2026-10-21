@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -40,22 +39,25 @@ class M3uPlaylistService {
     }
 
     const maxPlaylistBytes = 120 * 1024 * 1024;
-    final bytes = BytesBuilder(copy: false);
     var receivedBytes = 0;
-    await for (final chunk in responseBody.stream) {
-      receivedBytes += chunk.length;
-      if (receivedBytes > maxPlaylistBytes) {
-        throw const FormatException('La lista supera el límite configurado de 120 MB.');
+
+    // Count bytes while forwarding chunks to the UTF-8 line decoder. The
+    // parser retains channel records, not the entire raw playlist in memory.
+    Stream<List<int>> limitedChunks() async* {
+      await for (final chunk in responseBody.stream) {
+        receivedBytes += chunk.length;
+        if (receivedBytes > maxPlaylistBytes) {
+          throw const FormatException('La lista supera el límite configurado de 120 MB.');
+        }
+        yield chunk;
       }
-      bytes.add(chunk);
-    }
-    final body = utf8.decode(bytes.takeBytes(), allowMalformed: true);
-    if (body.trim().isEmpty) {
-      throw const FormatException('La lista recibida está vacía.');
     }
 
-    final report = _parser.parseWithReport(body);
-    if (report.totalEntries == 0) {
+    final lines = const LineSplitter().bind(
+      Utf8Decoder(allowMalformed: true).bind(limitedChunks()),
+    );
+    final report = await _parser.parseStream(lines);
+    if (receivedBytes == 0 || report.totalEntries == 0) {
       throw const FormatException('La respuesta no contiene entradas #EXTINF de una lista M3U.');
     }
     return report;
