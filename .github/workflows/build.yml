@@ -147,11 +147,9 @@ jobs:
         if: steps.supabase.outputs.configured == 'true'
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
-          # Ask PostgREST to resolve required columns with limit=0.
           SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_NORMALIZED"
           # Ask PostgREST to resolve required columns with limit=0. This validates
           # the schema even when a catalog table has no publicly visible rows.
@@ -175,7 +173,7 @@ jobs:
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
+              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). This table-backed feature is not verified; the build will fail until the API and schema check passes. $detail"
               failed=1
             fi
           done
