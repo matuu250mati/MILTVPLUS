@@ -15,7 +15,14 @@ import 'features/splash/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MiltvPlusApp extends StatelessWidget {
-  const MiltvPlusApp({super.key});
+  const MiltvPlusApp({
+    super.key,
+    this.supabaseReady = true,
+    this.onRetrySupabase,
+  });
+
+  final bool supabaseReady;
+  final Future<void> Function()? onRetrySupabase;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -56,12 +63,21 @@ class MiltvPlusApp extends StatelessWidget {
           ),
         ),
         routes: LegacyRouteRegistry.routes,
-        home: const _IntroCoordinator(),
+        home: _IntroCoordinator(
+          supabaseReady: supabaseReady,
+          onRetrySupabase: onRetrySupabase,
+        ),
       );
 }
 
 class _IntroCoordinator extends StatefulWidget {
-  const _IntroCoordinator();
+  const _IntroCoordinator({
+    required this.supabaseReady,
+    this.onRetrySupabase,
+  });
+
+  final bool supabaseReady;
+  final Future<void> Function()? onRetrySupabase;
 
   @override
   State<_IntroCoordinator> createState() => _IntroCoordinatorState();
@@ -91,7 +107,13 @@ class _IntroCoordinatorState extends State<_IntroCoordinator> {
   Widget build(BuildContext context) {
     if (!_introComplete) return const SplashScreen();
 
-    if (!isSupabaseConfigured || !supabaseClientInitialized) return const AuthScreen();
+    if (!isSupabaseConfigured) return const AuthScreen();
+    if (!widget.supabaseReady) {
+      return AuthScreen(
+        backendReady: false,
+        onRetryBackend: () => widget.onRetrySupabase?.call(),
+      );
+    }
 
     final auth = Supabase.instance.client.auth;
     return StreamBuilder<AuthState>(
