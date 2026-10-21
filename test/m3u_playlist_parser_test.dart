@@ -4,7 +4,7 @@ import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 void main() {
   const parser = M3uPlaylistParser();
 
-  test('parses named HTTPS channels and skips metadata and HTTP rows', () {
+  test('parses named HTTP/HTTPS channels and skips metadata rows', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1 tvg-id="one" tvg-name="Canal Uno" group-title="Argentina",Canal Uno
@@ -14,10 +14,35 @@ https://example.com/live/one.m3u8
 http://example.com/two/index.m3u8?token=abc
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Canal Uno');
-    expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
-    expect(channels.single.groupTitle, 'Argentina');
+    expect(channels, hasLength(2));
+    expect(channels.first.name, 'Canal Uno');
+    expect(channels.first.streamUrl, 'https://example.com/live/one.m3u8');
+    expect(channels.first.groupTitle, 'Argentina');
+    expect(channels.last.streamUrl, 'http://example.com/two/index.m3u8?token=abc');
+  });
+
+  test('reports imported, duplicate, incomplete and unsupported entries', () {
+    final report = parser.parseWithReport('''
+#EXTM3U
+#EXTINF:-1,Valid channel
+https://example.com/live.m3u8?token=keep
+#EXTINF:-1,Duplicate label
+https://example.com/live.m3u8?token=keep
+#EXTINF:-1,Missing URL
+#EXTINF:-1,Invalid scheme
+file:///tmp/channel.m3u8
+#EXTINF:-1,Web player
+https://www.twitch.tv/example
+''');
+
+    expect(report.totalEntries, 5);
+    expect(report.imported, 1);
+    expect(report.duplicates, 1);
+    expect(report.incomplete, 2);
+    expect(report.unsupported, 1);
+    expect(report.channels.single.streamUrl, 'https://example.com/live.m3u8?token=keep');
+    expect(report.imported + report.duplicates + report.incomplete + report.unsupported,
+        report.totalEntries);
   });
 
   test('extracts category, country, and language metadata from M3U', () {
