@@ -97,16 +97,7 @@ jobs:
           [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] && url_valid=true
           if [[ -n "$SUPABASE_ANON_KEY" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             if [[ "$SUPABASE_ANON_KEY" == *.*.* ]]; then
-              key_role="$(python3 - "$SUPABASE_ANON_KEY" <<'PY'
-          import base64, json, sys
-          try:
-              segment = sys.argv[1].split('.')[1]
-              segment += '=' * (-len(segment) % 4)
-              print(json.loads(base64.urlsafe_b64decode(segment.encode())).get('role', ''))
-          except Exception:
-              print('')
-          PY
-          )"
+              key_role="$(python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; p += "=" * (-len(p) % 4); print(json.loads(base64.urlsafe_b64decode(p)).get("role",""))' "$SUPABASE_ANON_KEY" 2>/dev/null || true)"
               [[ "$key_role" == "anon" ]] && key_valid=true
             elif [[ "$SUPABASE_ANON_KEY" == sb_publishable_* ]]; then
               key_valid=true
@@ -151,7 +142,8 @@ jobs:
         run: |
           set -euo pipefail
           # Ask PostgREST to resolve required columns with limit=0.
-          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_NORMALIZED" This validates
+          SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_NORMALIZED"
+          # Ask PostgREST to resolve required columns with limit=0. This validates
           # the schema even when a catalog table has no publicly visible rows.
           declare -A required_columns=(
             [channels]="title,url_stream,is_published,sort_order,logo"
