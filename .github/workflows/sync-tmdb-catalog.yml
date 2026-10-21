@@ -47,9 +47,14 @@ jobs:
             exit 1
           fi
 
+          # Accept only the canonical Supabase host, optionally followed by /rest/v1.
+          # Strip that API suffix so the function URL is built from the project root.
           normalized="${SUPABASE_URL%/}"
+          if [[ "$normalized" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
+            normalized="${BASH_REMATCH[1]}"
+          fi
           if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co."
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally ending in /rest/v1. No sync was run."
             exit 1
           fi
           project_ref="${BASH_REMATCH[1]}"
