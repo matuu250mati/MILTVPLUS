@@ -1,22 +1,51 @@
 import '../models/tv_channel.dart';
 
+/// A diagnostic result for a playlist import. Counts refer to #EXTINF entries,
+/// not to streams that have been proven to play successfully.
+class M3uParseReport {
+  const M3uParseReport({
+    required this.channels,
+    required this.totalEntries,
+    required this.imported,
+    required this.duplicates,
+    required this.incomplete,
+    required this.unsupported,
+  });
+
+  final List<TvChannel> channels;
+  final int totalEntries;
+  final int imported;
+  final int duplicates;
+  final int incomplete;
+  final int unsupported;
+}
+
 class M3uPlaylistParser {
   const M3uPlaylistParser();
 
-  List<TvChannel> parse(String source) {
+  List<TvChannel> parse(String source) => parseWithReport(source).channels;
+
+  M3uParseReport parseWithReport(String source) {
     final lines = source.replaceAll('\r', '').split('\n');
     final channels = <TvChannel>[];
     final seen = <String>{};
+    var total = 0;
+    var duplicates = 0;
+    var incomplete = 0;
+    var unsupported = 0;
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       if (!line.startsWith('#EXTINF:')) continue;
+      total++;
       final comma = _findUnquotedComma(line);
-      final metadata = comma < 0 ? line.substring('#EXTINF:'.length) : line.substring('#EXTINF:'.length, comma);
+      final metadata = comma < 0
+          ? line.substring('#EXTINF:'.length)
+          : line.substring('#EXTINF:'.length, comma);
       final displayName = comma < 0 ? '' : line.substring(comma + 1).trim();
       final attributes = _attributes(metadata);
       final tvgName = (attributes['tvg-name'] ?? '').trim();
-      final name = tvgName.isNotEmpty ? tvgName : (displayName.isNotEmpty ? displayName : 'Canal ${channels.length + 1}');
+      final name = tvgName.isNotEmpty ? tvgName : displayName;
 
       String? streamUrl;
       for (var j = i + 1; j < lines.length; j++) {
@@ -29,13 +58,26 @@ class M3uPlaylistParser {
         break;
       }
 
-      if (streamUrl == null) continue;
-      final uri = Uri.tryParse(streamUrl);
-      if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
-          uri.scheme != 'https' || _isWebPageOnlyHost(uri.host) || name.trim().isEmpty) {
+      if (streamUrl == null || name.isEmpty) {
+        incomplete++;
         continue;
       }
-      if (!seen.add(_streamIdentity(uri))) continue;
+
+      final uri = Uri.tryParse(streamUrl);
+      if (uri == null || !uri.hasAuthority || uri.userInfo.isNotEmpty ||
+          (uri.scheme != 'https' && uri.scheme != 'http')) {
+        incomplete++;
+        continue;
+      }
+      if (_isWebPageOnlyHost(uri.host)) {
+        unsupported++;
+        continue;
+      }
+
+      if (!seen.add(_streamIdentity(uri))) {
+        duplicates++;
+        continue;
+      }
 
       channels.add(TvChannel(
         name: name,
@@ -47,7 +89,15 @@ class M3uPlaylistParser {
         tvgId: _nonEmpty(attributes['tvg-id']),
       ));
     }
-    return List<TvChannel>.unmodifiable(channels);
+
+    return M3uParseReport(
+      channels: List<TvChannel>.unmodifiable(channels),
+      totalEntries: total,
+      imported: channels.length,
+      duplicates: duplicates,
+      incomplete: incomplete,
+      unsupported: unsupported,
+    );
   }
 
   int _findUnquotedComma(String line) {
