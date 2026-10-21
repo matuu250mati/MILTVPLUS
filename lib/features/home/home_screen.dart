@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
+import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
 import '../catalog/catalog_screen.dart';
+import '../live/live_player_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -125,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _ChannelRail(
                       channels: data.channels.take(compact ? 8 : 12).toList(),
                       compact: compact,
-                      onOpenLive: () => widget.onNavigate(0),
+                      onSelect: _openChannel,
                     ),
                   SizedBox(height: compact ? 20 : 26),
                   _SectionHeader(
@@ -208,6 +210,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openMovie(MovieModel movie) =>
       CatalogScreen.openMovieDetail(context, movie);
+
+  Future<void> _openChannel(ChannelModel channel) async {
+    final urls = channel.streamUrls
+        .map((url) => url.trim())
+        .where((url) => url.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (urls.isEmpty && channel.urlStream.trim().isNotEmpty) {
+      urls.add(channel.urlStream.trim());
+    }
+    if (urls.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${channel.title} todavía no tiene un enlace de reproducción publicado.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LivePlayerScreen(
+          channels: [
+            TvChannel(
+              name: channel.title,
+              streamUrl: urls.first,
+              category: channel.category,
+              country: channel.countryCode,
+              logoUrl: channel.logo,
+              backupStreamUrls: urls.skip(1).toList(growable: false),
+            ),
+          ],
+          initialIndex: 0,
+        ),
+      ),
+    );
+  }
 }
 
 class _HomeData {
@@ -558,10 +595,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _ChannelRail extends StatelessWidget {
-  const _ChannelRail({required this.channels, required this.compact, required this.onOpenLive});
+  const _ChannelRail({required this.channels, required this.compact, required this.onSelect});
   final List<ChannelModel> channels;
   final bool compact;
-  final VoidCallback onOpenLive;
+  final ValueChanged<ChannelModel> onSelect;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -582,7 +619,7 @@ class _ChannelRail extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13),
                   focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
                   hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
-                  onTap: onOpenLive,
+                  onTap: () => onSelect(channel),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
