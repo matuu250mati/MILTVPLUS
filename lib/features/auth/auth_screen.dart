@@ -134,9 +134,16 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
+        final detail = e.message.toLowerCase();
+        final isNetworkError = detail.contains('socket') ||
+            detail.contains('network') || detail.contains('connection') ||
+            detail.contains('timed out') || detail.contains('timeout') ||
+            detail.contains('host lookup') || detail.contains('fetch');
         setState(() {
           _error = true;
-          _message = e.message;
+          _message = isNetworkError
+              ? 'No hay conexión con el servicio. Revisá tu internet e intentá nuevamente.'
+              : e.message;
         });
       }
     } catch (error) {
