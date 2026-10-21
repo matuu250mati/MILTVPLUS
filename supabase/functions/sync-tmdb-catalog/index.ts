@@ -1,6 +1,6 @@
-// MILTVPLUS catalog metadata sync. Deploy with TMDB_API_KEY and SYNC_SECRET secrets.
-// Only metadata is imported. No stream URLs are inferred or invented.
-// Re-running this function updates the same rows by tmdb_id; it does not create stream access.
+// MILTVPLUS catalog metadata sync.
+// Metadata is sourced from TMDB. Playback URLs are never inferred or copied from third-party streaming sites.
+// Existing owner-configured stream URLs and publication decisions must survive metadata refreshes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
   } catch {
     request = {};
   }
-  const pages = Math.max(1, Math.min(Number(request.pages ?? 1) || 1, 5));
+  const requestedPages = Number(request.pages ?? 5);
+  const pages = Math.max(1, Math.min(Number.isFinite(requestedPages) ? Math.floor(requestedPages) : 5, 10));
   const includeMovies = request.includeMovies !== false;
   const includeSeries = request.includeSeries !== false;
   if (!includeMovies && !includeSeries) return json({ error: "Select movies, series, or both." }, 400);
@@ -56,6 +57,42 @@ Deno.serve(async (req) => {
     return await response.json();
   };
 
+  // Existing records are refreshed only with descriptive metadata. Playback URLs,
+  // stream mirrors, and the owner's publication decision are deliberately omitted.
+  const saveMetadata = async (
+    table: "movies" | "series",
+    rows: Array<Record<string, unknown>>,
+    hasStreamUrl: boolean,
+  ) => {
+    if (!rows.length) return { inserted: 0, updated: 0 };
+    const ids = rows.map((row) => Number(row.tmdb_id)).filter((id) => Number.isInteger(id) && id > 0);
+    const { data: existingRows, error: lookupError } = await supabase
+      .from(table)
+      .select("tmdb_id")
+      .in("tmdb_id", ids);
+    if (lookupError) throw new Error(`Supabase ${table} lookup failed: ${lookupError.message}`);
+
+    const existingIds = new Set((existingRows ?? []).map((row: { tmdb_id: number | string }) => Number(row.tmdb_id)));
+    const existing = rows.filter((row) => existingIds.has(Number(row.tmdb_id)));
+    const fresh = rows
+      .filter((row) => !existingIds.has(Number(row.tmdb_id)))
+      .map((row) => ({
+        ...row,
+        ...(hasStreamUrl ? { url_stream: "", stream_urls: [] } : {}),
+        is_published: true,
+      }));
+
+    if (existing.length) {
+      const { error } = await supabase.from(table).upsert(existing, { onConflict: "tmdb_id" });
+      if (error) throw new Error(`Supabase ${table} metadata update failed: ${error.message}`);
+    }
+    if (fresh.length) {
+      const { error } = await supabase.from(table).insert(fresh);
+      if (error) throw new Error(`Supabase ${table} metadata insert failed: ${error.message}`);
+    }
+    return { inserted: fresh.length, updated: existing.length };
+  };
+
   try {
     const [movieGenresResponse, tvGenresResponse] = await Promise.all([
       includeMovies ? api("genre/movie/list") : Promise.resolve({ genres: [] }),
@@ -64,11 +101,21 @@ Deno.serve(async (req) => {
     const movieGenres = new Map<number, string>((movieGenresResponse.genres ?? []).map((g: { id: number; name: string }) => [g.id, g.name]));
     const tvGenres = new Map<number, string>((tvGenresResponse.genres ?? []).map((g: { id: number; name: string }) => [g.id, g.name]));
 
-    let moviesProcessed = 0;
-    let seriesProcessed = 0;
-    for (let page = 1; page <= pages; page++) {
-      if (includeMovies) {
-        const data = await api(`movie/popular?page=${page}`);
+    const totals = {
+      pagesPerSource: pages,
+      movieSources: includeMovies ? ["movie/popular", "movie/top_rated"] : [],
+      seriesSources: includeSeries ? ["tv/popular", "tv/top_rated"] : [],
+      moviesInserted: 0,
+      moviesUpdated: 0,
+      seriesInserted: 0,
+      seriesUpdated: 0,
+    };
+
+    // Two complementary lists per type widen discovery without a huge, brittle
+    // one-shot import. Upserts are idempotent by TMDB ID.
+    for (const source of totals.movieSources) {
+      for (let page = 1; page <= pages; page++) {
+        const data = await api(`${source}?page=${page}`);
         const rows = (data.results ?? []).map((item: any) => ({
           tmdb_id: Number(item.id),
           title: String(item.title ?? item.original_title ?? "").trim(),
@@ -77,22 +124,19 @@ Deno.serve(async (req) => {
           genres: (item.genre_ids ?? []).map((id: number) => movieGenres.get(id)).filter(Boolean),
           logo: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
           backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-          // Deliberately empty until an authorized stream is added by the catalog owner.
-          url_stream: "",
           release_year: item.release_date ? Number(String(item.release_date).slice(0, 4)) || null : null,
           duration_seconds: null,
           country_code: "AR",
-          is_published: true,
         })).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
-        if (rows.length) {
-          const { error } = await supabase.from("movies").upsert(rows, { onConflict: "tmdb_id" });
-          if (error) throw new Error(`Supabase movies upsert failed: ${error.message}`);
-          moviesProcessed += rows.length;
-        }
+        const saved = await saveMetadata("movies", rows, true);
+        totals.moviesInserted += saved.inserted;
+        totals.moviesUpdated += saved.updated;
       }
+    }
 
-      if (includeSeries) {
-        const data = await api(`tv/popular?page=${page}`);
+    for (const source of totals.seriesSources) {
+      for (let page = 1; page <= pages; page++) {
+        const data = await api(`${source}?page=${page}`);
         const rows = (data.results ?? []).map((item: any) => ({
           tmdb_id: Number(item.id),
           title: String(item.name ?? item.original_name ?? "").trim(),
@@ -103,22 +147,17 @@ Deno.serve(async (req) => {
           backdrop_url: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
           release_year: item.first_air_date ? Number(String(item.first_air_date).slice(0, 4)) || null : null,
           country_code: "AR",
-          is_published: true,
         })).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
-        if (rows.length) {
-          const { error } = await supabase.from("series").upsert(rows, { onConflict: "tmdb_id" });
-          if (error) throw new Error(`Supabase series upsert failed: ${error.message}`);
-          seriesProcessed += rows.length;
-        }
+        const saved = await saveMetadata("series", rows, false);
+        totals.seriesInserted += saved.inserted;
+        totals.seriesUpdated += saved.updated;
       }
     }
 
     return json({
       ok: true,
-      pages,
-      moviesProcessed,
-      seriesProcessed,
-      note: "Metadata imported. Movies without an authorized stream remain non-playable until an owner adds one.",
+      ...totals,
+      note: "TMDB metadata synchronized. Existing playback URLs and publication states were preserved; new movie rows need an authorized playback source before they can play.",
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Catalog sync failed." }, 502);
