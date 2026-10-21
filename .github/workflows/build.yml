@@ -161,54 +161,34 @@ jobs:
             exit 1
           fi
 
-      # Apply the known QA-only compatibility migration through the Supabase Management API.
-      # This avoids requiring a database password or asking the user to recopy project credentials.
-      - name: Apply movie stream URL compatibility migration to QA
+      # Supabase's Management API SQL endpoint is read-only for DDL.
+      # Use the official CLI and the QA database password to apply tracked migrations.
+      # This step is strictly scoped to the QA project and never targets production.
+      - name: Apply tracked Supabase migrations to QA
         if: ${{ github.event_name == 'pull_request' && steps.supabase.outputs.configured == 'true' }}
         env:
-          SUPABASE_QA_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_QA_DB_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          [[ -n "${SUPABASE_QA_ACCESS_TOKEN//[[:space:]]/}" ]] || {
-            echo "::error::QA migration cannot run: SUPABASE_QA_ACCESS_TOKEN is missing from the miltvplus-qa environment."
+          [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]] || {
+            echo "::error::Missing SUPABASE_QA_ACCESS_TOKEN in the miltvplus-qa GitHub environment."
             exit 1
           }
-          sql=$(cat <<'SQL'
-          DO $miltvplus$
-          BEGIN
-            ALTER TABLE public.movies
-              ADD COLUMN IF NOT EXISTS stream_urls jsonb NOT NULL DEFAULT '[]'::jsonb;
-            ALTER TABLE public.movies
-              DROP CONSTRAINT IF EXISTS movies_stream_urls_array_check;
-            ALTER TABLE public.movies
-              ADD CONSTRAINT movies_stream_urls_array_check
-              CHECK (jsonb_typeof(stream_urls) = 'array');
-            UPDATE public.movies
-            SET stream_urls = jsonb_build_array(url_stream)
-            WHERE COALESCE(trim(url_stream), '') <> ''
-              AND stream_urls = '[]'::jsonb;
-          END
-          $miltvplus$;
-          SQL
-          )
-          response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
-          status="$(jq -n --arg query "$sql" '{query:$query}' | curl --silent --show-error --max-time 30 \
-            --output "$response_file" --write-out '%{http_code}' \
-            --request POST "https://api.supabase.com/v1/projects/uoqfovrynlyterjylpqj/database/query" \
-            --header "Authorization: Bearer $SUPABASE_QA_ACCESS_TOKEN" \
-            --header "Content-Type: application/json" \
-            --data-binary @-)" || {
-              echo "::error::Supabase Management API could not apply the QA compatibility migration."
-              exit 1
-            }
-          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
-            echo "::error::QA migration API returned HTTP $status. The token may lack database-write permission or the endpoint may be unavailable for this project."
-            cat "$response_file"
+          [[ -n "${SUPABASE_DB_PASSWORD//[[:space:]]/}" ]] || {
+            echo "::error::Missing SUPABASE_QA_DB_PASSWORD in the miltvplus-qa GitHub environment. Add the QA database password as an environment secret; do not paste it into chat."
             exit 1
-          fi
-          echo "QA movie stream_urls compatibility migration request succeeded."
+          }
+          npx --yes supabase@latest --version
+          npx --yes supabase@latest link --project-ref uoqfovrynlyterjylpqj
+          echo "Checking pending QA migrations before applying them..."
+          npx --yes supabase@latest db push --dry-run
+          echo "Applying tracked migrations to QA only..."
+          npx --yes supabase@latest db push
+          echo "Confirming applied migration history..."
+          npx --yes supabase@latest migration list
+          echo "### QA Supabase migrations: applied and history checked" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify required Supabase schema
         if: steps.supabase.outputs.configured == 'true'
