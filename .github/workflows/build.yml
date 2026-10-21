@@ -79,13 +79,29 @@ jobs:
       - name: Validate Supabase configuration
         id: supabase
         env:
+          # Prefer separate project-specific secrets; generic secrets remain a compatibility fallback.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_PRODUCTION_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_PRODUCTION_ANON_KEY }}
+          IS_PRODUCTION_BUILD: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) }}
           IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$IS_PRODUCTION_BUILD" == "true" ]]; then
+            SUPABASE_URL="${SUPABASE_PRODUCTION_URL:-${SUPABASE_URL:-}}"
+            SUPABASE_ANON_KEY="${SUPABASE_PRODUCTION_ANON_KEY:-${SUPABASE_ANON_KEY:-}}"
+            expected_project_ref="mkdubrwdgorpobbrxdzy"
+            target_environment="production"
+          else
+            SUPABASE_URL="${SUPABASE_QA_URL:-${SUPABASE_URL:-}}"
+            SUPABASE_ANON_KEY="${SUPABASE_QA_ANON_KEY:-${SUPABASE_ANON_KEY:-}}"
+            expected_project_ref="uoqfovrynlyterjylpqj"
+            target_environment="QA"
+          fi
           SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           SUPABASE_ANON_KEY="$(printf '%s' "${SUPABASE_ANON_KEY:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
           while [[ "$SUPABASE_URL" == */ ]]; do SUPABASE_URL="${SUPABASE_URL%/}"; done
@@ -116,7 +132,7 @@ jobs:
           echo "url_format_valid=$url_valid" >> "$GITHUB_OUTPUT"
           echo "key_format_valid=$key_valid" >> "$GITHUB_OUTPUT"
 
-          if [[ "$url_valid" == true && "$key_valid" == true && ( -z "$key_project_ref" || "$key_project_ref" == "$url_project_ref" ) ]]; then
+          if [[ "$url_valid" == true && "$key_valid" == true && "$url_project_ref" == "$expected_project_ref" && ( -z "$key_project_ref" || "$key_project_ref" == "$url_project_ref" ) ]]; then
             echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
             echo "SUPABASE_ANON_KEY_NORMALIZED=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -131,7 +147,9 @@ jobs:
               echo "This is a fork pull request with no secrets. Backend-dependent features have not been validated."
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            if [[ "$url_valid" == true && "$key_valid" == true && -n "$key_project_ref" && "$key_project_ref" != "$url_project_ref" ]]; then
+            if [[ "$url_valid" == true && "$key_valid" == true && "$url_project_ref" != "$expected_project_ref" ]]; then
+              echo "::error::This $target_environment build must use Supabase project $expected_project_ref; the configured URL points to another project."
+            elif [[ "$url_valid" == true && "$key_valid" == true && -n "$key_project_ref" && "$key_project_ref" != "$url_project_ref" ]]; then
               echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY refer to different Supabase projects."
             elif [[ "$url_valid" != true ]]; then
               echo "::error::SUPABASE_URL is missing or malformed. Expected https://<project-ref>.supabase.co; /rest/v1 is normalized automatically."
