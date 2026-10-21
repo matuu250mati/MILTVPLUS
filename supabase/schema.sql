@@ -107,10 +107,35 @@ alter table public.episodes enable row level security;
 alter table public.content_submissions enable row level security;
 
 -- SQL privileges are required in addition to RLS policies.
--- RLS still limits these roles to rows marked as published.
+-- Client roles may read published catalog rows, but cannot write catalog data.
+revoke insert, update, delete, truncate, references, trigger
+  on public.channels, public.movies, public.series, public.episodes
+  from anon, authenticated;
+revoke update, delete, truncate, references, trigger
+  on public.content_submissions from anon, authenticated;
+
 grant select on public.channels, public.movies, public.series, public.episodes,
   public.content_submissions to anon, authenticated;
 grant insert on public.content_submissions to authenticated;
+
+do $
+declare
+  existing_policy record;
+begin
+  for existing_policy in
+    select tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in ('channels', 'movies', 'series', 'episodes', 'content_submissions')
+  loop
+    execute format(
+      'drop policy %I on public.%I',
+      existing_policy.policyname,
+      existing_policy.tablename
+    );
+  end loop;
+end
+$;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
