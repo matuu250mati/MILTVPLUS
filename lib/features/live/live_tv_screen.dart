@@ -210,7 +210,17 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       // these playlists were fetched only for explicitly filtered categories,
       // which left Telefe/C5N absent from the normal TV-in-live entry point.
       if (requested.isEmpty) {
-        sourceIds.addAll(['argentina', 'free-tv-argentina']);
+        // Load every user-supplied public playlist in the unified TV screen:
+        // repository master list, sports, Argentina, Spanish, global index and
+        // Free-TV. Genre classification still routes sports into Deportes.
+        sourceIds.addAll([
+          'argentina',
+          'free-tv-argentina',
+          'spanish',
+          'sports',
+          'global-index',
+          'free-tv-global',
+        ]);
       }
       if (requested.any((value) => ['noticias', 'news', 'tv argentina', 'argentina'].contains(value))) {
         sourceIds.add('free-tv-argentina');
@@ -272,6 +282,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         if (selected >= channels.length) selected = -1;
       });
 
+      // Persist the final merged result only after all configured public sources
+      // have been attempted, so the next launch retains the expanded channel set.
+      if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
+        await channelStorage.save(merged.values.toList(growable: false));
+      }
+
       if (showFeedback) {
         final message = publicFallbackLoaded
             ? 'Lista pública inicial cargada: ${channels.length} señales. La reproducción se verifica al abrir cada canal.'
@@ -312,6 +328,18 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       title: 'Argentina (señales oficiales adicionales)',
       subtitle: 'Free-TV/IPTV · incluye reproductores oficiales públicos',
       url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_argentina.m3u8',
+    ),
+    (
+      id: 'free-tv-global',
+      title: 'Free-TV internacional',
+      subtitle: 'Free-TV/IPTV · lista general internacional',
+      url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',
+    ),
+    (
+      id: 'global-index',
+      title: 'Índice internacional completo',
+      subtitle: 'IPTV-org · catálogo global de canales en vivo',
+      url: 'https://iptv-org.github.io/iptv/index.m3u',
     ),
     (
       id: 'spanish',
