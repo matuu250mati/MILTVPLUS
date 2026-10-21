@@ -84,7 +84,9 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     setState(() => _controlsVisible = true);
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted && _controller?.value.isPlaying == true) {
+      // Embedded official web players have no VideoPlayerController; their
+      // overlay must still auto-hide so the page remains interactive.
+      if (mounted && (_webMode || _controller?.value.isPlaying == true)) {
         setState(() => _controlsVisible = false);
       }
     });
@@ -387,13 +389,15 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                 ),
               if (_controlsVisible)
                 const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xCC000000), Colors.transparent, Color(0xD9000000)],
-                        stops: [0, .42, 1],
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xCC000000), Colors.transparent, Color(0xD9000000)],
+                          stops: [0, .42, 1],
+                        ),
                       ),
                     ),
                   ),
