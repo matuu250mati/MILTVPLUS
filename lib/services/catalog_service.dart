@@ -123,11 +123,15 @@ class CatalogService {
     // Keep every published metadata row in the catalog, even when its owner
     // has not attached an authorized playback URL yet. The UI marks those items
     // as unavailable instead of silently hiding them from the user's catalog.
-    return (response as List<dynamic>)
+    final movies = (response as List<dynamic>)
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .toList(growable: false);
+        .toList(growable: true);
+    movies.sort((a, b) => a.title.trim().toLowerCase().compareTo(
+          b.title.trim().toLowerCase(),
+        ));
+    return List<MovieModel>.unmodifiable(movies);
   }
 
   Future<List<SeriesModel>> getSeries() async {
@@ -137,11 +141,15 @@ class CatalogService {
         .eq('is_published', true)
         .order('title', ascending: true);
 
-    return (response as List<dynamic>)
+    final series = (response as List<dynamic>)
         .map((item) => SeriesModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .toList(growable: false);
+        .toList(growable: true);
+    series.sort((a, b) => a.title.trim().toLowerCase().compareTo(
+          b.title.trim().toLowerCase(),
+        ));
+    return List<SeriesModel>.unmodifiable(series);
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
