@@ -1,55 +1,45 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/tv_channel.dart';
+import 'channel_cache_store_stub.dart'
+    if (dart.library.io) 'channel_cache_store_io.dart' as cache_store;
 
-/// Durable channel cache stored as a file instead of one large SharedPreferences
-/// string-list. This avoids Android preference XML growing to megabytes when
-/// global IPTV playlists contain thousands of channels.
+/// Durable channel cache. Native platforms use an app-private JSON file so
+/// large IPTV playlists do not inflate Android's SharedPreferences XML. Web
+/// uses its platform-compatible preferences implementation.
 class ChannelStorageService {
-  static const _storageKey = 'miltv_plus_channels_v1';
-  static const _fileName = 'miltv_plus_channels_v1.json';
-
-  Future<File> _storageFile() async {
-    final directory = await getApplicationSupportDirectory();
-    await directory.create(recursive: true);
-    return File('${directory.path}/$_fileName');
-  }
+  static const _legacyStorageKey = 'miltv_plus_channels_v1';
 
   Future<List<TvChannel>> load() async {
-    final file = await _storageFile();
-    if (await file.exists()) {
+    final cachedJson = await cache_store.readCache();
+    if (cachedJson != null && cachedJson.isNotEmpty) {
       try {
-        final decoded = jsonDecode(await file.readAsString());
-        if (decoded is List) {
-          return _decodeChannels(decoded);
-        }
+        final decoded = jsonDecode(cachedJson);
+        if (decoded is List) return _decodeChannels(decoded);
       } on FormatException {
-        // Fall through to legacy preferences if the cache file is damaged.
-      } on FileSystemException {
-        // Fall through to legacy preferences if the cache cannot be read.
+        // Recover from a damaged cache using the legacy preference entries.
       }
     }
 
-    // One-time migration for channels saved by earlier app versions.
+    // One-time migration from the previous SharedPreferences string-list.
     final preferences = await SharedPreferences.getInstance();
-    final legacy = preferences.getStringList(_storageKey) ?? const <String>[];
+    final legacy = preferences.getStringList(_legacyStorageKey) ?? const <String>[];
     final decodedLegacy = <dynamic>[];
     for (final entry in legacy) {
       try {
         final value = jsonDecode(entry);
-        if (value is Map<String, dynamic>) decodedLegacy.add(value);
+        if (value is Map) decodedLegacy.add(value);
       } on FormatException {
-        // Ignore a damaged legacy entry without discarding other channels.
+        // Ignore one damaged entry without discarding the remaining channels.
       }
     }
     final channels = _decodeChannels(decodedLegacy);
     if (channels.isNotEmpty) {
+      // Preserve the old entries unless the new cache was written successfully.
       await save(channels);
-      await preferences.remove(_storageKey);
+      await preferences.remove(_legacyStorageKey);
     }
     return channels;
   }
@@ -60,8 +50,10 @@ class ChannelStorageService {
       if (decoded is! Map) continue;
       final name = decoded['name'];
       final url = decoded['streamUrl'];
-      if (name is! String || url is! String ||
-          name.trim().isEmpty || url.trim().isEmpty) {
+      if (name is! String ||
+          url is! String ||
+          name.trim().isEmpty ||
+          url.trim().isEmpty) {
         continue;
       }
       channels.add(TvChannel(
@@ -82,7 +74,6 @@ class ChannelStorageService {
   }
 
   Future<void> save(List<TvChannel> channels) async {
-    final file = await _storageFile();
     final encoded = channels
         .map((channel) => {
               'name': channel.name,
@@ -96,6 +87,6 @@ class ChannelStorageService {
               'backupStreamUrls': channel.backupStreamUrls,
             })
         .toList(growable: false);
-    await file.writeAsString(jsonEncode(encoded), flush: true);
+    await cache_store.writeCache(jsonEncode(encoded));
   }
 }
