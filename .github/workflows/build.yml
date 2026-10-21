@@ -77,36 +77,47 @@ jobs:
         run: flutter test
 
       - name: Validate Supabase configuration
+        id: supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
-            echo "::error::Configure the SUPABASE_URL repository secret."
-            exit 1
-          fi
-          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
-            echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
-            exit 1
-          fi
-          SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
+          SUPABASE_URL="$(printf '%s' "${SUPABASE_URL:-}" | xargs)"
+          SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
-          if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
+          url_valid=false
+          key_valid=false
+          [[ "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]] && url_valid=true
+          [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" && ! "$SUPABASE_ANON_KEY" =~ [[:space:]] ]] && key_valid=true
+
+          if [[ "$url_valid" == true && "$key_valid" == true ]]; then
+            echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
+            echo "SUPABASE_ANON_KEY_NORMALIZED=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Supabase configuration format validated."
+          elif [[ "$IS_PULL_REQUEST" == true ]]; then
+            # PR builds are isolated QA packages. Do not fake a backend: build with
+            # empty defines so the app reports that Supabase is not configured.
+            echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
+            echo "SUPABASE_ANON_KEY_NORMALIZED=" >> "$GITHUB_ENV"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Supabase secrets are missing or malformed. Continuing only with an unconfigured QA APK; authentication and catalog features will not work until valid settings are supplied."
+            {
+              echo "### Supabase configuration: QA-only"
+              echo "This pull-request APK is compiled without backend credentials because the repository secrets are absent or malformed. Login and database-backed catalogs are not expected to work in this QA build."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Production builds require SUPABASE_URL exactly like https://<project-ref>.supabase.co and a non-empty SUPABASE_ANON_KEY without whitespace."
             exit 1
           fi
-          if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
-            echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
-            exit 1
-          fi
-          echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
-
+        if: steps.supabase.outputs.configured == 'true'
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
