@@ -147,10 +147,19 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
       // hosts; arbitrary web pages are still rejected by the playlist parser.
       if (_isSupportedWebPlayerUrl(uri)) {
         try {
+          final pageLoaded = Completer<void>();
           final web = WebViewController()
             ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..setBackgroundColor(Colors.black);
-          await web.loadRequest(uri).timeout(const Duration(seconds: 12));
+            ..setBackgroundColor(Colors.black)
+            ..setNavigationDelegate(
+              NavigationDelegate(
+                onPageFinished: (_) {
+                  if (!pageLoaded.isCompleted) pageLoaded.complete();
+                },
+              ),
+            );
+          await web.loadRequest(uri);
+          await pageLoaded.future.timeout(const Duration(seconds: 12));
           if (!mounted || request != _requestId) return;
           _webController = web;
           _webMode = true;
@@ -341,9 +350,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                   // Pointer listeners do not claim the gesture, so the web
                   // player remains tappable while a hidden app overlay can be
                   // brought back with a touch.
-                  onPointerDown: (_) {
-                    if (!_controlsVisible) _showControls();
-                  },
+                  onPointerDown: (_) => _showControls(),
                   child: WebViewWidget(controller: _webController!),
                 )
               else if (ready)
