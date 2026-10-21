@@ -12,6 +12,24 @@ class CatalogScreen extends StatefulWidget {
 
   final String category;
 
+  /// Opens a native detail page from any catalog rail without leaving the app.
+  static Future<void> openMovieDetail(BuildContext context, MovieModel movie) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _CatalogDetailScreen(entry: _CatalogEntry.fromMovie(movie)),
+      ),
+    );
+  }
+
+  /// Opens a native detail page for a series selected outside the catalog grid.
+  static Future<void> openSeriesDetail(BuildContext context, SeriesModel series) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _CatalogDetailScreen(entry: _CatalogEntry.fromSeries(series)),
+      ),
+    );
+  }
+
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
