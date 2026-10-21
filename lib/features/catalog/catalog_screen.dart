@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
@@ -420,27 +421,11 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.streamUrl != null && entry.streamUrl!.trim().isNotEmpty
-            ? () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => CatalogPlayerScreen(
-                      title: entry.title,
-                      streamUrl: entry.streamUrls.isNotEmpty
-                          ? entry.streamUrls.first
-                          : entry.streamUrl!,
-                      backupStreamUrls: entry.streamUrls.length > 1
-                          ? entry.streamUrls.skip(1).toList(growable: false)
-                          : const <String>[],
-                    ),
-                  ),
-                )
-            : entry.seriesId != null
-                ? () => _openSeriesEpisodes(context, entry)
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Este título todavía no está disponible para reproducir.'),
-                      ),
-                    ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => _CatalogDetailScreen(entry: entry),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -504,6 +489,212 @@ class _CatalogCard extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _CatalogDetailScreen extends StatefulWidget {
+  const _CatalogDetailScreen({required this.entry});
+
+  final _CatalogEntry entry;
+
+  @override
+  State<_CatalogDetailScreen> createState() => _CatalogDetailScreenState();
+}
+
+class _CatalogDetailScreenState extends State<_CatalogDetailScreen> {
+  bool _favorite = false;
+  bool _liked = false;
+  bool _preferencesLoaded = false;
+
+  String get _key => widget.entry.title.trim().toLowerCase().replaceAll(RegExp(r'\\s+'), ' ');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _favorite = prefs.getStringList('miltvplus.catalog.favorites.v1')?.contains(_key) ?? false;
+        _liked = prefs.getStringList('miltvplus.catalog.likes.v1')?.contains(_key) ?? false;
+        _preferencesLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _preferencesLoaded = true);
+    }
+  }
+
+  Future<void> _toggleSaved(String storageKey, bool value, void Function(bool) update) async {
+    update(value);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final values = (prefs.getStringList(storageKey) ?? <String>[]).toSet();
+      if (value) {
+        values.add(_key);
+      } else {
+        values.remove(_key);
+      }
+      await prefs.setStringList(storageKey, values.toList()..sort());
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo guardar la preferencia en este dispositivo.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _play() async {
+    final entry = widget.entry;
+    if (entry.seriesId != null) {
+      await _openSeriesEpisodes(context, entry);
+      return;
+    }
+    final url = entry.streamUrls.isNotEmpty
+        ? entry.streamUrls.first
+        : (entry.streamUrl ?? '').trim();
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este título tiene ficha de catálogo, pero todavía no tiene una fuente autorizada de reproducción.')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CatalogPlayerScreen(
+          title: entry.title,
+          streamUrl: url,
+          backupStreamUrls: entry.streamUrls.length > 1
+              ? entry.streamUrls.skip(1).toList(growable: false)
+              : const <String>[],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final canPlay = entry.seriesId != null ||
+        entry.streamUrls.any((url) => url.trim().isNotEmpty) ||
+        (entry.streamUrl?.trim().isNotEmpty ?? false);
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 300,
+            backgroundColor: AppTheme.background,
+            leading: IconButton(
+              tooltip: 'Volver al catálogo',
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(entry.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (entry.posterUrl != null && entry.posterUrl!.trim().isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: entry.posterUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const ColoredBox(color: AppTheme.panel),
+                    )
+                  else
+                    const ColoredBox(color: AppTheme.panel),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x22000000), Color(0xF0000000)],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (entry.year != null) Chip(label: Text(entry.year.toString())),
+                    Chip(label: Text(entry.category)),
+                    ...entry.genres.take(5).map((genre) => Chip(label: Text(genre))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(entry.title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 12),
+                Text(
+                  entry.synopsis?.trim().isNotEmpty == true
+                      ? entry.synopsis!
+                      : 'La descripción de este título todavía no está disponible.',
+                  style: const TextStyle(color: AppTheme.muted, height: 1.55),
+                ),
+                const SizedBox(height: 22),
+                FilledButton.icon(
+                  onPressed: canPlay ? _play : null,
+                  icon: Icon(entry.seriesId != null ? Icons.list_alt_rounded : Icons.play_arrow_rounded),
+                  label: Text(entry.seriesId != null ? 'VER EPISODIOS' : 'REPRODUCIR'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
+                ),
+                if (!canPlay) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Falta una fuente de vídeo autorizada. La ficha se muestra, pero no se inventará ni se extraerá una URL de un sitio externo.',
+                    style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: !_preferencesLoaded
+                            ? null
+                            : () => _toggleSaved(
+                                  'miltvplus.catalog.favorites.v1',
+                                  !_favorite,
+                                  (value) => setState(() => _favorite = value),
+                                ),
+                        icon: Icon(_favorite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded),
+                        label: Text(_favorite ? 'GUARDADO' : 'FAVORITOS'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: !_preferencesLoaded
+                            ? null
+                            : () => _toggleSaved(
+                                  'miltvplus.catalog.likes.v1',
+                                  !_liked,
+                                  (value) => setState(() => _liked = value),
+                                ),
+                        icon: Icon(_liked ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined),
+                        label: Text(_liked ? 'TE GUSTA' : 'ME GUSTA'),
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MessageState extends StatelessWidget {
