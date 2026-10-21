@@ -136,10 +136,10 @@ https://example.com/news.m3u8
     expect(channels.single.name, 'News');
   });
 
-  test('skips web-player pages that are not direct streams', () {
+  test('keeps official YouTube live pages for embedded playback and rejects unrelated web players', () {
     final channels = parser.parse('''
 #EXTM3U
-#EXTINF:-1,YouTube page
+#EXTINF:-1,YouTube live page
 https://www.youtube.com/c/todonoticias/live
 #EXTINF:-1,Twitch page
 https://www.twitch.tv/examplechannel
@@ -147,9 +147,10 @@ https://www.twitch.tv/examplechannel
 https://cdn.example.org/live/playlist.m3u8
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Direct HLS');
-    expect(channels.single.streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
+    expect(channels, hasLength(2));
+    expect(channels.map((channel) => channel.name), containsAll(['YouTube live page', 'Direct HLS']));
+    expect(channels.map((channel) => channel.streamUrl), contains('https://www.youtube.com/c/todonoticias/live'));
+    expect(channels.map((channel) => channel.streamUrl), contains('https://cdn.example.org/live/playlist.m3u8'));
   });
 
   test('parses tvg-name, logo, id and quoted commas without breaking metadata', () {
