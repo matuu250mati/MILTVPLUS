@@ -20,6 +20,7 @@ create table if not exists public.channels (
 
 create table if not exists public.movies (
   id uuid primary key default gen_random_uuid(),
+  tmdb_id bigint unique,
   title text not null,
   synopsis text not null default '',
   category text not null default 'Películas',
@@ -38,6 +39,7 @@ create table if not exists public.movies (
 
 create table if not exists public.series (
   id uuid primary key default gen_random_uuid(),
+  tmdb_id bigint unique,
   title text not null,
   synopsis text not null default '',
   category text not null default 'Series',
@@ -49,6 +51,23 @@ create table if not exists public.series (
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists public.content_submissions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  title text not null,
+  description text not null default '',
+  stream_url text not null,
+  poster_url text,
+  duration_seconds integer,
+  series_title text,
+  season_number integer,
+  episode_number integer,
+  media_type text not null check (media_type in ('movie', 'episode')),
+  moderation_status text not null default 'pending'
+    check (moderation_status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default now()
 );
 
 create table if not exists public.episodes (
@@ -70,8 +89,14 @@ create index if not exists channels_published_order_idx
   on public.channels (is_published, sort_order, title);
 create index if not exists movies_published_idx
   on public.movies (is_published, release_year desc);
+create unique index if not exists movies_tmdb_id_unique_idx
+  on public.movies (tmdb_id);
 create index if not exists series_published_idx
   on public.series (is_published, title);
+create unique index if not exists series_tmdb_id_unique_idx
+  on public.series (tmdb_id);
+create index if not exists content_submissions_moderation_type_created_idx
+  on public.content_submissions (moderation_status, media_type, created_at desc);
 create index if not exists episodes_series_order_idx
   on public.episodes (series_id, season_number, episode_number);
 
@@ -79,10 +104,13 @@ alter table public.channels enable row level security;
 alter table public.movies enable row level security;
 alter table public.series enable row level security;
 alter table public.episodes enable row level security;
+alter table public.content_submissions enable row level security;
 
 -- SQL privileges are required in addition to RLS policies.
 -- RLS still limits these roles to rows marked as published.
-grant select on public.channels, public.movies, public.series, public.episodes to anon, authenticated;
+grant select on public.channels, public.movies, public.series, public.episodes,
+  public.content_submissions to anon, authenticated;
+grant insert on public.content_submissions to authenticated;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
@@ -107,6 +135,16 @@ create policy "Authenticated users read published episodes"
       where s.id = episodes.series_id and s.is_published
     )
   );
+
+drop policy if exists "Public users read approved submissions" on public.content_submissions;
+create policy "Public users read approved submissions"
+  on public.content_submissions for select to anon, authenticated
+  using (moderation_status = 'approved');
+
+drop policy if exists "Users submit pending content" on public.content_submissions;
+create policy "Users submit pending content"
+  on public.content_submissions for insert to authenticated
+  with check (auth.uid() = user_id and moderation_status = 'pending');
 
 -- No client-side INSERT/UPDATE/DELETE policies are intentionally created.
 -- Manage catalog writes from the Supabase dashboard or a trusted server using
