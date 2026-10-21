@@ -27,6 +27,7 @@ create table if not exists public.movies (
   logo text,
   backdrop_url text,
   url_stream text not null,
+  stream_urls jsonb not null default '[]'::jsonb check (jsonb_typeof(stream_urls) = 'array'),
   release_year integer,
   duration_seconds integer,
   country_code text not null default 'AR',
