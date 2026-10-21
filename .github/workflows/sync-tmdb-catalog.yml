@@ -41,6 +41,7 @@ jobs:
             echo "::error::Catalog metadata sync is production-only and must target project mkdubrwdgorpobbrxdzy; got $project_ref. No metadata was imported."
             exit 1
           fi
+          echo "SUPABASE_URL_NORMALIZED=$normalized" >> "$GITHUB_ENV"
           echo "Validated required sync secrets and production project target."
 
       - name: Sync movies and series metadata
@@ -56,7 +57,7 @@ jobs:
             *) echo "pages must be between 1 and 5"; exit 2 ;;
           esac
           response="$(curl --fail-with-body --silent --show-error \
-            --request POST "$SUPABASE_URL/functions/v1/sync-tmdb-catalog" \
+            --request POST "$SUPABASE_URL_NORMALIZED/functions/v1/sync-tmdb-catalog" \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
