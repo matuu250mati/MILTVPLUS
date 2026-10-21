@@ -245,6 +245,19 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             if (_matchesCategoryFilter(categorizedChannel)) addUnique(categorizedChannel);
           }
           publicFallbackLoaded = publicFallbackLoaded || additionalChannels.isNotEmpty;
+
+          // Publish each source progressively instead of blocking the screen
+          // until every remote playlist has finished downloading.
+          if (mounted) {
+            setState(() {
+              channels
+                ..clear()
+                ..addAll(merged.values);
+            });
+          }
+          if (widget.categoryFilter == null || widget.categoryFilter!.isEmpty) {
+            await channelStorage.save(merged.values.toList(growable: false));
+          }
         } catch (_) {
           // Una lista pública puede estar caída o geobloqueada; conservamos las demás fuentes.
         }
