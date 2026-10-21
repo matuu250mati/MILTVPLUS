@@ -17,7 +17,11 @@ class ChannelStorageService {
     if (cachedJson != null && cachedJson.isNotEmpty) {
       try {
         final decoded = jsonDecode(cachedJson);
-        if (decoded is List) return _decodeChannels(decoded);
+        if (decoded is List && decoded.isNotEmpty) {
+          final cachedChannels = _decodeChannels(decoded);
+          if (cachedChannels.isNotEmpty) return cachedChannels;
+        }
+        // An empty or unusable cache may still have recoverable legacy entries.
       } on FormatException {
         // Recover from a damaged cache using the legacy preference entries.
       }
