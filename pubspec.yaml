@@ -4,7 +4,7 @@ publish_to: "none"
 version: 3.10.8+408
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -20,13 +20,13 @@ dependencies:
   # Keep Dart and Android implementations on a tested compatible pair.
   # Do not let a future Android Pigeon/JNI API change drift into QA builds.
   shared_preferences: 2.3.5
-  shared_preferences_android: 2.3.4
+  shared_preferences_android: ^2.4.24
   crypto: ^3.0.6
   open_filex: ^4.7.0
-  package_info_plus: ^8.1.2
-  device_info_plus: ^11.3.0
+  package_info_plus: ^10.2.2
+  device_info_plus: ^13.2.0
   path_provider: ^2.1.4
-  file_picker: ^10.3.10
+  file_picker: ^13.1.0
 
 dev_dependencies:
   flutter_test:
