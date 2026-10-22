@@ -74,12 +74,25 @@ for path in files:
             if forbidden:
                 errors.append(f"{path}: private columns must not be granted: {', '.join(forbidden)}")
 
+# Fresh installs must define the rights column before the RLS insert policy uses it.
+schema_sql = Path("supabase/schema.sql").read_text(encoding="utf-8")
+if not re.search(r"rights_confirmed\s+boolean\s+not\s+null\s+default\s+false", schema_sql, re.IGNORECASE):
+    errors.append("supabase/schema.sql: missing rights_confirmed column")
+if not re.search(r"constraint\s+content_submission_rights\s+check\s*\(\s*rights_confirmed\s*\)", schema_sql, re.IGNORECASE):
+    errors.append("supabase/schema.sql: missing rights-confirmation constraint")
+
 # Enforce authenticated-only catalog access in the corrective migration.
 access_migration = Path("supabase/migrations/20261022100000_enforce_authenticated_catalog_access.sql")
 if not access_migration.exists():
     errors.append(f"{access_migration}: missing authenticated-only access migration")
 else:
     access_sql = access_migration.read_text(encoding="utf-8")
+    rights_add = re.search(r"alter\s+table\s+public\.content_submissions\s+add\s+column\s+if\s+not\s+exists\s+rights_confirmed\s+boolean\s+not\s+null\s+default\s+false", access_sql, re.IGNORECASE)
+    submit_policy = re.search(r"create\s+policy\s+['"]Users submit pending content['"].*?with\s+check\s*\((.*?)\);", access_sql, re.IGNORECASE | re.DOTALL)
+    if not rights_add:
+        errors.append(f"{access_migration}: must add rights_confirmed before using it in RLS")
+    elif submit_policy and not re.search(r"\bright_confirmed\b", submit_policy.group(1), re.IGNORECASE):
+        errors.append(f"{access_migration}: submission policy must require rights_confirmed")
     for table in ("channels", "movies", "series", "episodes", "content_submissions"):
         if not re.search(
             rf"create\s+policy\s+[^;]+on\s+public\.{table}\s+for\s+select\s+to\s+authenticated",
