@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Canales en vivo',
                     icon: Icons.live_tv_rounded,
-                    color: const AppTheme.accent,
+                    color: AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(0),
                   ),
                   const SizedBox(height: 10),
@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Películas populares',
                     icon: Icons.local_movies_rounded,
-                    color: const AppTheme.accent,
+                    color: AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(2),
                   ),
                   const SizedBox(height: 10),
