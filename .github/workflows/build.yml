@@ -54,7 +54,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*36([[:space:]]*//.*)?
+          grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*36([[:space:]]*//.*)?$' android/app/build.gradle.kts
+          bash tool/validate_android_tv.sh
+
       # Every PR build uses a separate package so QA installation cannot replace production MILTVPLUS.
       - name: Prepare side-by-side QA package
         if: ${{ github.event_name == 'pull_request' }}
