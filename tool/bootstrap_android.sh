@@ -90,10 +90,35 @@ PY_MIN_SDK
   fi
 }
 
+# Keep compileSdk aligned with Android dependencies that require API 36.
+# Do not change targetSdk or minSdk as part of this compatibility fix.
+ensure_compile_android_sdk() {
+  local gradle_file="$root_dir/android/app/build.gradle.kts"
+  if [[ -f "$gradle_file" ]]; then
+    python3 - "$gradle_file" <<'PY_COMPILE_SDK'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+content = path.read_text(encoding="utf-8")
+pattern = re.compile(r"(?m)^(\\s*compileSdk\\s*=\\s*)(?:flutter\\.compileSdkVersion|[0-9]+)(\\s*(?://.*)?)$")
+content, count = pattern.subn(r"\\g<1>36\\g<2>", content)
+if count != 1:
+    raise SystemExit("Android compileSdk validation failed: expected exactly one compileSdk assignment that can be safely set to API 36.")
+if not re.search(r"(?m)^\\s*compileSdk\\s*=\\s*36\\s*$", content):
+    raise SystemExit("Android compileSdk validation failed: API 36 was not retained.")
+path.write_text(content, encoding="utf-8")
+print("Android compileSdk configured and validated: API 36.")
+PY_COMPILE_SDK
+  fi
+}
+
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
 if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/miltvplus_signing_configured.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
   ensure_min_android_sdk
+  ensure_compile_android_sdk
   configure_android_build_toolchain
   echo "El proyecto Android y los recursos de marca están completos; se conservan y se actualiza el toolchain compatible."
   exit 0
@@ -122,6 +147,7 @@ for item in source.rglob("*"):
         shutil.copy2(item, target)
 PY_COPY_MISSING
 ensure_min_android_sdk
+ensure_compile_android_sdk
 configure_android_build_toolchain
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
