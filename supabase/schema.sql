@@ -142,7 +142,7 @@ begin
       existing_policy.tablename
     );
   end loop;
-end
+end;
 $;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
