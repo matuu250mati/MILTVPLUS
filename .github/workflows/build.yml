@@ -144,7 +144,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify required Supabase schema (diagnostic; APK build continues)
+      - name: Verify required Supabase schema
         if: env.SUPABASE_URL_NORMALIZED != ''
 
         env:
@@ -154,11 +154,13 @@ jobs:
           set -euo pipefail
           # Ask PostgREST to resolve required columns with limit=0. This validates
           # the schema even when a catalog table has no publicly visible rows.
+          # Keep this contract aligned with deploy-supabase-migrations.yml.
+          # stream_urls is required by the movie/catalog import path.
           declare -A required_columns=(
-            [channels]="title,url_stream,is_published,sort_order,logo"
-            [movies]="title,url_stream,is_published,created_at"
-            [series]="title,is_published"
-            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [channels]="title,url_stream,stream_urls,category,country_code,is_published,sort_order,logo"
+            [movies]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,url_stream,stream_urls,release_year,duration_seconds,country_code,is_published,created_at,updated_at"
+            [series]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,release_year,country_code,is_published,created_at,updated_at"
+            [episodes]="series_id,title,synopsis,logo,url_stream,duration_seconds,is_published,season_number,episode_number,created_at"
             [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
           )
           failed=0
@@ -173,7 +175,7 @@ jobs:
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
+              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Required app columns are unavailable; inspect the response and deploy the reviewed migration before building a release. $detail"
               failed=1
             fi
           done
