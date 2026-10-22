@@ -344,51 +344,122 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget _drawerItem(int index) {
     final item = items[index];
     final active = selected == index;
+    final label = switch (item.label) {
+      'TV EN VIVO' => 'TV en Vivo',
+      'PELÍCULAS' => 'Películas',
+      'SERIES' => 'Series',
+      'ANIME' => 'Anime',
+      'DEPORTES' => 'Deportes',
+      'INFANTIL' => 'Infantil / Kids',
+      'GRATIS' => 'Catálogo global',
+      'EXPLORAR' => 'Explorar',
+      'PUBLICAR' => 'Publicación de contenido',
+      '+18' => 'Zona +18',
+      'CONFIGURACIÓN' => 'Configuración',
+      'MODERACIÓN' => 'Moderación de contenido',
+      _ => 'Inicio',
+    };
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-        selected: active,
-        selectedTileColor: AppTheme.accent.withValues(alpha: .13),
-        leading: Icon(
-          item.icon,
-          color: active ? AppTheme.accent : AppTheme.muted,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFF00E5FF), Color(0xFF00FF66)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          color: active ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: active
+              ? [BoxShadow(color: AppTheme.accent.withValues(alpha: .13), blurRadius: 14)]
+              : const [],
         ),
-        title: Text(
-          item.label == 'TV EN VIVO'
-              ? 'TV en Vivo'
-              : item.label == 'PELÍCULAS'
-                  ? 'Películas'
-                  : item.label == 'SERIES'
-                      ? 'Series'
-                      : item.label == 'ANIME'
-                          ? 'Anime'
-                          : item.label == 'DEPORTES'
-                  ? 'Deportes'
-                  : item.label == 'INFANTIL'
-                      ? 'Infantil / Kids'
-                      : item.label == 'GRATIS'
-                          ? 'Contenido gratis'
-                          : item.label == 'EXPLORAR'
-                              ? 'Explorar'
-                              : item.label == 'PUBLICAR'
-                              ? 'Publicación de contenido'
-                              : item.label == '+18'
-                                  ? 'Zona +18'
-                                  : item.label == 'CONFIGURACIÓN'
-                                      ? 'Perfil y configuración'
-                                      : item.label == 'MODERACIÓN'
-                                          ? 'Moderación de contenido'
-                                          : 'Inicio',
-          style: TextStyle(
-            color: active ? Colors.white : AppTheme.muted,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          selected: active,
+          selectedTileColor: Colors.transparent,
+          leading: Icon(item.icon, color: active ? const Color(0xFF031018) : AppTheme.muted),
+          title: Text(
+            label,
+            style: TextStyle(
+              color: active ? const Color(0xFF031018) : AppTheme.muted,
+              fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+            ),
           ),
+          onTap: () {
+            Navigator.of(context).pop();
+            setState(() => selected = index);
+          },
         ),
-        onTap: () {
-          Navigator.of(context).pop();
-          setState(() => selected = index);
-        },
+      ),
+    );
+  }
+
+  Widget _buildStatusFooter() {
+    final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
+    final profile = user?.email?.trim();
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF050A14),
+        border: Border(top: BorderSide(color: Color(0xFF15324A))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: SafeArea(
+        top: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 560;
+            final textSize = compact ? 9.0 : 11.0;
+            return Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.circle, color: AppTheme.accent, size: 7),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          'MILTVPLUS v3.10.8',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppTheme.muted, fontSize: textSize, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    compact ? (profile == null || profile.isEmpty ? 'Usuario: Invitado' : profile) : 'Usuario: ${profile == null || profile.isEmpty ? 'Invitado' : profile}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.muted, fontSize: textSize),
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.wifi_rounded, color: AppTheme.accent, size: compact ? 12 : 15),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          compact ? 'ARG' : 'Conectado · ARG 🇦🇷',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppTheme.accent, fontSize: textSize, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -517,7 +588,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       backgroundColor: AppTheme.background,
       // Inicio already renders its own header inside the scrollable dashboard.
       appBar: selected == 1 ? null : ((selected == 10 || selected == 0 || selected == 5) ? AppBar(
-        backgroundColor: const Color(0xFF080A10),
+        backgroundColor: AppTheme.background,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
         titleSpacing: 4,
@@ -546,6 +617,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ),
       )),
       drawer: _buildDrawer(),
+      bottomNavigationBar: _buildStatusFooter(),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wideLayout = constraints.maxWidth >= 1000;
