@@ -18,7 +18,7 @@ Working branch: `codex/m3u-integrity-report`.
 - The bootstrap explicitly keeps `android.builtInKotlin=false` and `android.newDsl=false`; therefore this toolchain upgrade does **not** itself migrate plugins off KGP.
 - `pubspec.yaml` currently constrains `package_info_plus` to 8.x, `device_info_plus` to 11.x, and `file_picker` to 10.x.
 - `shared_preferences` and `shared_preferences_android` are explicitly pinned to `2.3.5` and `2.3.4` to avoid untested Android implementation/API drift.
-- A committed `pubspec.lock` was not found at the time of inspection, so the exact resolved dependency graph must be captured in CI before choosing upgrades. The Android workflow now prints Flutter/Dart and the resolved versions of all four target packages.
+- No committed `pubspec.lock` is present, so CI resolves dependencies on each run. The version-report step was fixed after its initial grep pattern incorrectly rejected the leading `-` in `flutter pub deps --style=compact` output. On successful commit `a67cfbafa873cce43eb97e62a17679dd804cd809`, CI reported Flutter `3.47.7`, Dart `3.13.5`, `device_info_plus 11.5.0`, `file_picker 10.3.10`, `package_info_plus 8.3.1`, and `shared_preferences_android 2.3.4`.
 
 ## Safety rules
 
@@ -36,6 +36,10 @@ Working branch: `codex/m3u-integrity-report`.
 - Re-check the build log for the KGP warning. If a plugin still applies KGP, keep the migration marked incomplete rather than suppressing the warning.
 - Preserve the current app structure and avoid publishing/releasing production artifacts until all required checks pass.
 
+## Latest verified run
+
+Commit `a67cfbafa873cce43eb97e62a17679dd804cd809` passed the Android workflow and Flutter CI. The run reported `flutter analyze` clean, all 38 tests passing, the QA APK built (96.9 MB), and Supabase schema checks HTTP 200 for `channels`, `movies`, `series`, `episodes`, and `content_submissions`. The KGP warning remains present for all four target plugins. Therefore this is a validated baseline, not a completed Kotlin migration.
+
 ## Status
 
-Investigation in progress. The last recorded CI passed, but the Kotlin plugin migration is not yet verified complete.
+Investigation in progress. Next change must be based on a call-site/API compatibility audit and an actual migration of every plugin still applying KGP; do not flip `android.builtInKotlin` to true yet.
