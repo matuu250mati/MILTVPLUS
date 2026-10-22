@@ -126,7 +126,7 @@ grant select (
 ) on public.content_submissions to anon, authenticated;
 grant insert on public.content_submissions to authenticated;
 
-do $
+do $$
 declare
   existing_policy record;
 begin
@@ -143,7 +143,7 @@ begin
     );
   end loop;
 end;
-$;
+$$;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
