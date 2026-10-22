@@ -88,7 +88,7 @@ if not access_migration.exists():
 else:
     access_sql = access_migration.read_text(encoding="utf-8")
     rights_add = re.search(r"alter\s+table\s+public\.content_submissions\s+add\s+column\s+if\s+not\s+exists\s+rights_confirmed\s+boolean\s+not\s+null\s+default\s+false", access_sql, re.IGNORECASE)
-    submit_policy = re.search(r"create\s+policy\s+['"]Users submit pending content['"].*?with\s+check\s*\((.*?)\);", access_sql, re.IGNORECASE | re.DOTALL)
+    submit_policy = re.search(r"""create\s+policy\s+['"]Users submit pending content['"].*?with\s+check\s*\((.*?)\);""", access_sql, re.IGNORECASE | re.DOTALL)
     if not rights_add:
         errors.append(f"{access_migration}: must add rights_confirmed before using it in RLS")
     elif submit_policy and not re.search(r"\bright_confirmed\b", submit_policy.group(1), re.IGNORECASE):
