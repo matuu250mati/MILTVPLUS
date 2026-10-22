@@ -52,8 +52,11 @@ if parser.script_count != 1:
 if "1857055" not in html:
     print("Downloader code is missing", file=sys.stderr)
     sys.exit(1)
-if "latest/download/MILTVPLUS.apk" in html:
-    print("Do not assume an unverified APK asset filename; link to Releases", file=sys.stderr)
+if "releases/latest/download/MILTVPLUS.apk" not in html:
+    print("Missing stable link to the published MILTVPLUS APK asset", file=sys.stderr)
+    sys.exit(1)
+if "releases/latest/download/MILTVPLUS.apk.sha256" not in html:
+    print("Missing SHA-256 checksum link for the published APK", file=sys.stderr)
     sys.exit(1)
 scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
 if len(scripts) != 1:
