@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.8
   supabase_flutter: ^2.8.0
   video_player: ^2.9.2
   fvp: ^0.39.1
