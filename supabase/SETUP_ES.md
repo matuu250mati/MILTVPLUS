@@ -77,7 +77,7 @@ En SQL Editor, ejecutá una sola vez el contenido actualizado de:
 
 `supabase/migrations/20261013090200_user_content_submissions.sql`
 
-Esta migración crea `content_submissions`, habilita RLS, permite a usuarios autenticados enviar propuestas pendientes y permite que el público lea únicamente las aprobadas. Los moderadores solo pueden cambiar el campo `moderation_status`.
+Esta migración crea `content_submissions`, habilita RLS, permite a usuarios autenticados enviar propuestas pendientes y permite que usuarios autenticados lean únicamente las aprobadas. Los moderadores autorizados pueden revisar propuestas pendientes y cambiar `moderation_status`.
 
 Si el SQL Editor devuelve un error, no continúes como si la migración hubiera quedado aplicada. Copiá el error completo (sin claves ni tokens) y corregilo antes de probar el flujo.
 
@@ -100,7 +100,7 @@ Confirmá que la consulta de verificación devuelva exactamente una cuenta con e
 
 ## 5. Política vigente de acceso al catálogo
 
-El requisito vigente en esta rama es **catálogo solo para usuarios autenticados**. La migración correctiva `20261022100000_enforce_authenticated_catalog_access.sql` revoca la lectura del rol `anon` y permite a `authenticated` leer únicamente canales, películas y series publicados, episodios cuyo padre esté publicado y propuestas aprobadas. También elimina las políticas existentes de esas cinco tablas antes de instalar el conjunto previsto; por eso, antes de aplicarla en un proyecto con políticas personalizadas, revisá esas políticas y respaldá la configuración para confirmar que no se pierdan permisos administrativos necesarios.
+El requisito vigente en esta rama es **catálogo solo para usuarios autenticados**. La migración correctiva `20261022100000_enforce_authenticated_catalog_access.sql` revoca la lectura del rol `anon` y permite a `authenticated` leer únicamente canales, películas y series publicados, episodios cuyo padre esté publicado y propuestas aprobadas. Reemplaza solo las políticas de lectura conocidas y restaura las políticas owner-only de películas, series y episodios, además de las políticas de moderación. Aun así, antes de aplicarla en producción, compará las políticas reales del proyecto con las migraciones y verificá los permisos de publicación de canales, porque el historial anterior pudo haber eliminado políticas personalizadas.
 
 Las migraciones históricas `20261021210000_catalog_rls_hardening.sql` y `20261022090000_content_submissions_column_privileges.sql` contienen concesiones previas a `anon`; no las interpretes aisladamente. La migración correctiva posterior debe quedar registrada y aplicada en el proyecto destino. No ejecutes la migración de producción sin verificar primero el ID del proyecto, el historial de migraciones y las políticas personalizadas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
