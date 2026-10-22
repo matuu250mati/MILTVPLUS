@@ -104,7 +104,15 @@ El requisito vigente en esta rama es **catálogo solo para usuarios autenticados
 
 Las migraciones históricas `20261021210000_catalog_rls_hardening.sql` y `20261022090000_content_submissions_column_privileges.sql` contienen concesiones previas a `anon`; no las interpretes aisladamente. La migración correctiva posterior debe quedar registrada y aplicada en el proyecto destino. No ejecutes la migración de producción sin verificar primero el ID del proyecto, el historial de migraciones y las políticas personalizadas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
-## 6. Prueba de aceptación
+## 6. Archivos de medios del propietario
+
+La pantalla **PUBLICAR** sube archivos al bucket `owner-media` y guarda una URL pública para que el reproductor pueda abrirla. La migración `20261022110000_owner_media_storage_policies.sql` crea/configura ese bucket y limita las operaciones de escritura a sesiones autenticadas cuyo `app_metadata.role` sea `owner`.
+
+**Importante:** el bucket es público para lectura por diseño: cualquier persona que obtenga la URL de un archivo puede intentar abrirlo, aunque el catálogo requiera iniciar sesión. Subí únicamente medios que tengas derecho a distribuir públicamente. Si el requisito es que el video también quede protegido detrás de autenticación, no alcanza con RLS del catálogo: habrá que cambiar el flujo para guardar la ruta del objeto y emitir URLs firmadas al reproducir; no se debe resolver haciendo privado el bucket sin adaptar antes el reproductor.
+
+Tras aplicar la migración, probá con una cuenta normal que no pueda subir, reemplazar ni borrar objetos en `owner-media`, y con el rol `owner` que pueda subir y reproducir un archivo autorizado. La compilación de CI no ejecuta esta prueba contra producción.
+
+## 7. Prueba de aceptación
 
 1. Verificá que las tablas `channels`, `movies`, `series`, `episodes` y `content_submissions` existan y tengan las columnas consultadas por la app.
 2. Confirmá en el historial de Supabase que la migración `20261022100000_enforce_authenticated_catalog_access.sql` se haya aplicado al proyecto correcto.
