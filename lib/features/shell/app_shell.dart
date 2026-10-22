@@ -447,7 +447,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          compact ? 'ARG' : 'Conectado · ARG 🇦🇷',
+                          compact ? 'ARG 🇦🇷' : 'Red · ARG 🇦🇷',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: AppTheme.accent, fontSize: textSize, fontWeight: FontWeight.w700),
@@ -489,7 +489,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                         colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
                       ),
                     ),
-                    child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 30),
+                    child: const Icon(Icons.live_tv_rounded, color: Color(0xFF031018), size: 29),
                   ),
                   const SizedBox(width: 9),
                   const Expanded(
