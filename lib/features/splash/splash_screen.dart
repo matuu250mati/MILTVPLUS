@@ -46,8 +46,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFF030609),
       body: LayoutBuilder(
@@ -225,21 +223,6 @@ class _SplashScreenState extends State<SplashScreen>
                           ],
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              ),
-              // Keep this local reference useful during accessibility/TV QA.
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: SizedBox(
-                  width: 1,
-                  height: 1,
-                  child: ExcludeSemantics(
-                    child: Text(
-                      media.size.width > 0 ? 'MILTVPLUS' : '',
-                      style: const TextStyle(fontSize: 1),
                     ),
                   ),
                 ),
