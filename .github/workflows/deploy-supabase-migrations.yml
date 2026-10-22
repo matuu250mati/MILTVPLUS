@@ -1,11 +1,8 @@
 name: Deploy Supabase database migrations
 
+# Production schema changes must be reviewed and explicitly dispatched; never deploy on merge alone.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/migrations/**'
 
 permissions:
   contents: read
