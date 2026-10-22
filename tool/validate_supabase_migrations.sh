@@ -116,7 +116,7 @@ if not storage_migration.exists():
 else:
     storage_sql = storage_migration.read_text(encoding="utf-8")
     if not re.search(
-        r"insert\s+into\s+storage\.buckets\s*\(\s*id\s*,\s*name\s*,\s*public\s*\).*?owner-media.*?on\s+conflict\s*\(\s*id\s*\).*?public\s*=\s*excluded\.public",
+        r"insert\s+into\s+storage\.buckets\s*\(\s*id\s*,\s*name\s*,\s*public\s*\).*?owner-media.*?on\s+conflict\s*\(\s*id\s*\)\s+do\s+nothing.*?where\s+id\s*=\s*'owner-media'\s+and\s+public\s*=\s*true.*?raise\s+exception",
         storage_sql, re.IGNORECASE | re.DOTALL
     ):
         errors.append(f"{storage_migration}: must provision owner-media as a public-URL bucket")
