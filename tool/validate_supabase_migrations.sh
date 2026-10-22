@@ -91,7 +91,7 @@ else:
     submit_policy = re.search(r"""create\s+policy\s+['"]Users submit pending content['"].*?with\s+check\s*\((.*?)\);""", access_sql, re.IGNORECASE | re.DOTALL)
     if not rights_add:
         errors.append(f"{access_migration}: must add rights_confirmed before using it in RLS")
-    elif submit_policy and not re.search(r"\bright_confirmed\b", submit_policy.group(1), re.IGNORECASE):
+    elif submit_policy and not re.search(r"\brights_confirmed\b", submit_policy.group(1), re.IGNORECASE):
         errors.append(f"{access_migration}: submission policy must require rights_confirmed")
     for table in ("channels", "movies", "series", "episodes", "content_submissions"):
         if not re.search(
