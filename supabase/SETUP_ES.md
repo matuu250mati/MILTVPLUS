@@ -20,7 +20,7 @@ La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de column
 
 ## Despliegue automatizado de migraciones
 
-El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que se ejecuta manualmente desde **GitHub → Actions → Deploy Supabase database migrations → Run workflow**. Antes de ejecutarlo, configurá en **Settings → Secrets and variables → Actions → Repository secrets** estos secretos del mismo proyecto:
+El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que se ejecuta manualmente desde **GitHub → Actions → Deploy Supabase database migrations → Run workflow**. La primera ejecución debe usar `apply_migrations = false` (valor predeterminado): solo muestra el plan con `supabase db push --dry-run` y no modifica producción. Revisá ese plan y `supabase migration list`; si aparecen migraciones históricas inesperadas, detenete y reconciliá el historial antes de aplicar nada. Solo después de revisar el plan y confirmar una copia de seguridad, ejecutá una segunda vez con `apply_migrations = true`. Tras aplicar, el workflow verifica columnas usando el volcado de esquema de la conexión de base de datos; no usa SELECT anónimo, porque el catálogo debe denegar ese acceso. Antes de ejecutarlo, configurá en **Settings → Secrets and variables → Actions → Repository secrets** estos secretos del mismo proyecto:
 
 - `SUPABASE_ACCESS_TOKEN`: token personal de acceso de Supabase.
 - `SUPABASE_DB_PASSWORD`: contraseña de la base de datos del proyecto.
@@ -29,7 +29,7 @@ El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que s
 
 El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. Que el APK compile no demuestra que `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD` estén configurados para el entorno `production`. Confirmá que los cuatro secretos estén presentes en el entorno de GitHub Actions `production`; no los pegues en el chat. El workflow ahora rechaza explícitamente cualquier proyecto cuyo ref no sea el de producción esperado.
 
-No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
+No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes. No actives `apply_migrations` si el plan incluye migraciones antiguas que no reconocés o si no confirmaste el historial del proyecto.
 
 ## 2. Normalizar categorías de TV en vivo
 
