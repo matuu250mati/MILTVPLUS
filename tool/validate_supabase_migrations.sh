@@ -63,6 +63,26 @@ for path in files:
             if forbidden:
                 errors.append(f"{path}: private columns must not be granted: {', '.join(forbidden)}")
 
+# Enforce authenticated-only catalog access in the corrective migration.
+access_migration = Path("supabase/migrations/20261022100000_enforce_authenticated_catalog_access.sql")
+if not access_migration.exists():
+    errors.append(f"{access_migration}: missing authenticated-only access migration")
+else:
+    access_sql = access_migration.read_text(encoding="utf-8")
+    for table in ("channels", "movies", "series", "episodes", "content_submissions"):
+        if not re.search(
+            rf"create\s+policy\s+[^;]+on\s+public\.{table}\s+for\s+select\s+to\s+authenticated",
+            access_sql,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            errors.append(f"{access_migration}: {table} SELECT policy must target authenticated only")
+        if re.search(
+            rf"create\s+policy\s+[^;]+on\s+public\.{table}\s+for\s+select\s+to\s+anon\b",
+            access_sql,
+            re.IGNORECASE | re.DOTALL,
+        ):
+            errors.append(f"{access_migration}: anonymous SELECT policy is forbidden for {table}")
+
 if errors:
     for error in errors:
         print(f"ERROR: {error}", file=sys.stderr)
