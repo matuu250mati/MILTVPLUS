@@ -323,10 +323,44 @@ class _DashboardHeader extends StatelessWidget {
             ),
           ),
         ),
+        if (!compact) ...[
+          const SizedBox(width: 12),
+          StreamBuilder<int>(
+            stream: Stream<int>.periodic(const Duration(minutes: 1), (tick) => tick),
+            builder: (context, snapshot) {
+              final now = DateTime.now();
+              const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+              const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+              final label = '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+              return Text(label, style: const TextStyle(color: Color(0xFFDCE7F5), fontSize: 11, fontWeight: FontWeight.w600));
+            },
+          ),
+        ],
         IconButton(
           tooltip: 'Buscar contenido',
           onPressed: () => onNavigate(8),
           icon: const Icon(Icons.search_rounded),
+        ),
+        IconButton(
+          tooltip: 'Notificaciones',
+          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No hay notificaciones nuevas.')),
+          ),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.notifications_none_rounded),
+              Positioned(
+                right: -1,
+                top: -1,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(color: Color(0xFFFF3B4E), shape: BoxShape.circle),
+                ),
+              ),
+            ],
+          ),
         ),
         IconButton(
           tooltip: 'Configuración',
@@ -477,11 +511,11 @@ class _CategoryStrip extends StatelessWidget {
   final ValueChanged<int> onNavigate;
 
   static const _categories = <_CategoryInfo>[
-    _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF18CFFF), 0),
-    _CategoryInfo('Deportes', Icons.sports_soccer_rounded, Color(0xFF18F17B), 5),
-    _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
-    _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
-    _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF674F), 4),
+    _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF00E5FF), 0),
+    _CategoryInfo('Deportes', Icons.sports_soccer_rounded, Color(0xFF00FF66), 5),
+    _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF7C4DFF), 2),
+    _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFE040FB), 3),
+    _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF3D00), 4),
   ];
 
   @override
