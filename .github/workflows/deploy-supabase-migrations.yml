@@ -121,11 +121,11 @@ jobs:
           }
           errors = []
           for table, columns in required.items():
-              match = re.search(rf'CREATE TABLE\\s+(?:public\\.)?{re.escape(table)}\\s*\\((.*?)\\n\\);', sql, re.IGNORECASE | re.DOTALL)
+              match = re.search(rf'CREATE TABLE\s+(?:public\.)?{re.escape(table)}\s*\((.*?)\n\);', sql, re.IGNORECASE | re.DOTALL)
               if not match:
                   errors.append(f'{table}: table definition not found in remote schema dump')
                   continue
-              present = set(re.findall(r'^\\s*([a-z_][a-z0-9_]*)\\s+', match.group(1), re.IGNORECASE | re.MULTILINE))
+              present = set(re.findall(r'^\s*([a-z_][a-z0-9_]*)\s+', match.group(1), re.IGNORECASE | re.MULTILINE))
               missing = sorted(columns - {name.lower() for name in present})
               if missing:
                   errors.append(f'{table}: missing required columns: {", ".join(missing)}')
