@@ -55,7 +55,7 @@ if "1857055" not in html:
 if "latest/download/MILTVPLUS.apk" in html:
     print("Do not assume an unverified APK asset filename; link to Releases", file=sys.stderr)
     sys.exit(1)
-scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
+scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
 if len(scripts) != 1:
     print("Could not isolate the landing-page JavaScript", file=sys.stderr)
     sys.exit(1)
