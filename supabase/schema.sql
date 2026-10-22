@@ -114,16 +114,23 @@ revoke insert, update, delete, truncate, references, trigger
 revoke insert, update, delete, truncate, references, trigger
   on public.content_submissions from anon, authenticated;
 
+revoke select on public.channels, public.movies, public.series, public.episodes
+  from anon;
 grant select on public.channels, public.movies, public.series, public.episodes
-  to anon, authenticated;
+  to authenticated;
 
 -- Only grant public catalog fields; keep submitter identity and rights metadata private.
 revoke select on table public.content_submissions from anon, authenticated;
+revoke select (
+  id, title, description, stream_url, poster_url, duration_seconds,
+  series_title, season_number, episode_number, media_type,
+  moderation_status, created_at
+) on public.content_submissions from anon;
 grant select (
   id, title, description, stream_url, poster_url, duration_seconds,
   series_title, season_number, episode_number, media_type,
   moderation_status, created_at
-) on public.content_submissions to anon, authenticated;
+) on public.content_submissions to authenticated;
 grant insert on public.content_submissions to authenticated;
 
 do $$
@@ -147,21 +154,21 @@ $$;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
 create policy "Authenticated users read published channels"
-  on public.channels for select to anon, authenticated using (is_published);
+  on public.channels for select to authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published movies" on public.movies;
 drop policy if exists "Public users read published movies" on public.movies;
 create policy "Public users read published movies"
-  on public.movies for select to anon, authenticated using (is_published);
+  on public.movies for select to authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published series" on public.series;
 drop policy if exists "Public users read published series" on public.series;
 create policy "Public users read published series"
-  on public.series for select to anon, authenticated using (is_published);
+  on public.series for select to authenticated using (is_published);
 
 drop policy if exists "Authenticated users read published episodes" on public.episodes;
 create policy "Authenticated users read published episodes"
-  on public.episodes for select to anon, authenticated
+  on public.episodes for select to authenticated
   using (
     is_published and exists (
       select 1 from public.series s
@@ -171,7 +178,7 @@ create policy "Authenticated users read published episodes"
 
 drop policy if exists "Public users read approved submissions" on public.content_submissions;
 create policy "Public users read approved submissions"
-  on public.content_submissions for select to anon, authenticated
+  on public.content_submissions for select to authenticated
   using (moderation_status = 'approved');
 
 drop policy if exists "Users submit pending content" on public.content_submissions;
