@@ -263,7 +263,7 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text(
-          'Panel privado del propietario. Lo que publiques aparece en el catálogo para los espectadores.',
+          'Panel privado del propietario. Lo que publiques aparece en el catálogo para usuarios autenticados autorizados.',
           style: TextStyle(color: AppTheme.muted, height: 1.45),
         ),
         const SizedBox(height: 18),
