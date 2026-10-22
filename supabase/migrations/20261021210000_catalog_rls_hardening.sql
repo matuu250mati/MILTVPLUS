@@ -18,7 +18,16 @@ begin
     );
   end loop;
 end
-$$;
+$;
+
+-- Enforce row-level policies even when this migration is applied to a legacy
+-- project whose tables were created without RLS enabled. Policies alone do not
+-- restrict rows while RLS is disabled.
+alter table public.channels enable row level security;
+alter table public.movies enable row level security;
+alter table public.series enable row level security;
+alter table public.episodes enable row level security;
+alter table public.content_submissions enable row level security;
 
 revoke insert, update, delete, truncate, references, trigger
   on public.channels, public.movies, public.series, public.episodes
