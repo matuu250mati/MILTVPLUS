@@ -62,7 +62,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           _selectedCategory = 'Todos';
         }
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -103,7 +103,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           uri != null &&
           uri.scheme == 'https' &&
           uri.hasAuthority &&
-          !uri.userInfo.isNotEmpty &&
+          uri.userInfo.isEmpty &&
           !urls.contains(value)) {
         urls.add(value);
       }
