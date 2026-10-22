@@ -422,10 +422,10 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
-          if-no-files-found: error
-          retention-days: 14
             build/app-release.apk
             build/app-release.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
 
   publish-release:
     name: Publish verified Android release
@@ -456,7 +456,7 @@ jobs:
           done
           (cd build && sha256sum --check MILTVPLUS.apk.sha256)
           (cd build && sha256sum --check app-release.apk.sha256)
-          app_version="$(sed -n 's/^version: \\([^+]*\\)+.*/\\1/p' pubspec.yaml)"
+          app_version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
           [[ -n "$app_version" ]] || { echo "::error::Could not read app version from pubspec.yaml."; exit 1; }
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             tag="$GITHUB_REF_NAME"
