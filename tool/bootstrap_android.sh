@@ -102,11 +102,11 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 content = path.read_text(encoding="utf-8")
-pattern = re.compile(r"(?m)^(\\s*compileSdk\\s*=\\s*)(?:flutter\\.compileSdkVersion|[0-9]+)(\\s*(?://.*)?)$")
-content, count = pattern.subn(r"\\g<1>36\\g<2>", content)
+pattern = re.compile(r"(?m)^(\s*compileSdk\s*=\s*)(?:flutter\.compileSdkVersion|[0-9]+)(\s*(?://.*)?)$")
+content, count = pattern.subn(r"\g<1>36\g<2>", content)
 if count != 1:
     raise SystemExit("Android compileSdk validation failed: expected exactly one compileSdk assignment that can be safely set to API 36.")
-if not re.search(r"(?m)^\\s*compileSdk\\s*=\\s*36\\s*$", content):
+if not re.search(r"(?m)^\s*compileSdk\s*=\s*36\s*$", content):
     raise SystemExit("Android compileSdk validation failed: API 36 was not retained.")
 path.write_text(content, encoding="utf-8")
 print("Android compileSdk configured and validated: API 36.")
