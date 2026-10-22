@@ -3,6 +3,12 @@ name: Deploy Supabase database migrations
 # Production schema changes must be reviewed and explicitly dispatched; never deploy on merge alone.
 on:
   workflow_dispatch:
+    inputs:
+      apply_migrations:
+        description: "Apply the pending migrations after reviewing a separate dry-run"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -85,40 +91,54 @@ jobs:
         run: supabase db push --dry-run
 
       - name: Apply tracked migrations
+        if: ${{ inputs.apply_migrations }}
         run: supabase db push
 
       - name: Verify migration history
+        if: ${{ inputs.apply_migrations }}
         run: supabase migration list
 
-      - name: Verify required PostgREST schema
+      - name: Verify deployed database schema using pg_dump
+        if: ${{ inputs.apply_migrations }}
         shell: bash
         run: |
           set -euo pipefail
-          declare -A required_columns=(
-            [channels]="title,url_stream,stream_urls,category,country_code,is_published,sort_order,logo"
-            [movies]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,url_stream,stream_urls,release_year,duration_seconds,country_code,is_published,created_at,updated_at"
-            [series]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,release_year,country_code,is_published,created_at,updated_at"
-            [episodes]="series_id,title,synopsis,logo,url_stream,duration_seconds,is_published,season_number,episode_number,created_at"
-            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
-          )
-          failed=0
-          for table in channels movies series episodes content_submissions; do
-            query="select=${required_columns[$table]}&limit=0"
-            status="$(curl --silent --show-error --max-time 12 \
-              --output /tmp/supabase-schema-body.txt \
-              --write-out '%{http_code}' \
-              --header "apikey: $SUPABASE_ANON_KEY" \
-              --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
-              "$SUPABASE_URL/rest/v1/$table?$query" || true)"
-            if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
-              detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
-              echo "::error::Post-deploy schema verification failed for $table (HTTP ${status:-no-response}): $detail"
-              failed=1
-            else
-              echo "Verified $table required columns (HTTP $status)."
-            fi
-          done
-          if [[ "$failed" -ne 0 ]]; then
-            echo "::error::One or more Supabase tables failed post-deployment verification."
-            exit 1
-          fi
+          # Use the linked database connection, not anon PostgREST SELECTs. The
+          # intended RLS policy denies anon catalog reads after deployment.
+          supabase db dump --linked --schema public --file /tmp/supabase-public-schema.sql --password "$SUPABASE_DB_PASSWORD"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          sql = Path('/tmp/supabase-public-schema.sql').read_text(encoding='utf-8')
+          required = {
+              'channels': {'title', 'url_stream', 'stream_urls', 'category', 'country_code', 'is_published', 'sort_order', 'logo'},
+              'movies': {'tmdb_id', 'title', 'synopsis', 'category', 'genres', 'logo', 'backdrop_url', 'url_stream', 'stream_urls', 'release_year', 'duration_seconds', 'country_code', 'is_published', 'created_at', 'updated_at'},
+              'series': {'tmdb_id', 'title', 'synopsis', 'category', 'genres', 'logo', 'backdrop_url', 'release_year', 'country_code', 'is_published', 'created_at', 'updated_at'},
+              'episodes': {'series_id', 'title', 'synopsis', 'logo', 'url_stream', 'duration_seconds', 'is_published', 'season_number', 'episode_number', 'created_at'},
+              'content_submissions': {'title', 'description', 'stream_url', 'poster_url', 'duration_seconds', 'series_title', 'season_number', 'episode_number', 'media_type', 'moderation_status', 'created_at'},
+          }
+          errors = []
+          for table, columns in required.items():
+              match = re.search(rf'CREATE TABLE\\s+(?:public\\.)?{re.escape(table)}\\s*\\((.*?)\\n\\);', sql, re.IGNORECASE | re.DOTALL)
+              if not match:
+                  errors.append(f'{table}: table definition not found in remote schema dump')
+                  continue
+              present = set(re.findall(r'^\\s*([a-z_][a-z0-9_]*)\\s+', match.group(1), re.IGNORECASE | re.MULTILINE))
+              missing = sorted(columns - {name.lower() for name in present})
+              if missing:
+                  errors.append(f'{table}: missing required columns: {", ".join(missing)}')
+          if errors:
+              for error in errors:
+                  print(f'ERROR: {error}', file=sys.stderr)
+              sys.exit(1)
+          print('Remote database schema verified: all required catalog columns are present.')
+          PY
+
+      - name: Explain dry-run-only result
+        if: ${{ !inputs.apply_migrations }}
+        shell: bash
+        run: |
+          echo "### Dry run only — no production migrations applied" >> "$GITHUB_STEP_SUMMARY"
+          echo "Review the planned migration list and the remote migration history. If any old migrations are unexpectedly pending, stop and reconcile history before a separate run with apply_migrations enabled." >> "$GITHUB_STEP_SUMMARY"
