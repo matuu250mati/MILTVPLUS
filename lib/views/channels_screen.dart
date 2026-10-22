@@ -44,7 +44,11 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       });
     }
     try {
-      final response = await _supabase.from('channels').select();
+      // Ask PostgREST for published rows only; keep the client-side check below as defense in depth.
+      final response = await _supabase
+          .from('channels')
+          .select()
+          .eq('is_published', true);
       final data = List<Map<String, dynamic>>.from(response);
       final loaded = data
           .map(ChannelModel.fromJson)
