@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/supabase_config.dart';
 
 /// Read-only access to the published MILTV PLUS catalog.
-/// Public reads are limited by RLS to published entries; writes remain server-side.
+/// Authenticated reads are limited by RLS to published entries; owner writes are server-authorized by RLS.
 class CatalogRepository {
   const CatalogRepository();
 
