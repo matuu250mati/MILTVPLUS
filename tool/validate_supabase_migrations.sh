@@ -126,7 +126,7 @@ else:
             storage_sql, re.IGNORECASE | re.DOTALL
         ):
             errors.append(f"{storage_migration}: missing authenticated owner-only {operation} policy")
-    if len(re.findall(r"auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'role'\s*=\s*'owner'", storage_sql, re.IGNORECASE)) < 4:
+    if len(re.findall(r"auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'role'\s*\)?\s*=\s*'owner'", storage_sql, re.IGNORECASE)) < 4:
         errors.append(f"{storage_migration}: each storage write policy must check server-managed owner role")
 
 
