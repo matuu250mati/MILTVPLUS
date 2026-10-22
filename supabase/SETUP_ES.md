@@ -106,7 +106,7 @@ Las migraciones históricas `20261021210000_catalog_rls_hardening.sql` y `202610
 
 ## 6. Archivos de medios del propietario
 
-La pantalla **PUBLICAR** sube archivos al bucket `owner-media` y guarda una URL pública para que el reproductor pueda abrirla. La migración `20261022110000_owner_media_storage_policies.sql` crea/configura ese bucket y limita las operaciones de escritura a sesiones autenticadas cuyo `app_metadata.role` sea `owner`.
+La pantalla **PUBLICAR** sube archivos al bucket `owner-media` y guarda una URL pública para que el reproductor pueda abrirla. La migración `20261022110000_owner_media_storage_policies.sql` crea el bucket si no existe y limita las operaciones de escritura a sesiones autenticadas cuyo `app_metadata.role` sea `owner`. Si ya existe un bucket privado con ese nombre, la migración se detiene en vez de hacerlo público automáticamente; revisá sus objetos y la política de acceso antes de decidir un cambio de visibilidad.
 
 **Importante:** el bucket es público para lectura por diseño: cualquier persona que obtenga la URL de un archivo puede intentar abrirlo, aunque el catálogo requiera iniciar sesión. Subí únicamente medios que tengas derecho a distribuir públicamente. Si el requisito es que el video también quede protegido detrás de autenticación, no alcanza con RLS del catálogo: habrá que cambiar el flujo para guardar la ruta del objeto y emitir URLs firmadas al reproducir; no se debe resolver haciendo privado el bucket sin adaptar antes el reproductor.
 
