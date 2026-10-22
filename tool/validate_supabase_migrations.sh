@@ -108,6 +108,49 @@ else:
             errors.append(f"{access_migration}: anonymous SELECT policy is forbidden for {table}")
 
 
+
+# Owner publishing must retain server-enforced CRUD for movies, series, and episodes.
+owner_policy_pattern = re.compile(
+    r"""create\s+policy\s+['"]([^'"]+)['"]\s+on\s+public\.(movies|series|episodes)\s+for\s+(select|insert|update|delete)\s+to\s+authenticated\b(.*?);""",
+    re.IGNORECASE | re.DOTALL,
+)
+owner_policies = list(owner_policy_pattern.finditer(access_sql)) if access_migration.exists() else []
+owner_role = re.compile(
+    r"auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'role'\s*\)?\s*=\s*'owner'",
+    re.IGNORECASE,
+)
+for table in ("movies", "series", "episodes"):
+    for operation in ("select", "insert", "update", "delete"):
+        if not any(
+            match.group(1).lower().startswith("miltvplus owner")
+            and match.group(2).lower() == table
+            and match.group(3).lower() == operation
+            and owner_role.search(match.group(4))
+            for match in owner_policies
+        ):
+            errors.append(
+                f"{access_migration}: missing owner-role {operation.upper()} policy for {table}"
+            )
+
+moderator_policy = re.search(
+    r"""create\s+policy\s+['"]Moderators review submissions['"]\s+on\s+public\.content_submissions\s+for\s+update\s+to\s+authenticated\b(.*?);""",
+    access_sql if access_migration.exists() else "",
+    re.IGNORECASE | re.DOTALL,
+)
+if not moderator_policy or not re.search(
+    r"auth\.jwt\(\)\s*->\s*'app_metadata'\s*->>\s*'role'\s*\)?\s+in\s*\(\s*'admin'\s*,\s*'moderator'\s*\)",
+    moderator_policy.group(1) if moderator_policy else "",
+    re.IGNORECASE,
+):
+    errors.append(f"{access_migration}: missing authenticated admin/moderator review policy")
+if not re.search(
+    r"grant\s+update\s*\(\s*moderation_status\s*\)\s+on\s+public\.content_submissions\s+to\s+authenticated",
+    access_sql if access_migration.exists() else "",
+    re.IGNORECASE,
+):
+    errors.append(f"{access_migration}: moderator updates must be limited to moderation_status")
+
+
 # The owner publishing screen uploads to owner-media and persists public URLs.
 # Provision the bucket and assert that only the server-managed owner role can write.
 storage_migration = Path("supabase/migrations/20261022110000_owner_media_storage_policies.sql")
