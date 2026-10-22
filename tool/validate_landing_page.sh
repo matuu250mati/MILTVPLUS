@@ -16,6 +16,7 @@ class LandingPageParser(HTMLParser):
         self.ids = []
         self.fragments = []
         self.selectors = set()
+        self.translation_keys = set()
         self.script_count = 0
 
     def handle_starttag(self, tag, attrs):
@@ -26,6 +27,8 @@ class LandingPageParser(HTMLParser):
         href = attrs.get("href", "")
         if href.startswith("#") and len(href) > 1:
             self.fragments.append(href[1:])
+        if attrs.get("data-i18n"):
+            self.translation_keys.add(attrs["data-i18n"])
         if tag == "select" and attrs.get("id") == "language-select":
             self.selectors.add("language-select")
         if tag == "script":
@@ -46,6 +49,22 @@ if missing:
 if "language-select" not in parser.selectors:
     print("Missing international language selector", file=sys.stderr)
     sys.exit(1)
+translations_start = html.find("const translations={")
+translations_end = html.find("const fullTextTranslations=", translations_start)
+if translations_start < 0 or translations_end < 0:
+    print("Could not isolate primary locale dictionaries", file=sys.stderr)
+    sys.exit(1)
+translations_block = html[translations_start:translations_end]
+for locale in ("es-AR", "en-US", "es-ES", "pt-BR"):
+    line = next((line for line in translations_block.splitlines() if line.lstrip().startswith(f"'{locale}':{{")), "")
+    if not line:
+        print(f"Missing primary locale dictionary: {locale}", file=sys.stderr)
+        sys.exit(1)
+    translated_keys = set(re.findall(r"(?:^|,)([A-Za-z][A-Za-z0-9]*):'", line))
+    missing_keys = sorted(parser.translation_keys - translated_keys)
+    if missing_keys:
+        print(f"Locale {locale} is missing data-i18n keys: {', '.join(missing_keys)}", file=sys.stderr)
+        sys.exit(1)
 for required_locale in ("'en-US':{", "'es-ES':{", "'pt-BR':{"):
     if required_locale not in html:
         print(f"Missing full-content translation dictionary: {required_locale}", file=sys.stderr)
