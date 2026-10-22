@@ -18,19 +18,36 @@ class CatalogService {
     return _client ?? Supabase.instance.client;
   }
 
+  /// Fetches every matching row in stable 500-row pages. PostgREST applies a
+  /// server-side row cap, so a single select can silently omit larger catalogs.
+  Future<List<Map<String, dynamic>>> _readAllPages(
+    Future<List<Map<String, dynamic>>> Function(int from, int to) loadPage,
+  ) async {
+    const pageSize = 500;
+    final rows = <Map<String, dynamic>>[];
+    var from = 0;
+    while (true) {
+      final page = await loadPage(from, from + pageSize - 1);
+      rows.addAll(page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+    return rows;
+  }
+
 
   /// User-submitted items become visible to everyone only after moderation approves them.
   Future<List<Map<String, dynamic>>> getApprovedSubmissions(String mediaType) async {
-    final response = await _supabase
+    final response = await _readAllPages((from, to) => _supabase
         .from('content_submissions')
         .select('title, description, stream_url, poster_url, duration_seconds, series_title, season_number, episode_number, media_type')
         .eq('moderation_status', 'approved')
         .eq('media_type', mediaType)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .order('id', ascending: true)
+        .range(from, to));
 
-    return (response as List<dynamic>)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList(growable: false);
+    return response;
   }
 
   Future<List<ChannelModel>> getChannels({List<String>? categories}) async {
@@ -95,30 +112,34 @@ class CatalogService {
       ]);
     }
 
-    final query = _supabase
-        .from('channels')
-        .select()
-        .eq('is_published', true);
-    final filteredQuery = expandedCategories.isEmpty
-        ? query
-        : query.inFilter('category', expandedCategories.toList(growable: false));
-    final response = await filteredQuery
-        .order('sort_order', ascending: true)
-        .order('title', ascending: true);
+    final response = await _readAllPages((from, to) {
+      final query = _supabase
+          .from('channels')
+          .select()
+          .eq('is_published', true);
+      final filteredQuery = expandedCategories.isEmpty
+          ? query
+          : query.inFilter('category', expandedCategories.toList(growable: false));
+      return filteredQuery
+          .order('sort_order', ascending: true)
+          .order('title', ascending: true)
+          .order('id', ascending: true)
+          .range(from, to);
+    });
 
-    return (response as List<dynamic>)
-        .map((item) => ChannelModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+    return response
+        .map((item) => ChannelModel.fromJson(item))
         .toList(growable: false);
   }
 
   Future<List<MovieModel>> getMovies() async {
-    final response = await _supabase
+    final response = await _readAllPages((from, to) => _supabase
         .from('movies')
         .select()
         .eq('is_published', true)
-        .order('title', ascending: true);
+        .order('title', ascending: true)
+        .order('id', ascending: true)
+        .range(from, to));
 
     // Keep every published metadata row in the catalog, even when its owner
     // has not attached an authorized playback URL yet. The UI marks those items
@@ -135,11 +156,13 @@ class CatalogService {
   }
 
   Future<List<SeriesModel>> getSeries() async {
-    final response = await _supabase
+    final response = await _readAllPages((from, to) => _supabase
         .from('series')
         .select()
         .eq('is_published', true)
-        .order('title', ascending: true);
+        .order('title', ascending: true)
+        .order('id', ascending: true)
+        .range(from, to));
 
     final series = (response as List<dynamic>)
         .map((item) => SeriesModel.fromJson(
@@ -153,13 +176,15 @@ class CatalogService {
   }
 
   Future<List<EpisodeModel>> getEpisodes(String seriesId) async {
-    final response = await _supabase
+    final response = await _readAllPages((from, to) => _supabase
         .from('episodes')
         .select()
         .eq('series_id', seriesId)
         .eq('is_published', true)
         .order('season_number', ascending: true)
-        .order('episode_number', ascending: true);
+        .order('episode_number', ascending: true)
+        .order('id', ascending: true)
+        .range(from, to));
 
     return (response as List<dynamic>)
         .map((item) => EpisodeModel.fromJson(
