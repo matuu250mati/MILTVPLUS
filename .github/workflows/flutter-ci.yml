@@ -29,6 +29,8 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
+      - name: Validate official landing page
+        run: bash tool/validate_landing_page.sh
       - name: Analyze Dart and Flutter code
         run: flutter analyze
       - name: Run tests
