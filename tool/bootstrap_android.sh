@@ -47,7 +47,7 @@ settings_path.write_text(settings, encoding="utf-8")
 wrapper = wrapper_path.read_text(encoding="utf-8")
 wrapper, wrapper_count = re.subn(
     r"(?m)^distributionUrl=.*$",
-    r"distributionUrl=https\\://services.gradle.org/distributions/gradle-9.1.0-all.zip",
+    r"distributionUrl=https\://services.gradle.org/distributions/gradle-9.1.0-all.zip",
     wrapper,
 )
 if wrapper_count != 1:
