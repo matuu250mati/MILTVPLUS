@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Canales en vivo',
                     icon: Icons.live_tv_rounded,
-                    color: const Color(0xFF18F17B),
+                    color: const AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(0),
                   ),
                   const SizedBox(height: 10),
@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Películas populares',
                     icon: Icons.local_movies_rounded,
-                    color: const Color(0xFF18F17B),
+                    color: const AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(2),
                   ),
                   const SizedBox(height: 10),
@@ -291,7 +291,7 @@ class _DashboardHeader extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
             gradient: const LinearGradient(
-              colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
+              colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -385,7 +385,7 @@ class _HeroBanner extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF17608B).withValues(alpha: .75)),
+        border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: .75)),
         gradient: const LinearGradient(
           colors: [Color(0xFF102D4D), Color(0xFF07101E), Color(0xFF030812)],
           begin: Alignment.topRight,
@@ -401,7 +401,7 @@ class _HeroBanner extends StatelessWidget {
             child: Icon(
               Icons.sports_soccer_rounded,
               size: compact ? 190 : 285,
-              color: const Color(0xFFB8FF35).withValues(alpha: .16),
+              color: const Color(0xFF00FF66).withValues(alpha: .16),
             ),
           ),
           const DecoratedBox(
@@ -658,7 +658,7 @@ class _ChannelRail extends StatelessWidget {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: const Color(0xFF17436C)),
+                      border: Border.all(color: const Color(0xFF00E5FF)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,7 +684,7 @@ class _ChannelRail extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF087B43),
+                                color: AppTheme.accent,
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: const Text('VIVO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900)),
@@ -760,7 +760,7 @@ class _PosterRail<T> extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.panel,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF1D527A)),
+                        border: Border.all(color: const Color(0xFF00E5FF)),
                       ),
                       child: image == null || image.trim().isEmpty
                           ? const Center(child: Icon(Icons.movie_outlined, color: AppTheme.accent, size: 40))
