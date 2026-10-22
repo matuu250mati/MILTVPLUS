@@ -144,52 +144,27 @@ jobs:
             exit 1
           fi
 
-      - name: Verify required Supabase schema
+      - name: Verify Supabase REST API is reachable
         if: env.SUPABASE_URL_NORMALIZED != ''
-
         env:
           SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && (secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY) || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          # Ask PostgREST to resolve required columns with limit=0. This validates
-          # the schema even when a catalog table has no publicly visible rows.
-          # Keep this contract aligned with deploy-supabase-migrations.yml.
-          # stream_urls is required by the movie/catalog import path.
-          declare -A required_columns=(
-            [channels]="title,url_stream,stream_urls,category,country_code,is_published,sort_order,logo"
-            [movies]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,url_stream,stream_urls,release_year,duration_seconds,country_code,is_published,created_at,updated_at"
-            [series]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,release_year,country_code,is_published,created_at,updated_at"
-            [episodes]="series_id,title,synopsis,logo,url_stream,duration_seconds,is_published,season_number,episode_number,created_at"
-            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
-          )
-          failed=0
-          for table in channels movies series episodes content_submissions; do
-            query="select=${required_columns[$table]}&limit=0"
-            status="$(curl --silent --show-error --max-time 12 \
-              --output /tmp/supabase-smoke-body.txt \
-              --write-out '%{http_code}' \
-              --header "apikey: $SUPABASE_ANON_KEY" \
-              "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
-            if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
-              echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
-            else
-              detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::error::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). Required app columns are unavailable; inspect the response and deploy the reviewed migration before building a release. $detail"
-              failed=1
-            fi
-          done
-          if [[ "$failed" -ne 0 ]]; then
-            {
-              echo "### Supabase schema validation: failed"
-              echo "One or more required tables did not match the app schema. The build is blocked to prevent a green CI result when database-backed features may fail."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "::error::Supabase schema validation failed. Fix the affected table/schema or deploy the required migration before this build can pass."
+          # This is a reachability check only. Catalog tables intentionally deny anon SELECT
+          # after RLS hardening, so schema validation must not depend on anon table access.
+          status="$(curl --silent --show-error --max-time 12 \
+            --output /tmp/supabase-rest-openapi.json \
+            --write-out '%{http_code}' \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header 'Accept: application/openapi+json' \
+            "$SUPABASE_URL_NORMALIZED/rest/v1/" || true)"
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            detail="$(head -c 400 /tmp/supabase-rest-openapi.json 2>/dev/null || true)"
+            echo "::error::Supabase REST API is not reachable (HTTP ${status:-no-response}). Check the project URL and public key. $detail"
             exit 1
-          else
-            echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "Supabase REST API is reachable (HTTP $status). Live schema verification is performed by the database deployment workflow using a database connection, not anonymous SELECT privileges."
 
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -270,40 +245,37 @@ jobs:
           set -euo pipefail
           apk="build/app/outputs/flutter-apk/app-release.apk"
           test -s "$apk"
-          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
-            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-            [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the production APK signature."; exit 1; }
-            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
-            [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the production APK signature."; exit 1; }
-            verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
-              printf '%s\n' "$verification_output"
-              echo "::error::The release APK signature is invalid."
-              exit 1
-            }
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          [[ -n "$sdk_root" ]] || { echo "::error::Android SDK path is unavailable; cannot verify the APK signature."; exit 1; }
+          apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo "::error::apksigner was not found; cannot verify the APK signature."; exit 1; }
+          verification_output="$("$apksigner" verify --verbose --print-certs "$apk" 2>&1)" || {
             printf '%s\n' "$verification_output"
-            # Parse SHA-256 without relying on exact signer numbering, capitalization,
-            # colon formatting, or whitespace used by different build-tools versions.
-            actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
-              tolower($0) ~ /certificate sha-256 digest:/ {
-                line = tolower($0)
-                sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
-                gsub(/[^0-9a-f]/, "", line)
-                print line
-                exit
-              }
-            ')"
-            if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
-              echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
-              echo "::error::Refusing to skip the production-certificate match check."
-              exit 1
-            fi
-            [[ "$actual_cert_sha256" == "$MILTVPLUS_EXPECTED_SIGNER_SHA256" ]] || {
+            echo "::error::The APK signature is invalid."
+            exit 1
+          }
+          printf '%s\n' "$verification_output"
+          actual_cert_sha256="$(printf '%s\n' "$verification_output" | awk '
+            tolower($0) ~ /certificate sha-256 digest:/ {
+              line = tolower($0)
+              sub(/^.*certificate sha-256 digest:[[:space:]]*/, "", line)
+              gsub(/[^0-9a-f]/, "", line)
+              print line
+              exit
+            }
+          ')"
+          if [[ ! "$actual_cert_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::apksigner verified the APK but did not emit a parseable SHA-256 certificate fingerprint."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "${VERIFY_PRODUCTION_SIGNING:-false}" == "true" ]]; then
+            [[ "$actual_cert_sha256" == "${MILTVPLUS_EXPECTED_SIGNER_SHA256:-}" ]] || {
               echo "::error::The APK signer certificate does not match the configured production keystore."
               exit 1
             }
             echo "Production APK signature is valid and matches the configured keystore certificate."
           else
-            echo "Non-versioned CI build: production signing verification was not requested."
+            echo "APK signature is structurally valid; production keystore matching is intentionally not required for this QA build."
           fi
 
       - name: Name APK and generate SHA-256 checksum
