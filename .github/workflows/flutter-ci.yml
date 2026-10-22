@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+      - name: Validate Supabase submission privileges
+        run: bash tool/validate_supabase_migrations.sh
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
