@@ -47,18 +47,21 @@ for path in files:
             re.IGNORECASE,
         ):
             errors.append(f"{path}: missing table-level SELECT revocation")
-        # Fresh schema must not grant anonymous reads; historical migrations
-        # are checked for their explicit column allowlist and corrected by the
-        # final authenticated-only migration.
-        target_roles = (
-            r"authenticated"
-            if path.name == "schema.sql"
-            else r"anon\s*,\s*authenticated"
-        )
-        match = re.search(
-            r"grant\s+select\s*\((.*?)\)\s*on\s+public\.content_submissions\s+to\s+" + target_roles,
+        # Match the complete column-grant statement and inspect its role list.
+        grants = list(re.finditer(
+            r"grant\s+select\s*\((.*?)\)\s*on\s+public\.content_submissions\s+to\s+([^;]+);",
             sql,
             re.IGNORECASE | re.DOTALL,
+        ))
+        match = next(
+            (
+                grant for grant in grants
+                if (
+                    (path.name == "schema.sql" and grant.group(2).strip().lower() == "authenticated")
+                    or (path.name != "schema.sql" and re.fullmatch(r"anon\s*,\s*authenticated", grant.group(2).strip(), re.IGNORECASE))
+                )
+            ),
+            None,
         )
         if not match:
             errors.append(f"{path}: missing explicit public column allowlist")
