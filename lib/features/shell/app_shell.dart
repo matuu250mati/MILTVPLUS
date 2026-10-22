@@ -111,7 +111,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               backgroundColor: const Color(0xFF111521),
               title: Row(
                 children: [
-                  const Icon(Icons.system_update_rounded, color: Color(0xFF5BE58B)),
+                  const Icon(Icons.system_update_rounded, color: Color(0xFF00FF66)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(info.mandatory
@@ -237,7 +237,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF20243C), Color(0xFF10131E)],
+                  colors: [Color(0xFF0A0F1D), Color(0xFF030712)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -250,7 +250,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     height: 60,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF5BE58B), Color(0xFFB5FF35)],
+                        colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -470,7 +470,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF06101F), Color(0xFF050914)],
+          colors: [Color(0xFF0A0F1D), Color(0xFF030712)],
         ),
       ),
       child: SafeArea(
@@ -486,7 +486,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
+                        colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
                       ),
                     ),
                     child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 30),
@@ -594,7 +594,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         titleSpacing: 4,
         title: const SizedBox.shrink(),
       ) : AppBar(
-        backgroundColor: const Color(0xFF080A10),
+        backgroundColor: const AppTheme.background,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
         titleSpacing: 4,
