@@ -98,19 +98,22 @@ where lower(email) = lower('moderador@tu-dominio.com');
 
 Confirmá que la consulta de verificación devuelva exactamente una cuenta con el rol `moderator`. Cerrá sesión y volvé a iniciar sesión en MILTVPLUS para renovar el JWT y cargar el rol. No asignes este rol a cuentas que no deban aprobar publicaciones.
 
-## 5. Verificar las políticas del catálogo
+## 5. Política vigente de acceso al catálogo
 
-Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. **Atención: hay una diferencia histórica de intención en el repositorio:** `supabase/schema.sql` y las migraciones `20261013090000`/`20261013090100` permiten lectura anónima de filas publicadas, mientras que `20261014143100_require_auth_for_catalog.sql` cambia el acceso de canales, películas, series y episodios a `authenticated` solamente. La política efectiva después de aplicar todas las migraciones es la última, salvo cambios manuales posteriores. Antes de publicar, decidí y verificá el requisito real: catálogo visible antes de iniciar sesión o catálogo solo para usuarios autenticados. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
+El requisito vigente en esta rama es **catálogo solo para usuarios autenticados**. La migración correctiva `20261022100000_enforce_authenticated_catalog_access.sql` revoca la lectura del rol `anon` y permite a `authenticated` leer únicamente canales, películas y series publicados, episodios cuyo padre esté publicado y propuestas aprobadas. También elimina las políticas existentes de esas cinco tablas antes de instalar el conjunto previsto; por eso, antes de aplicarla en un proyecto con políticas personalizadas, revisá esas políticas y respaldá la configuración para confirmar que no se pierdan permisos administrativos necesarios.
+
+Las migraciones históricas `20261021210000_catalog_rls_hardening.sql` y `20261022090000_content_submissions_column_privileges.sql` contienen concesiones previas a `anon`; no las interpretes aisladamente. La migración correctiva posterior debe quedar registrada y aplicada en el proyecto destino. No ejecutes la migración de producción sin verificar primero el ID del proyecto, el historial de migraciones y las políticas personalizadas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
 ## 6. Prueba de aceptación
 
-1. Verificá que las tablas `channels`, `movies`, `series` y `episodes` existan y tengan las columnas consultadas por la app.
-2. Confirmá que `content_submissions` exista después de aplicar su migración.
-3. Registrá una cuenta normal e iniciá sesión.
-4. En **PUBLICAR**, enviá una película de prueba cuya URL HTTPS sea tuya o esté autorizada.
-5. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'`.
-6. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**.
-7. Aprobá la propuesta y verificá que aparezca en el catálogo público.
-8. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
+1. Verificá que las tablas `channels`, `movies`, `series`, `episodes` y `content_submissions` existan y tengan las columnas consultadas por la app.
+2. Confirmá en el historial de Supabase que la migración `20261022100000_enforce_authenticated_catalog_access.sql` se haya aplicado al proyecto correcto.
+3. Con la clave pública y sin sesión, comprobá que las lecturas del catálogo no expongan filas (esperado: acceso denegado o cero filas según el endpoint y la política).
+4. Registrá una cuenta normal e iniciá sesión; comprobá que puede leer únicamente el contenido publicado.
+5. En **PUBLICAR**, enviá una propuesta de prueba cuya URL HTTPS sea tuya o esté autorizada.
+6. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'` y que un usuario no puede enviar propuestas asignándolas a otro `user_id` ni establecerlas como aprobadas.
+7. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**; verificá que las acciones de moderación sigan funcionando con los permisos de servidor previstos.
+8. Aprobá la propuesta y verificá que aparezca para un usuario autenticado autorizado.
+9. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
 
 La compilación de GitHub Actions solo verifica el código y construye el APK; no confirma que esta configuración ya esté aplicada a la base de datos real.
