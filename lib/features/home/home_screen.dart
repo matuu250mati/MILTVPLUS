@@ -302,7 +302,7 @@ class _DashboardHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 32),
+          child: const Icon(Icons.live_tv_rounded, color: Color(0xFF031018), size: 29),
         ),
         const SizedBox(width: 10),
         Expanded(
