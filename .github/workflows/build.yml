@@ -80,6 +80,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Report resolved Android plugin versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "### Resolved Android plugin versions" >> "$GITHUB_STEP_SUMMARY"
+          flutter --version
+          flutter pub deps --style=compact | tee /tmp/miltvplus-pub-deps.txt
+          for package in device_info_plus file_picker package_info_plus shared_preferences_android; do
+            line="$(grep -E "^ *$package " /tmp/miltvplus-pub-deps.txt | head -n 1 || true)"
+            if [[ -z "$line" ]]; then
+              echo "::error::Could not find resolved version for $package in flutter pub deps output."
+              exit 1
+            fi
+            echo "$line"
+            echo "- `$line`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
       - name: Analyze Dart code
         run: flutter analyze
 
