@@ -53,10 +53,10 @@ for path in files:
         target_roles = (
             r"authenticated"
             if path.name == "schema.sql"
-            else r"anon\\s*,\\s*authenticated"
+            else r"anon\s*,\s*authenticated"
         )
         match = re.search(
-            r"grant\\s+select\\s*\\((.*?)\\)\\s*on\\s+public\\.content_submissions\\s+to\\s+" + target_roles,
+            r"grant\s+select\s*\((.*?)\)\s*on\s+public\.content_submissions\s+to\s+" + target_roles,
             sql,
             re.IGNORECASE | re.DOTALL,
         )
