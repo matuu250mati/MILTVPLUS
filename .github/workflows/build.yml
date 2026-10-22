@@ -88,7 +88,7 @@ jobs:
           flutter --version
           flutter pub deps --style=compact | tee /tmp/miltvplus-pub-deps.txt
           for package in device_info_plus file_picker package_info_plus shared_preferences_android; do
-            line="$(grep -E "^ *$package " /tmp/miltvplus-pub-deps.txt | head -n 1 || true)"
+            line="$(grep -E "^[[:space:]]*-?[[:space:]]*$package[[:space:]]" /tmp/miltvplus-pub-deps.txt | head -n 1 || true)"
             if [[ -z "$line" ]]; then
               echo "::error::Could not find resolved version for $package in flutter pub deps output."
               exit 1
