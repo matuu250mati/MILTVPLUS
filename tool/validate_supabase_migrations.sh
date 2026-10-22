@@ -24,12 +24,17 @@ for path in files:
         errors.append(f"{path}: invalid single-dollar DO block delimiter")
     # A table-wide SELECT grant would expose columns such as user_id and
     # rights_confirmed to anon/authenticated when an approved row is visible.
-    if re.search(
-        r"grant\s+select\s+on\s+[^;]*public\.content_submissions\b",
+    for grant in re.finditer(
+        r"grant\s+((?:select|insert|update|delete|truncate|references|trigger)"
+        r"(?:\s*,\s*(?:select|insert|update|delete|truncate|references|trigger))*)"
+        r"\s+on\s+([^;]*);",
         sql,
         re.IGNORECASE | re.DOTALL,
     ):
-        errors.append(f"{path}: broad SELECT grant on content_submissions")
+        privileges = {item.strip().lower() for item in grant.group(1).split(",")}
+        target = grant.group(2).lower()
+        if "select" in privileges and "public.content_submissions" in target:
+            errors.append(f"{path}: broad SELECT grant on content_submissions")
     if path.name in {
         "schema.sql",
         "20261021200000_catalog_metadata_and_submissions.sql",
