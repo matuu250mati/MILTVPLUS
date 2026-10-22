@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                                     padding: EdgeInsets.all(18 * scale),
                                     child: const CustomPaint(
                                       painter: _NeonTelevisionPainter(),
-                                      child: const SizedBox.expand(),
+                                      child: SizedBox.expand(),
                                     ),
                                   ),
                                 );
