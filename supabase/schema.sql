@@ -65,9 +65,11 @@ create table if not exists public.content_submissions (
   season_number integer,
   episode_number integer,
   media_type text not null check (media_type in ('movie', 'episode')),
+  rights_confirmed boolean not null default false,
   moderation_status text not null default 'pending'
     check (moderation_status in ('pending', 'approved', 'rejected')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint content_submission_rights check (rights_confirmed)
 );
 
 create table if not exists public.episodes (
@@ -184,7 +186,11 @@ create policy "Public users read approved submissions"
 drop policy if exists "Users submit pending content" on public.content_submissions;
 create policy "Users submit pending content"
   on public.content_submissions for insert to authenticated
-  with check (auth.uid() = user_id and moderation_status = 'pending');
+  with check (
+    auth.uid() = user_id
+    and rights_confirmed
+    and moderation_status = 'pending'
+  );
 
 -- No client-side INSERT/UPDATE/DELETE policies are intentionally created.
 -- Manage catalog writes from the Supabase dashboard or a trusted server using
