@@ -80,6 +80,9 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          # Use the immutable official MDK SDK release instead of a flaky nightly SourceForge download.
+          FVP_DEPS_URL: https://github.com/wang-bin/mdk-sdk/releases/download/v0.38.0
+          FVP_DEPS_SHA256: ac9ee8a4d24bb8a3d8294ff60fada7244145b8469fc1abbff8a9d45458b4de6a
         shell: bash
         run: |
           set -euo pipefail
