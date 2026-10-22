@@ -55,7 +55,12 @@ jobs:
         run: |
           set -euo pipefail
           gradle_file="android/app/build.gradle.kts"
-          if ! grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*36([[:space:]]*//.*)?
+          if ! grep -Eq '^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*36([[:space:]]*//.*)?$' "$gradle_file"; then
+            echo "::error::Generated Android app must compile against SDK 36 or later; expected compileSdk = 36."
+            exit 1
+          fi
+          echo "Generated Android compileSdk check passed (36)."
+
       - name: Add OTA installation permissions to Android manifest
         run: bash tool/patch_ota_manifest.sh
 
