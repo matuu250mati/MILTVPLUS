@@ -18,7 +18,7 @@ begin
     );
   end loop;
 end
-$;
+$$;
 
 -- Enforce row-level policies even when this migration is applied to a legacy
 -- project whose tables were created without RLS enabled. Policies alone do not
