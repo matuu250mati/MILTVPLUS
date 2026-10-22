@@ -20,7 +20,7 @@ required_columns = {
 errors = []
 for path in files:
     sql = path.read_text(encoding="utf-8")
-    if re.search(r"(?im)^\\s*do\\s+\\$(?!\\$)", sql):
+    if re.search(r"(?im)^\s*do\s+\$(?!\$)", sql):
         errors.append(f"{path}: invalid single-dollar DO block delimiter")
     # A table-wide SELECT grant would expose columns such as user_id and
     # rights_confirmed to anon/authenticated when an approved row is visible.
