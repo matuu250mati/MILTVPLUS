@@ -594,7 +594,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         titleSpacing: 4,
         title: const SizedBox.shrink(),
       ) : AppBar(
-        backgroundColor: const AppTheme.background,
+        backgroundColor: AppTheme.background,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
         titleSpacing: 4,
