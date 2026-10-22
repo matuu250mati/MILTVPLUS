@@ -107,6 +107,28 @@ else:
         ):
             errors.append(f"{access_migration}: anonymous SELECT policy is forbidden for {table}")
 
+
+# The owner publishing screen uploads to owner-media and persists public URLs.
+# Provision the bucket and assert that only the server-managed owner role can write.
+storage_migration = Path("supabase/migrations/20261022110000_owner_media_storage_policies.sql")
+if not storage_migration.exists():
+    errors.append(f"{storage_migration}: missing owner-media storage migration")
+else:
+    storage_sql = storage_migration.read_text(encoding="utf-8")
+    if not re.search(
+        r"insert\\s+into\\s+storage\\.buckets\\s*\\(\\s*id\\s*,\\s*name\\s*,\\s*public\\s*\\).*?owner-media.*?on\\s+conflict\\s*\\(\\s*id\\s*\\).*?public\\s*=\\s*excluded\\.public",
+        storage_sql, re.IGNORECASE | re.DOTALL
+    ):
+        errors.append(f"{storage_migration}: must provision owner-media as a public-URL bucket")
+    for operation in ("insert", "update", "delete"):
+        if not re.search(
+            rf"create\\s+policy\\s+[^;]+on\\s+storage\\.objects\\s+for\\s+{operation}\\s+to\\s+authenticated",
+            storage_sql, re.IGNORECASE | re.DOTALL
+        ):
+            errors.append(f"{storage_migration}: missing authenticated owner-only {operation} policy")
+    if len(re.findall(r"auth\\.jwt\\(\\)\\s*->\\s*'app_metadata'\\s*->>\\s*'role'\\s*=\\s*'owner'", storage_sql, re.IGNORECASE)) < 4:
+        errors.append(f"{storage_migration}: each storage write policy must check server-managed owner role")
+
 if errors:
     for error in errors:
         print(f"ERROR: {error}", file=sys.stderr)
