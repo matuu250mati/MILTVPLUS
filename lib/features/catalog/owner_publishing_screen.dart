@@ -84,14 +84,10 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
   }
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      allowMultiple: false,
-      withData: false,
-    );
-    if (!mounted || result == null || result.files.isEmpty) return;
+    final selected = await FilePicker.pickFile(type: FileType.video);
+    if (!mounted || selected == null) return;
     setState(() {
-      _video = result.files.single;
+      _video = selected;
       _streamUrl.clear();
       _status = null;
     });
