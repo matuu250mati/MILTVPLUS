@@ -134,17 +134,8 @@ jobs:
             SUPABASE_URL="${SUPABASE_URL%/rest/v1}"
           fi
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
-            if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
-              echo "::warning::SUPABASE_URL is not canonical. QA APK compilation will continue, but Supabase connectivity/schema checks are skipped until the repository secret is corrected to a project reference or https://<project-ref>.supabase.co."
-              {
-                echo "### Supabase validation: not run"
-                echo "The configured QA URL is neither a 20-character Supabase project reference nor a canonical project URL. Schema/connectivity could not be tested; correct the SUPABASE_QA_URL secret."
-              } >> "$GITHUB_STEP_SUMMARY"
-              echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
-            else
-              echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally followed by /rest/v1. Other paths, query strings, fragments, and dashboard URLs are not valid."
-              exit 1
-            fi
+            echo "::error::SUPABASE_URL is invalid. Every CI run must validate Supabase; use a 20-character project reference or https://<project-ref>.supabase.co, optionally followed by /rest/v1. Dashboard URLs, other paths, query strings, and fragments are not valid."
+            exit 1
           else
             echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           fi
@@ -188,10 +179,12 @@ jobs:
           done
           if [[ "$failed" -ne 0 ]]; then
             {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
+              echo "### Supabase schema validation: failed"
+              echo "One or more required tables did not match the app schema. The build is blocked to prevent a green CI result when database-backed features may fail."
               echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Supabase schema validation failed. Fix the affected table/schema or deploy the required migration before this build can pass."
+            exit 1
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
           fi
