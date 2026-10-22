@@ -111,19 +111,22 @@ jobs:
           fi
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
             if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
-              echo "::warning::SUPABASE_URL is not in canonical project-root format. Continuing the PR QA build so the APK can be compiled; verify the repository secret before a production release."
+              echo "::warning::SUPABASE_URL is not canonical. QA APK compilation will continue, but Supabase connectivity/schema checks are skipped until the repository secret is corrected to https://<project-ref>.supabase.co."
+              echo "SUPABASE_URL_NORMALIZED=" >> "$GITHUB_ENV"
             else
               echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally followed by /rest/v1. Other paths, query strings, fragments, and dashboard URLs are not valid."
               exit 1
             fi
+          else
+            echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
           fi
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
             echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
             exit 1
           fi
-          echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
+        if: env.SUPABASE_URL_NORMALIZED != ''
 
         env:
           SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && (secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY) || secrets.SUPABASE_ANON_KEY }}
