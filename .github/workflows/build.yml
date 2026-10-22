@@ -76,9 +76,9 @@ jobs:
 
       - name: Build release APK for validation
         env:
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_QA_URL: ${{ vars.SUPABASE_QA_URL }}
+          SUPABASE_QA_URL: ${{ secrets.SUPABASE_QA_URL }}
           SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
         shell: bash
         run: |
@@ -86,7 +86,7 @@ jobs:
           url="${SUPABASE_QA_URL:-${SUPABASE_URL:-}}"
           key="${SUPABASE_QA_ANON_KEY:-${SUPABASE_ANON_KEY:-}}"
           if [[ -z "$url" || -z "$key" ]]; then
-            echo "::error::Missing QA Supabase URL/key. Configure SUPABASE_QA_URL and SUPABASE_QA_ANON_KEY (or SUPABASE_URL and SUPABASE_ANON_KEY) in repository/environment settings."
+            echo "::error::Missing Supabase URL/key. Verify the repository secrets SUPABASE_QA_URL and SUPABASE_QA_ANON_KEY, or SUPABASE_URL and SUPABASE_ANON_KEY."
             exit 1
           fi
           flutter build apk --release --dart-define="SUPABASE_URL=$url" --dart-define="SUPABASE_ANON_KEY=$key"
