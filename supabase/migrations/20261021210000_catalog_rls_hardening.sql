@@ -17,7 +17,7 @@ begin
       existing_policy.tablename
     );
   end loop;
-end
+end;
 $$;
 
 -- Enforce row-level policies even when this migration is applied to a legacy
