@@ -114,8 +114,16 @@ revoke insert, update, delete, truncate, references, trigger
 revoke insert, update, delete, truncate, references, trigger
   on public.content_submissions from anon, authenticated;
 
-grant select on public.channels, public.movies, public.series, public.episodes,
-  public.content_submissions to anon, authenticated;
+grant select on public.channels, public.movies, public.series, public.episodes
+  to anon, authenticated;
+
+-- Only grant public catalog fields; keep submitter identity and rights metadata private.
+revoke select on table public.content_submissions from anon, authenticated;
+grant select (
+  id, title, description, stream_url, poster_url, duration_seconds,
+  series_title, season_number, episode_number, media_type,
+  moderation_status, created_at
+) on public.content_submissions to anon, authenticated;
 grant insert on public.content_submissions to authenticated;
 
 do $
