@@ -34,6 +34,12 @@ revoke select, insert, update, delete, truncate, references, trigger
   on public.channels, public.movies, public.series, public.episodes from anon;
 grant select on public.channels, public.movies, public.series, public.episodes to authenticated;
 
+-- The preceding historical migration revoked client write privileges. Restore
+-- them only for authenticated owner-managed movie/series/episode publishing;
+-- RLS policies below remain the row-level authorization boundary.
+grant insert, update, delete on public.movies, public.series, public.episodes
+  to authenticated;
+
 -- Column grants survive table-level revokes, so remove anon access explicitly.
 revoke select on table public.content_submissions from anon;
 revoke select (
