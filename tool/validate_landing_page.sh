@@ -46,6 +46,14 @@ if missing:
 if "language-select" not in parser.selectors:
     print("Missing international language selector", file=sys.stderr)
     sys.exit(1)
+for required_locale in ("'en-US':{", "'es-ES':{", "'pt-BR':{"):
+    if required_locale not in html:
+        print(f"Missing full-content translation dictionary: {required_locale}", file=sys.stderr)
+        sys.exit(1)
+for required_phrase in ("fullTextTranslations", "Frequently asked questions", "Perguntas frequentes", "Central de Opiniões"):
+    if required_phrase not in html:
+        print(f"Missing expected localized content: {required_phrase}", file=sys.stderr)
+        sys.exit(1)
 if parser.script_count != 1:
     print(f"Expected one inline script, found {parser.script_count}", file=sys.stderr)
     sys.exit(1)
