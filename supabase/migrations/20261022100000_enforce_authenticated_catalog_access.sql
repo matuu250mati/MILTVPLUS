@@ -4,6 +4,11 @@
 -- may have removed. Never drop every policy on these tables.
 begin;
 
+-- Fresh schema.sql installs may predate the community rights-confirmation column.
+-- Add it before creating the insert policy that references it.
+alter table public.content_submissions
+  add column if not exists rights_confirmed boolean not null default false;
+
 alter table public.channels enable row level security;
 alter table public.movies enable row level security;
 alter table public.series enable row level security;
