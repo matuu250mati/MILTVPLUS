@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -131,8 +129,8 @@ class _SplashScreenState extends State<SplashScreen>
                                   ),
                                   child: Padding(
                                     padding: EdgeInsets.all(18 * scale),
-                                    child: CustomPaint(
-                                      painter: const _NeonTelevisionPainter(),
+                                    child: const CustomPaint(
+                                      painter: _NeonTelevisionPainter(),
                                       child: const SizedBox.expand(),
                                     ),
                                   ),
