@@ -105,8 +105,12 @@ jobs:
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
+          # Accept the project root or its PostgREST base URL, then normalize.
+          if [[ "$SUPABASE_URL" == */rest/v1 ]]; then
+            SUPABASE_URL="${SUPABASE_URL%/rest/v1}"
+          fi
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally followed by /rest/v1. Other paths, query strings, fragments, and dashboard URLs are not valid."
             exit 1
           fi
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
