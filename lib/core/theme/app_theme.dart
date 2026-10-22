@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const background = Color(0xFF080A10);
-  static const panel = Color(0xFF111521);
+  static const background = Color(0xFF030712);
+  static const panel = Color(0xFF0A0F1D);
 
   // Paleta de MIL TV Plus: azul y blanco argentinos con acento celeste.
   // Equivale a los dos estados del selector Android recibido:
   // seleccionado -> selectedAccent; normal -> accent.
-  static const selectedAccent = Color(0xFF74D7FF);
-  static const accent = Color(0xFFB8FF35);
+  static const selectedAccent = Color(0xFF00E5FF);
+  static const accent = Color(0xFF00FF66);
   static const muted = Color(0xFF9AA3B5);
 
   static final ThemeData dark = ThemeData(
