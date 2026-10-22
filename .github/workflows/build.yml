@@ -208,7 +208,7 @@ jobs:
             [movies]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,url_stream,stream_urls,release_year,duration_seconds,country_code,is_published,created_at,updated_at"
             [series]="tmdb_id,title,synopsis,category,genres,logo,backdrop_url,release_year,country_code,is_published,created_at,updated_at"
             [episodes]="series_id,title,synopsis,logo,url_stream,duration_seconds,is_published,season_number,episode_number,created_at"
-            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
+            [content_submissions]="id,title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
           )
           failed=0
           for table in channels movies series episodes content_submissions; do
@@ -232,6 +232,29 @@ jobs:
             exit 1
           else
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
+
+            # Verify that public catalog access cannot read internal moderation data.
+            # A missing column/schema-cache error is NOT accepted as a security pass:
+            # the API must explicitly reject access because of PostgreSQL privileges.
+            for private_column in user_id rights_confirmed; do
+              private_status="$(curl --silent --show-error --max-time 12 \
+                --output /tmp/supabase-private-column-body.txt \
+                --write-out '%{http_code}' \
+                --header "apikey: $SUPABASE_ANON_KEY" \
+                --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+                "$SUPABASE_URL_NORMALIZED/rest/v1/content_submissions?select=$private_column&limit=0" || true)"
+              private_body="$(cat /tmp/supabase-private-column-body.txt 2>/dev/null || true)"
+              if [[ "$private_status" =~ ^2[0-9][0-9]$ ]]; then
+                echo "::error::Public anon key can select private column content_submissions.$private_column (HTTP $private_status)."
+                exit 1
+              elif ! grep -Eiq '42501|permission denied' <<< "$private_body"; then
+                detail="$(head -c 400 /tmp/supabase-private-column-body.txt 2>/dev/null || true)"
+                echo "::error::Private-column check for content_submissions.$private_column did not return an explicit PostgreSQL permission denial (HTTP ${private_status:-no-response}). This is not accepted as proof of safe grants. $detail"
+                exit 1
+              fi
+              echo "Supabase privacy check passed: anon cannot select content_submissions.$private_column (HTTP $private_status; permission denied)."
+            done
+            echo "Public catalog columns are accessible and private submission metadata is denied." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Configure production APK signing
