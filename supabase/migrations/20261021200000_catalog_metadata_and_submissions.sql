@@ -192,8 +192,17 @@ alter table public.series enable row level security;
 alter table public.episodes enable row level security;
 alter table public.content_submissions enable row level security;
 
-grant select on public.channels, public.movies, public.series, public.episodes,
-  public.content_submissions to anon, authenticated;
+grant select on public.channels, public.movies, public.series, public.episodes
+  to anon, authenticated;
+
+-- Community submission rows may contain internal ownership/rights metadata.
+-- Grant only the fields needed by the public approved-content catalog.
+revoke select on table public.content_submissions from anon, authenticated;
+grant select (
+  id, title, description, stream_url, poster_url, duration_seconds,
+  series_title, season_number, episode_number, media_type,
+  moderation_status, created_at
+) on public.content_submissions to anon, authenticated;
 grant insert on public.content_submissions to authenticated;
 
 drop policy if exists "Authenticated users read published channels" on public.channels;
