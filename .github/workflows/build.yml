@@ -144,27 +144,26 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Supabase REST API is reachable
+      - name: Verify Supabase Auth API is reachable
         if: env.SUPABASE_URL_NORMALIZED != ''
         env:
           SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && (secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY) || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          # This is a reachability check only. Catalog tables intentionally deny anon SELECT
-          # after RLS hardening, so schema validation must not depend on anon table access.
+          # Do not query catalog tables with anon: RLS intentionally denies those reads.
+          # The Auth health endpoint validates URL/key reachability without bypassing RLS.
           status="$(curl --silent --show-error --max-time 12 \
-            --output /tmp/supabase-rest-openapi.json \
+            --output /tmp/supabase-auth-health.json \
             --write-out '%{http_code}' \
             --header "apikey: $SUPABASE_ANON_KEY" \
-            --header 'Accept: application/openapi+json' \
-            "$SUPABASE_URL_NORMALIZED/rest/v1/" || true)"
+            "$SUPABASE_URL_NORMALIZED/auth/v1/health" || true)"
           if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
-            detail="$(head -c 400 /tmp/supabase-rest-openapi.json 2>/dev/null || true)"
-            echo "::error::Supabase REST API is not reachable (HTTP ${status:-no-response}). Check the project URL and public key. $detail"
+            detail="$(head -c 400 /tmp/supabase-auth-health.json 2>/dev/null || true)"
+            echo "::error::Supabase Auth API health check failed (HTTP ${status:-no-response}). Check the project URL and public key. $detail"
             exit 1
           fi
-          echo "Supabase REST API is reachable (HTTP $status). Live schema verification is performed by the database deployment workflow using a database connection, not anonymous SELECT privileges."
+          echo "Supabase Auth API is reachable (HTTP $status). Live schema verification is performed by the database deployment workflow using a database connection, not anonymous SELECT privileges."
 
       - name: Configure production APK signing
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.verify_production_signing) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
