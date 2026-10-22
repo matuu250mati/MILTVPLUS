@@ -60,7 +60,7 @@ for locale in ("es-AR", "en-US", "es-ES", "pt-BR"):
     if not line:
         print(f"Missing primary locale dictionary: {locale}", file=sys.stderr)
         sys.exit(1)
-    translated_keys = set(re.findall(r"(?:^|,)([A-Za-z][A-Za-z0-9]*):'", line))
+    translated_keys = set(re.findall(r"(?:^|[,{])([A-Za-z][A-Za-z0-9]*):'", line))
     missing_keys = sorted(parser.translation_keys - translated_keys)
     if missing_keys:
         print(f"Locale {locale} is missing data-i18n keys: {', '.join(missing_keys)}", file=sys.stderr)
