@@ -44,3 +44,12 @@ Un HTTP 500 posterior indicaría que falta algún secreto de runtime (normalment
 - La sincronización es idempotente por `tmdb_id): las ejecuciones posteriores actualizan metadatos en lugar de duplicar filas.
 - TMDB aporta metadatos, no derechos de distribución ni URLs de streaming. Revisá sus términos y la atribución correspondiente antes de publicar.
 - La función acepta de 1 a 5 páginas por ejecución. Empezá con 1 página durante la validación para limitar el consumo y el volumen de cambios.
+
+## Episodios y fuentes existentes
+
+La función también importa temporadas y episodios (solo metadatos) de las series sincronizadas.
+
+- Opciones del cuerpo JSON: `includeEpisodes` (por defecto `true`) y `episodeSeriesLimit` (por defecto 5, máximo 20 series por página, para no superar el tiempo límite de la Edge Function).
+- La respuesta incluye `episodesProcessed`.
+- Las películas y episodios nuevos se crean con `url_stream` vacío: no son reproducibles hasta que el propietario cargue una fuente autorizada.
+- Las películas y episodios que ya existen solo reciben metadatos: sus `url_stream` y duraciones no se sobrescriben.

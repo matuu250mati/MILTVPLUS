@@ -63,7 +63,7 @@ jobs:
 
       - name: Checkout repository
         if: steps.config.outputs.configured == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Supabase CLI
         if: steps.config.outputs.configured == 'true'
