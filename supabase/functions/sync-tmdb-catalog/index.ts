@@ -32,7 +32,13 @@ Deno.serve(async (req) => {
     return json({ error: "Missing TMDB_API_KEY or Supabase server secrets." }, 500);
   }
 
-  let request: { pages?: number; includeMovies?: boolean; includeSeries?: boolean };
+  let request: {
+    pages?: number;
+    includeMovies?: boolean;
+    includeSeries?: boolean;
+    includeEpisodes?: boolean;
+    episodeSeriesLimit?: number;
+  };
   try {
     request = await req.json();
   } catch {
@@ -41,6 +47,9 @@ Deno.serve(async (req) => {
   const pages = Math.max(1, Math.min(Number(request.pages ?? 1) || 1, 5));
   const includeMovies = request.includeMovies !== false;
   const includeSeries = request.includeSeries !== false;
+  const includeEpisodes = includeSeries && request.includeEpisodes !== false;
+  // Caps TMDB calls per page so the Edge Function stays within its time limit.
+  const episodeSeriesLimit = Math.max(1, Math.min(Number(request.episodeSeriesLimit ?? 5) || 5, 20));
   if (!includeMovies && !includeSeries) return json({ error: "Select movies, series, or both." }, 400);
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -66,6 +75,7 @@ Deno.serve(async (req) => {
 
     let moviesProcessed = 0;
     let seriesProcessed = 0;
+    let episodesProcessed = 0;
     for (let page = 1; page <= pages; page++) {
       if (includeMovies) {
         const data = await api(`movie/popular?page=${page}`);
@@ -85,8 +95,25 @@ Deno.serve(async (req) => {
           is_published: true,
         })).filter((row: any) => row.tmdb_id > 0 && row.title.length > 0);
         if (rows.length) {
-          const { error } = await supabase.from("movies").upsert(rows, { onConflict: "tmdb_id" });
-          if (error) throw new Error(`Supabase movies upsert failed: ${error.message}`);
+          // Never overwrite a stream URL an owner already added: existing rows get metadata only.
+          const { data: existing, error: lookupError } = await supabase
+            .from("movies")
+            .select("tmdb_id")
+            .in("tmdb_id", rows.map((row: any) => row.tmdb_id));
+          if (lookupError) throw new Error(`Supabase movies lookup failed: ${lookupError.message}`);
+          const existingIds = new Set((existing ?? []).map((row: any) => Number(row.tmdb_id)));
+          const fresh = rows.filter((row: any) => !existingIds.has(row.tmdb_id));
+          const known = rows
+            .filter((row: any) => existingIds.has(row.tmdb_id))
+            .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => metadata);
+          if (fresh.length) {
+            const { error } = await supabase.from("movies").upsert(fresh, { onConflict: "tmdb_id" });
+            if (error) throw new Error(`Supabase movies insert failed: ${error.message}`);
+          }
+          if (known.length) {
+            const { error } = await supabase.from("movies").upsert(known, { onConflict: "tmdb_id" });
+            if (error) throw new Error(`Supabase movies update failed: ${error.message}`);
+          }
           moviesProcessed += rows.length;
         }
       }
@@ -109,6 +136,62 @@ Deno.serve(async (req) => {
           const { error } = await supabase.from("series").upsert(rows, { onConflict: "tmdb_id" });
           if (error) throw new Error(`Supabase series upsert failed: ${error.message}`);
           seriesProcessed += rows.length;
+
+          if (includeEpisodes) {
+            const { data: seriesRows, error: seriesLookupError } = await supabase
+              .from("series")
+              .select("id, tmdb_id")
+              .in("tmdb_id", rows.map((row: any) => row.tmdb_id))
+              .limit(episodeSeriesLimit);
+            if (seriesLookupError) throw new Error(`Supabase series lookup failed: ${seriesLookupError.message}`);
+            for (const seriesRow of seriesRows ?? []) {
+              const details = await api(`tv/${seriesRow.tmdb_id}`);
+              const seasons = (details.seasons ?? [])
+                .filter((season: any) => Number(season.season_number) > 0)
+                .slice(0, 12);
+              for (const season of seasons) {
+                const seasonData = await api(`tv/${seriesRow.tmdb_id}/season/${season.season_number}`);
+                const episodeRows = (seasonData.episodes ?? [])
+                  .map((episode: any) => ({
+                    series_id: seriesRow.id,
+                    season_number: Number(episode.season_number ?? season.season_number),
+                    episode_number: Number(episode.episode_number),
+                    title: String(episode.name ?? "").trim() || `Episodio ${episode.episode_number}`,
+                    synopsis: String(episode.overview ?? ""),
+                    logo: episode.still_path ? `https://image.tmdb.org/t/p/w500${episode.still_path}` : null,
+                    // Empty until an authorized stream is added by the catalog owner.
+                    url_stream: "",
+                    duration_seconds: episode.runtime ? Number(episode.runtime) * 60 : null,
+                    is_published: true,
+                  }))
+                  .filter((row: any) => row.season_number > 0 && row.episode_number > 0);
+                if (!episodeRows.length) continue;
+
+                // Keep stream URLs already set on existing episodes.
+                const { data: existingEpisodes, error: episodeLookupError } = await supabase
+                  .from("episodes")
+                  .select("episode_number")
+                  .eq("series_id", seriesRow.id)
+                  .eq("season_number", episodeRows[0].season_number);
+                if (episodeLookupError) throw new Error(`Supabase episodes lookup failed: ${episodeLookupError.message}`);
+                const existingNumbers = new Set((existingEpisodes ?? []).map((row: any) => Number(row.episode_number)));
+                const freshEpisodes = episodeRows.filter((row: any) => !existingNumbers.has(row.episode_number));
+                const knownEpisodes = episodeRows
+                  .filter((row: any) => existingNumbers.has(row.episode_number))
+                  .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => metadata);
+                const conflict = "series_id,season_number,episode_number";
+                if (freshEpisodes.length) {
+                  const { error } = await supabase.from("episodes").upsert(freshEpisodes, { onConflict: conflict });
+                  if (error) throw new Error(`Supabase episodes insert failed: ${error.message}`);
+                }
+                if (knownEpisodes.length) {
+                  const { error } = await supabase.from("episodes").upsert(knownEpisodes, { onConflict: conflict });
+                  if (error) throw new Error(`Supabase episodes update failed: ${error.message}`);
+                }
+                episodesProcessed += episodeRows.length;
+              }
+            }
+          }
         }
       }
     }
@@ -118,7 +201,8 @@ Deno.serve(async (req) => {
       pages,
       moviesProcessed,
       seriesProcessed,
-      note: "Metadata imported. Movies without an authorized stream remain non-playable until an owner adds one.",
+      episodesProcessed,
+      note: "Metadata imported; existing stream URLs were preserved. Titles and episodes without an authorized stream remain non-playable until an owner adds one.",
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Catalog sync failed." }, 502);
