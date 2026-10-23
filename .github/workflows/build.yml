@@ -23,7 +23,12 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # PR validation must use QA's environment-scoped secrets; official builds use production secrets.
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'miltvplus-qa' || 'production' }}
+    outputs:
+      schema_verified: ${{ steps.schema_check.outputs.verified }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - name: Checkout repository
@@ -78,8 +83,8 @@ jobs:
 
       - name: Validate Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_URL || secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -105,15 +110,22 @@ jobs:
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
 
-      - name: Verify required Supabase schema (diagnostic; APK build continues)
-
+      - name: Verify required Supabase schema for release eligibility
+        id: schema_check
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          # Ask PostgREST to resolve required columns with limit=0. This validates
-          # the schema even when a catalog table has no publicly visible rows.
+          # The catalog is intentionally protected by RLS. An anon-key 401/403
+          # cannot prove that the schema is missing, so only run this gate with
+          # the server-side verification key. Never print that key.
+          if [[ -z "${SUPABASE_SERVICE_ROLE_KEY//[[:space:]]/}" ]]; then
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Supabase schema could not be verified: configure SUPABASE_SERVICE_ROLE_KEY as a GitHub Actions secret. APK artifact generation may continue, but official Release publication is blocked."
+            echo "### Supabase schema validation: not verified; Release blocked" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           declare -A required_columns=(
             [channels]="title,url_stream,is_published,sort_order,logo"
             [movies]="title,url_stream,is_published,created_at"
@@ -127,24 +139,23 @@ jobs:
             status="$(curl --silent --show-error --max-time 12 \
               --output /tmp/supabase-smoke-body.txt \
               --write-out '%{http_code}' \
-              --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
               "$SUPABASE_URL_NORMALIZED/rest/v1/$table?$query" || true)"
             if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
               echo "Supabase schema check passed: $table (HTTP $status; required columns resolved)"
             else
               detail="$(head -c 400 /tmp/supabase-smoke-body.txt 2>/dev/null || true)"
-              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). The APK can be built, but this table-backed feature may not work until the migration is deployed. $detail"
+              echo "::warning::Supabase schema check failed for '$table' (HTTP ${status:-no-response}). $detail"
               failed=1
             fi
           done
-          if [[ "$failed" -ne 0 ]]; then
-            {
-              echo "### Supabase schema validation: warnings"
-              echo "One or more tables do not yet match the app schema. The APK will still be built for installation/testing; affected database features may fail until migrations are deployed."
-              echo "See `supabase/SETUP_ES.md` and the job log for table-level details."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
+          if [[ "$failed" -eq 0 ]]; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
             echo "### Supabase schema validation: passed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "### Supabase schema validation: failed; Release blocked" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Configure production APK signing
@@ -208,7 +219,7 @@ jobs:
 
       - name: Build release APK
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ github.event_name == 'pull_request' && secrets.SUPABASE_QA_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -321,8 +332,8 @@ jobs:
   publish-release:
     name: Publish verified APK release
     needs: build
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-    runs-on: ubuntu-latest
+    if: ${{ needs.build.outputs.schema_verified == 'true' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
