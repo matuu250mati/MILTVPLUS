@@ -105,7 +105,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       final merged = <String, TvChannel>{};
 
       void addUnique(TvChannel channel) {
-        final key = _streamIdentity(channel.streamUrl);
+        // A stream can legitimately belong to multiple catalog sections.
+        // Deduplicate mirrors within a section, not globally by URL, or the
+        // first category encountered would silently erase later memberships.
+        final key =
+            '${_streamIdentity(channel.streamUrl)}|${channel.liveSection.trim().toLowerCase()}';
         final existing = merged[key];
         if (existing == null) {
           merged[key] = channel;
