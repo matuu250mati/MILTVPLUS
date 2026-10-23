@@ -15,7 +15,6 @@ class _TeatrixScreenState extends State<TeatrixScreen> {
   late final WebViewController _controller;
   bool _loading = true;
   bool _failed = false;
-  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -30,7 +29,6 @@ class _TeatrixScreenState extends State<TeatrixScreen> {
             setState(() {
               _loading = true;
               _failed = false;
-              _loadGeneration++;
             });
           },
           onPageFinished: (_) {
@@ -117,7 +115,6 @@ class _TeatrixScreenState extends State<TeatrixScreen> {
             child: Stack(
               children: [
                 WebViewWidget(
-                  key: ValueKey(_loadGeneration),
                   controller: _controller,
                 ),
                 if (_failed)
