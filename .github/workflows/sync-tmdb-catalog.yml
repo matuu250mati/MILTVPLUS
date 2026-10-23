@@ -71,6 +71,18 @@ jobs:
         with:
           version: latest
 
+      - name: Align QA Edge Function sync secret
+        if: steps.config.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_QA_ACCESS_TOKEN }}
+          SYNC_SECRET: ${{ secrets.MILTVPLUS_QA_CATALOG_SYNC_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the deployed Edge Function secret identical to the GitHub Environment secret.
+          # Do not print the secret to logs.
+          supabase secrets set "SYNC_SECRET=$SYNC_SECRET" --project-ref "$SUPABASE_PROJECT_ID"
+
       - name: Deploy catalog sync function to configured project
         if: steps.config.outputs.configured == 'true'
         env:
