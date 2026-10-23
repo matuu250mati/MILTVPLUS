@@ -81,6 +81,23 @@ if not re.search(r"rights_confirmed\s+boolean\s+not\s+null\s+default\s+false", s
 if not re.search(r"constraint\s+content_submission_rights\s+check\s*\(\s*rights_confirmed\s*\)", schema_sql, re.IGNORECASE):
     errors.append("supabase/schema.sql: missing rights-confirmation constraint")
 
+# Column-level allowlists are ineffective if a historical table-level or
+# column-level SELECT grant remains for authenticated users. Revoke both before
+# restoring only the approved catalog columns.
+access_migration = Path("supabase/migrations/20261022100000_enforce_authenticated_catalog_access.sql")
+if access_migration.exists():
+    access_sql = access_migration.read_text(encoding="utf-8")
+    if not re.search(
+        r"revoke\\s+select\\s+on\\s+table\\s+public\\.content_submissions\\s+from\\s+anon\\s*,\\s*authenticated",
+        access_sql, re.IGNORECASE,
+    ):
+        errors.append(f"{access_migration}: must revoke table-level SELECT from anon and authenticated")
+    if not re.search(
+        r"\\)\\s+on\\s+public\\.content_submissions\\s+from\\s+anon\\s*,\\s*authenticated\\s*;",
+        access_sql, re.IGNORECASE,
+    ):
+        errors.append(f"{access_migration}: must revoke prior column-level SELECT grants before allowlisting")
+
 # Enforce authenticated-only catalog access in the corrective migration.
 access_migration = Path("supabase/migrations/20261022100000_enforce_authenticated_catalog_access.sql")
 if not access_migration.exists():
