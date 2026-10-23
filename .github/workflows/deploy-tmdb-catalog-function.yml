@@ -3,6 +3,7 @@ name: Deploy TMDB catalog sync function
 on:
   # Manual-only, QA-only deployment. Prevent an ordinary push from deploying
   # this function to the production Supabase project.
+  workflow_dispatch:
 
 permissions:
   contents: read
