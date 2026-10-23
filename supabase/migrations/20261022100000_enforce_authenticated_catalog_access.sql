@@ -46,12 +46,12 @@ grant insert, update, delete on public.movies, public.series, public.episodes
   to authenticated;
 
 -- Column grants survive table-level revokes, so remove anon access explicitly.
-revoke select on table public.content_submissions from anon;
+revoke select on table public.content_submissions from anon, authenticated;
 revoke select (
   id, title, description, stream_url, poster_url, duration_seconds,
   series_title, season_number, episode_number, media_type,
   moderation_status, created_at
-) on public.content_submissions from anon;
+) on public.content_submissions from anon, authenticated;
 grant select (
   id, title, description, stream_url, poster_url, duration_seconds,
   series_title, season_number, episode_number, media_type,
