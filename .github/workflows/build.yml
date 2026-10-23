@@ -15,7 +15,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: miltvplus-apk-${{ github.ref }}
@@ -298,6 +298,8 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
+            build/app-release.apk
+            build/app-release.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -311,12 +313,31 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
+            build/app-release.apk
+            build/app-release.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
+  publish-release:
+    name: Publish verified APK release
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download verified APK artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: MILTVPLUS-release-apk
+          path: build
+
       - name: Prepare OTA release metadata
         id: release_metadata
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -341,7 +362,7 @@ jobs:
           echo "tag_name=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Publish signed APK to GitHub Releases for OTA
-        if: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && steps.release_metadata.outputs.publish == 'true' }}
+        if: ${{ steps.release_metadata.outputs.publish == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_metadata.outputs.tag_name }}
