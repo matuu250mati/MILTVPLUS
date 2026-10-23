@@ -106,35 +106,7 @@ jobs:
           # Use the linked database connection, not anon PostgREST SELECTs. The
           # intended RLS policy denies anon catalog reads after deployment.
           supabase db dump --linked --schema public --file /tmp/supabase-public-schema.sql --password "$SUPABASE_DB_PASSWORD"
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          sql = Path('/tmp/supabase-public-schema.sql').read_text(encoding='utf-8')
-          required = {
-              'channels': {'title', 'url_stream', 'stream_urls', 'category', 'country_code', 'is_published', 'sort_order', 'logo'},
-              'movies': {'tmdb_id', 'title', 'synopsis', 'category', 'genres', 'logo', 'backdrop_url', 'url_stream', 'stream_urls', 'release_year', 'duration_seconds', 'country_code', 'is_published', 'created_at', 'updated_at'},
-              'series': {'tmdb_id', 'title', 'synopsis', 'category', 'genres', 'logo', 'backdrop_url', 'release_year', 'country_code', 'is_published', 'created_at', 'updated_at'},
-              'episodes': {'series_id', 'title', 'synopsis', 'logo', 'url_stream', 'duration_seconds', 'is_published', 'season_number', 'episode_number', 'created_at'},
-              'content_submissions': {'title', 'description', 'stream_url', 'poster_url', 'duration_seconds', 'series_title', 'season_number', 'episode_number', 'media_type', 'moderation_status', 'created_at'},
-          }
-          errors = []
-          for table, columns in required.items():
-              match = re.search(rf'CREATE TABLE\s+(?:public\.)?{re.escape(table)}\s*\((.*?)\n\);', sql, re.IGNORECASE | re.DOTALL)
-              if not match:
-                  errors.append(f'{table}: table definition not found in remote schema dump')
-                  continue
-              present = set(re.findall(r'^\s*([a-z_][a-z0-9_]*)\s+', match.group(1), re.IGNORECASE | re.MULTILINE))
-              missing = sorted(columns - {name.lower() for name in present})
-              if missing:
-                  errors.append(f'{table}: missing required columns: {", ".join(missing)}')
-          if errors:
-              for error in errors:
-                  print(f'ERROR: {error}', file=sys.stderr)
-              sys.exit(1)
-          print('Remote database schema verified: all required catalog columns are present.')
-          PY
+          python3 tool/validate_supabase_schema_dump.py /tmp/supabase-public-schema.sql
 
       - name: Explain dry-run-only result
         if: ${{ !inputs.apply_migrations }}
