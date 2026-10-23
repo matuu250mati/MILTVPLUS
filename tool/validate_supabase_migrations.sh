@@ -88,12 +88,12 @@ access_migration = Path("supabase/migrations/20261022100000_enforce_authenticate
 if access_migration.exists():
     access_sql = access_migration.read_text(encoding="utf-8")
     if not re.search(
-        r"revoke\\s+select\\s+on\\s+table\\s+public\\.content_submissions\\s+from\\s+anon\\s*,\\s*authenticated",
+        r"revoke\s+select\s+on\s+table\s+public\.content_submissions\s+from\s+anon\s*,\s*authenticated",
         access_sql, re.IGNORECASE,
     ):
         errors.append(f"{access_migration}: must revoke table-level SELECT from anon and authenticated")
     if not re.search(
-        r"\\)\\s+on\\s+public\\.content_submissions\\s+from\\s+anon\\s*,\\s*authenticated\\s*;",
+        r"\)\s+on\s+public\.content_submissions\s+from\s+anon\s*,\s*authenticated\s*;",
         access_sql, re.IGNORECASE,
     ):
         errors.append(f"{access_migration}: must revoke prior column-level SELECT grants before allowlisting")
