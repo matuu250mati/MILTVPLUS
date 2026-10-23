@@ -9,8 +9,10 @@ import 'live_player_screen.dart';
 class LiveTvScreen extends StatefulWidget {
   const LiveTvScreen({super.key, this.categoryFilter, required this.onBack});
 
-  /// When set, fetches published Supabase channels only from these categories.
-  /// Local M3U channels are retained only when their metadata/name matches.
+  /// When set, displays published Supabase and M3U channels whose canonical
+  /// [TvChannel.liveSection] matches one of these sections. Repository reads
+  /// fetch all published rows first so noncanonical source labels are not lost.
+  /// Local M3U channels use the same classifier.
   final List<String>? categoryFilter;
 
   /// Returns to the Home/Dashboard when Android or a TV remote sends Back.
