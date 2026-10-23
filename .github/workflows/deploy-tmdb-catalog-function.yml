@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           for name in SUPABASE_ACCESS_TOKEN SUPABASE_QA_URL; do
             if [[ -z "${!name//[[:space:]]/}" ]]; then
-              echo "::error::Missing repository secret: $name. Function deployment cannot proceed."
+              echo "::error::Missing QA deployment secret: $name (repository or miltvplus-qa environment). Function deployment cannot proceed."
               exit 1
             fi
           done
