@@ -341,7 +341,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          app_version="$(sed -n 's/^version: \\([^+]*\\)+.*/\\1/p' pubspec.yaml)"
+          app_version="$(sed -n 's/^version: \([^+]*\)+.*/\1/p' pubspec.yaml)"
           [[ -n "$app_version" ]] || { echo "::error::Could not read app version from pubspec.yaml."; exit 1; }
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             tag="$GITHUB_REF_NAME"
