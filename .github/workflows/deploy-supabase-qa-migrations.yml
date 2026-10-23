@@ -1,0 +1,125 @@
+name: Deploy MILTVPLUS QA database migrations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-supabase-qa-migrations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: miltvplus-qa
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_QA_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate QA deployment credentials and target
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [[ -z "${!name//[[:space:]]/}" ]]; then
+              echo "::error::Missing QA environment secret: $name (or SUPABASE_QA_URL / SUPABASE_QA_ANON_KEY). No migration was applied."
+              exit 1
+            fi
+          done
+          normalized="${SUPABASE_URL%/}"
+          if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
+            echo "::error::SUPABASE_QA_URL must be https://<project-ref>.supabase.co. No migration was applied."
+            exit 1
+          fi
+          SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+          if [[ "$SUPABASE_PROJECT_ID" == "MILTV" || "$SUPABASE_PROJECT_ID" == "miltv" ]]; then
+            echo "::error::Refusing to run QA migration workflow against a production-looking project ref."
+            exit 1
+          fi
+          echo "SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID" >> "$GITHUB_ENV"
+          echo "Validated QA project URL (project ref masked)."
+
+      - name: Validate migration filenames
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          migrations=(supabase/migrations/*.sql)
+          if [[ ${#migrations[@]} -eq 0 ]]; then
+            echo "::error::No SQL migrations found."
+            exit 1
+          fi
+          for migration in "${migrations[@]}"; do
+            filename="${migration##*/}"
+            if [[ ! "$filename" =~ ^[0-9]{14}_[a-z0-9_]+[.]sql$ ]]; then
+              echo "::error::Invalid Supabase migration filename: $filename. Expected YYYYMMDDHHMMSS_name.sql."
+              exit 1
+            fi
+          done
+          printf 'Validated %s timestamped migration files.\n' "${#migrations[@]}"
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link QA project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Preview pending migrations without applying
+        run: supabase db push --dry-run
+
+      - name: Apply tracked migrations to QA
+        run: supabase db push
+
+      - name: Verify migration history
+        run: supabase migration list
+
+      - name: Verify required catalog schema through service role
+        shell: bash
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_QA_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SUPABASE_SERVICE_ROLE_KEY//[[:space:]]/}" ]]; then
+            echo "::error::Missing SUPABASE_QA_SERVICE_ROLE_KEY in miltvplus-qa environment."
+            exit 1
+          fi
+          declare -A required_columns=(
+            [channels]="title,url_stream,is_published,sort_order,logo"
+            [movies]="title,url_stream,is_published,created_at"
+            [series]="title,is_published"
+            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
+            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
+          )
+          failed=0
+          for table in channels movies series episodes content_submissions; do
+            query="select=${required_columns[$table]}&limit=0"
+            status="$(curl --silent --show-error --max-time 12 \
+              --output /tmp/supabase-schema-body.txt \
+              --write-out '%{http_code}' \
+              --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              "$SUPABASE_URL/rest/v1/$table?$query" || true)"
+            if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+              echo "Verified $table required columns (HTTP $status)."
+            else
+              detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
+              echo "::error::QA schema verification failed for $table (HTTP ${status:-no-response}): $detail"
+              failed=1
+            fi
+          done
+          if [[ "$failed" -ne 0 ]]; then
+            echo "::error::QA migrations were applied, but schema verification failed. Do not publish a release."
+            exit 1
+          fi
+          echo "### QA database migrations and schema verification passed" >> "$GITHUB_STEP_SUMMARY"
