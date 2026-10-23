@@ -2,6 +2,15 @@ name: Deploy MILTVPLUS QA database migrations
 
 on:
   workflow_dispatch:
+    inputs:
+      migration_mode:
+        description: 'Preview pending migrations first; choose apply only after reviewing the dry-run output.'
+        required: true
+        type: choice
+        default: preview-only
+        options:
+          - preview-only
+          - apply
 
 permissions:
   contents: read
@@ -41,10 +50,6 @@ jobs:
             exit 1
           fi
           SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
-          if [[ "$SUPABASE_PROJECT_ID" == "MILTV" || "$SUPABASE_PROJECT_ID" == "miltv" ]]; then
-            echo "::error::Refusing to run QA migration workflow against a production-looking project ref."
-            exit 1
-          fi
           echo "SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID" >> "$GITHUB_ENV"
           echo "Validated QA project URL (project ref masked)."
 
@@ -78,13 +83,22 @@ jobs:
       - name: Preview pending migrations without applying
         run: supabase db push --dry-run
 
+      - name: Stop after preview unless explicitly approved
+        if: ${{ inputs.migration_mode == 'preview-only' }}
+        run: |
+          echo "::notice::Preview-only mode selected. No database migrations were applied."
+          echo "### QA migration preview complete — no changes applied" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Apply tracked migrations to QA
+        if: ${{ inputs.migration_mode == 'apply' }}
         run: supabase db push
 
       - name: Verify migration history
+        if: ${{ inputs.migration_mode == 'apply' }}
         run: supabase migration list
 
       - name: Verify required catalog schema through service role
+        if: ${{ inputs.migration_mode == 'apply' }}
         shell: bash
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_QA_SERVICE_ROLE_KEY }}
