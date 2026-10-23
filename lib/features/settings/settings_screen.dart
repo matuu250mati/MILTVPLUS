@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const _providerUrlKey = 'miltv_provider_url_v1';
   static const _profilePhoneKey = 'miltv_profile_phone_v1';
   static const _profileAvatarKey = 'miltv_profile_avatar_v1';
+  static const _savedPlaylistUrlsKey = 'miltvplus_saved_playlist_urls_v1';
 
   final _phoneController = TextEditingController();
   int _avatarIndex = 0;
@@ -61,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _avatarIndex = (preferences.getInt(_profileAvatarKey) ?? 0).clamp(0, _profileAvatars.length - 1);
       _urlController.text = preferences.getString(_providerUrlKey) ?? '';
       _textScale = preferences.getDouble('miltvplus_accessibility_text_scale_v1') ?? 1.0;
+      _playlistUrlController.text = (preferences.getStringList(_savedPlaylistUrlsKey) ?? const <String>[]).join('\n');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -136,6 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   static const _playlistSources = <({String title, String url})>[
+    (title: 'Lista principal MILTVPLUS', url: 'https://raw.githubusercontent.com/matuu250mati/MILTVPLUS/main/IPTV-URL.TXT'),
     (title: 'Deportes internacionales', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u'),
     (title: 'Canales de Argentina', url: 'https://iptv-org.github.io/iptv/countries/ar.m3u'),
     (title: 'Canales en español', url: 'https://iptv-org.github.io/iptv/languages/spa.m3u'),
@@ -146,8 +149,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _importPlaylist(String url, String title) async {
     final normalizedUrl = url.trim();
     final uri = Uri.tryParse(normalizedUrl);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
-      _showMessage('Ingresá una URL HTTPS válida de una lista propia o autorizada.');
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+      _showMessage('Ingresá una URL HTTP/HTTPS válida de una lista propia o autorizada.');
       return;
     }
     if (_importingPlaylist) return;
@@ -156,34 +159,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final imported = await _playlistService.importFromUrl(normalizedUrl);
       final merged = <String, TvChannel>{};
       for (final channel in await _channelStorage.load()) {
-        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+        merged.putIfAbsent(_channelIdentity(channel), () => channel);
       }
       for (final channel in imported) {
-        merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
+        merged.putIfAbsent(_channelIdentity(channel), () => channel);
       }
       await _channelStorage.save(merged.values.toList(growable: false));
+      final preferences = await SharedPreferences.getInstance();
+      final savedUrls = preferences.getStringList(_savedPlaylistUrlsKey) ?? <String>[];
+      if (!savedUrls.contains(normalizedUrl)) {
+        savedUrls.add(normalizedUrl);
+        await preferences.setStringList(_savedPlaylistUrlsKey, savedUrls);
+      }
       _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
-    } catch (_) {
-      _showMessage('No se pudo cargar $title. Verificá que la lista sea pública, HTTPS y compatible con M3U.');
+    } catch (error) {
+      _showMessage('No se pudo cargar $title. Revisá la URL, el acceso a la lista y el formato M3U. Detalle: $error');
     } finally {
       if (mounted) setState(() => _importingPlaylist = false);
     }
   }
 
-  String _streamIdentity(String value) {
-    final uri = Uri.tryParse(value.trim());
-    if (uri == null || uri.host.isEmpty) return value.trim();
-    return uri.replace(scheme: uri.scheme.toLowerCase(), host: uri.host.toLowerCase(),
-        path: uri.normalizePath().path, fragment: '').toString();
+  String _channelIdentity(TvChannel channel) {
+    final uri = Uri.tryParse(channel.streamUrl.trim());
+    final normalizedUrl = uri == null || uri.host.isEmpty
+        ? channel.streamUrl.trim()
+        : uri.replace(
+            scheme: uri.scheme.toLowerCase(),
+            host: uri.host.toLowerCase(),
+            path: uri.normalizePath().path,
+            fragment: '',
+          ).toString();
+    // Preserve aliases that share a stream but belong to different categories.
+    return '$normalizedUrl|${channel.name.trim().toLowerCase()}|${(channel.groupTitle ?? channel.category ?? '').trim().toLowerCase()}';
+  }
+
+  Future<void> _importAllPlaylists() async {
+    if (_importingPlaylist) return;
+    for (var index = 0; index < _playlistSources.length; index++) {
+      if (!mounted) return;
+      final source = _playlistSources[index];
+      await _importPlaylist(source.url, '${source.title} (${index + 1}/${_playlistSources.length})');
+    }
+    if (mounted) {
+      _showMessage('Proceso de carga finalizado. Las listas que respondieron correctamente quedaron guardadas localmente.');
+    }
   }
 
   Future<void> _importCustomPlaylist() async {
-    final url = _playlistUrlController.text.trim();
-    if (url.isEmpty) {
-      _showMessage('Pegá primero la URL HTTPS de tu lista M3U.');
+    final urls = _playlistUrlController.text
+        .split(RegExp(r'[\r\n]+'))
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    if (urls.isEmpty) {
+      _showMessage('Pegá una o más URL HTTP/HTTPS, una por línea.');
       return;
     }
-    await _importPlaylist(url, 'Lista propia');
+    if (_importingPlaylist) return;
+    for (var index = 0; index < urls.length; index++) {
+      // Each successful list is persisted immediately, so a later failure
+      // cannot erase earlier imports.
+      await _importPlaylist(urls[index], 'Lista ${index + 1}/${urls.length}');
+    }
+    if (mounted && urls.length > 1) {
+      _showMessage('Proceso terminado: ${urls.length} listas intentadas. Cada lista que se pudo importar quedó guardada en este dispositivo.');
+    }
   }
 
   void _clearImageCache() {
@@ -431,6 +471,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(color: AppTheme.muted, height: 1.5),
               ),
               const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _importingPlaylist ? null : _importAllPlaylists,
+                  icon: _importingPlaylist
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.playlist_add_check_circle_rounded),
+                  label: Text(_importingPlaylist ? 'GUARDANDO LISTAS…' : 'CARGAR TODAS LAS LISTAS'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Cada lista se guarda al terminar. Si una fuente falla, las listas anteriores no se borran.',
+                style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 12),
               for (final source in _playlistSources)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -447,11 +503,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: _playlistUrlController,
                 keyboardType: TextInputType.url,
-                minLines: 1,
-                maxLines: 2,
+                minLines: 3,
+                maxLines: 5,
                 decoration: const InputDecoration(
-                  labelText: 'Mi lista M3U/M3U8 (HTTPS)',
-                  hintText: 'https://servidor/mi-lista.m3u',
+                  labelText: 'URL de listas M3U/M3U8 (una por línea)',
+                  hintText: 'https://servidor/lista-argentina.m3u\nhttps://servidor/lista-deportes.m3u',
                   prefixIcon: Icon(Icons.link_rounded),
                 ),
               ),

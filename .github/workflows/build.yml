@@ -76,10 +76,30 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Validate Supabase configuration
+      # Select QA-only credentials for PRs; production credentials are never a fallback.
+      - name: Select isolated Supabase credentials
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_QA_ANON_KEY: ${{ secrets.SUPABASE_QA_ANON_KEY }}
+          SUPABASE_PRODUCTION_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PRODUCTION_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            [[ -n "${SUPABASE_QA_ANON_KEY//[[:space:]]/}" ]] || {
+              echo "::error::Missing SUPABASE_QA_ANON_KEY. Add the publishable/anon key from MILTVPLUS-QA; do not use the production key."
+              exit 1
+            }
+            printf '%s\n' 'SUPABASE_URL=https://uoqfovrynlyterjylpqj.supabase.co' >> "$GITHUB_ENV"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$SUPABASE_QA_ANON_KEY" >> "$GITHUB_ENV"
+          else
+            [[ -n "${SUPABASE_PRODUCTION_URL//[[:space:]]/}" ]] || { echo "::error::Missing SUPABASE_URL repository secret."; exit 1; }
+            [[ -n "${SUPABASE_PRODUCTION_ANON_KEY//[[:space:]]/}" ]] || { echo "::error::Missing SUPABASE_ANON_KEY repository secret."; exit 1; }
+            printf 'SUPABASE_URL=%s\n' "$SUPABASE_PRODUCTION_URL" >> "$GITHUB_ENV"
+            printf 'SUPABASE_ANON_KEY=%s\n' "$SUPABASE_PRODUCTION_ANON_KEY" >> "$GITHUB_ENV"
+          fi
+
+      - name: Validate Supabase configuration
         shell: bash
         run: |
           set -euo pipefail
@@ -107,8 +127,6 @@ jobs:
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
 
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -207,8 +225,6 @@ jobs:
           fi
 
       - name: Build release APK
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
