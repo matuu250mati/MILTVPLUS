@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:miltvplus/models/tv_channel.dart';
+import 'package:miltv_plus/models/tv_channel.dart';
 
 void main() {
   group('TvChannel.liveSection classification', () {
