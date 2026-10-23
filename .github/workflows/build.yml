@@ -313,6 +313,8 @@ jobs:
             build/MILTVPLUS-*-android.apk.sha256
             build/MILTVPLUS.apk
             build/MILTVPLUS.apk.sha256
+            build/app-release.apk
+            build/app-release.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
