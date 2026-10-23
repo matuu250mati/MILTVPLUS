@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/tv_channel.dart';
@@ -29,18 +31,8 @@ class ChannelStorageService {
     final decodedLegacy = <dynamic>[];
     for (final entry in legacy) {
       try {
-        final value = ChannelStorageCodec.decode(entry);
-        decodedLegacy.addAll(value.map((channel) => {
-              'name': channel.name,
-              'streamUrl': channel.streamUrl,
-              'groupTitle': channel.groupTitle,
-              'country': channel.country,
-              'language': channel.language,
-              'category': channel.category,
-              'logoUrl': channel.logoUrl,
-              'tvgId': channel.tvgId,
-              'backupStreamUrls': channel.backupStreamUrls,
-            }));
+        final value = jsonDecode(entry);
+        if (value is Map) decodedLegacy.add(value);
       } on FormatException {
         // Ignore one damaged entry without discarding the remaining channels.
       }
