@@ -5,7 +5,7 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'qa/**']
   workflow_dispatch:
     inputs:
       verify_production_signing:
@@ -76,39 +76,51 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Validate Supabase configuration
+      - name: Validate and select isolated Supabase configuration
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          SUPABASE_URL_PRODUCTION: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY_PRODUCTION: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL_QA: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_ANON_KEY_QA: ${{ secrets.SUPABASE_QA_ANON_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${SUPABASE_URL//[[:space:]]/}" ]]; then
-            echo "::error::Configure the SUPABASE_URL repository secret."
-            exit 1
-          fi
-          if [[ -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
-            echo "::error::Configure SUPABASE_ANON_KEY with the project's publishable/anon key."
-            exit 1
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            SUPABASE_URL="$SUPABASE_URL_QA"
+            SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_QA"
+            if [[ -z "${SUPABASE_URL//[[:space:]]/}" || -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
+              echo "::error::QA build requires both SUPABASE_QA_URL and SUPABASE_QA_ANON_KEY. Production secrets will not be used as fallback."
+              exit 1
+            fi
+            echo "Selecting isolated MILTVPLUS-QA Supabase configuration for pull request build."
+          else
+            SUPABASE_URL="$SUPABASE_URL_PRODUCTION"
+            SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_PRODUCTION"
+            if [[ -z "${SUPABASE_URL//[[:space:]]/}" || -z "${SUPABASE_ANON_KEY//[[:space:]]/}" ]]; then
+              echo "::error::Production build requires SUPABASE_URL and SUPABASE_ANON_KEY."
+              exit 1
+            fi
+            echo "Selecting existing production Supabase configuration."
           fi
           SUPABASE_URL="$(printf '%s' "$SUPABASE_URL" | xargs)"
           while [[ "$SUPABASE_URL" == */ ]]; do
             SUPABASE_URL="${SUPABASE_URL%/}"
           done
           if [[ ! "$SUPABASE_URL" =~ ^https://[a-z0-9-]+[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be exactly https://<project-ref>.supabase.co. Remove /rest/v1, paths, query strings, fragments, or dashboard URLs."
+            echo "::error::Selected Supabase URL must be exactly https://<project-ref>.supabase.co. Remove paths, query strings, fragments, or dashboard URLs."
             exit 1
           fi
           if [[ "$SUPABASE_ANON_KEY" =~ [[:space:]] ]]; then
-            echo "::error::SUPABASE_ANON_KEY contains whitespace. Copy the complete publishable/anon key."
+            echo "::error::Selected Supabase publishable/anon key contains whitespace."
             exit 1
           fi
           echo "SUPABASE_URL_NORMALIZED=$SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY_SELECTED=$SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
 
       - name: Verify required Supabase schema (diagnostic; APK build continues)
-
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY_SELECTED }}
         shell: bash
         run: |
           set -euo pipefail
@@ -208,7 +220,7 @@ jobs:
 
       - name: Build release APK
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY_SELECTED }}
         shell: bash
         run: |
           set -euo pipefail
