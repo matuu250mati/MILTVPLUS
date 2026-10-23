@@ -12,24 +12,24 @@ Se agregó la migración no destructiva `supabase/migrations/20261014090000_chan
 
 ## Estado de la última comprobación automática
 
-**Actualizado el 15/10/2026:** la ejecución de GitHub Actions más reciente consultó las columnas requeridas de `channels`, `movies`, `series`, `episodes` y `content_submissions`; las cinco devolvieron HTTP 200 y resolvieron las columnas solicitadas.
+**Comprobación automática de CI (21/10/2026):** el flujo de QA consultó las columnas requeridas de `channels`, `movies`, `series`, `episodes` y `content_submissions`; las cinco devolvieron HTTP 200. Esta validación corresponde al proyecto QA seleccionado por el workflow, no certifica por sí sola el proyecto de producción.
 
 El registro del 14/10/2026 había detectado nombres heredados en `channels` y un HTTP 404 para `content_submissions`. Esos hallazgos son históricos y no deben tomarse como el estado actual sin repetir la comprobación. Conservamos la migración de compatibilidad por si se configura otro proyecto o reaparece una diferencia de esquema.
 
-La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de columna usados en la consulta de diagnóstico. **No garantiza** que existan filas visibles para el rol anónimo, que las políticas RLS permitan cada operación de lectura/escritura ni que todos los flujos de cuenta y moderación funcionen. Verificá esas operaciones con pruebas funcionales y políticas del proyecto correcto antes de dar Supabase por cerrado.
+La comprobación HTTP 200 confirma que PostgREST resolvió los nombres de columna usados en la consulta de diagnóstico. **No garantiza** que existan filas visibles para el rol anónimo, que las políticas RLS permitan cada operación de lectura/escritura ni que todos los flujos de cuenta y moderación funcionen. Antes de dar Supabase por cerrado, repetí la verificación en producción y probá autenticación, lectura como anon y authenticated, envíos de contenido y moderación.
 
 ## Despliegue automatizado de migraciones
 
-El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que se ejecuta manualmente desde **GitHub → Actions → Deploy Supabase database migrations → Run workflow**. Antes de ejecutarlo, configurá en **Settings → Secrets and variables → Actions → Repository secrets** estos secretos del mismo proyecto:
+El repositorio incluye `.github/workflows/deploy-supabase-migrations.yml`, que se ejecuta manualmente desde **GitHub → Actions → Deploy Supabase database migrations → Run workflow**. La primera ejecución debe usar `apply_migrations = false` (valor predeterminado): solo muestra el plan con `supabase db push --dry-run` y no modifica producción. Revisá ese plan y `supabase migration list`; si aparecen migraciones históricas inesperadas, detenete y reconciliá el historial antes de aplicar nada. Solo después de revisar el plan y confirmar una copia de seguridad, ejecutá una segunda vez con `apply_migrations = true`. Tras aplicar, el workflow verifica columnas usando el volcado de esquema de la conexión de base de datos; no usa SELECT anónimo, porque el catálogo debe denegar ese acceso. Antes de ejecutarlo, configurá en **Settings → Secrets and variables → Actions → Repository secrets** estos secretos del mismo proyecto:
 
 - `SUPABASE_ACCESS_TOKEN`: token personal de acceso de Supabase.
 - `SUPABASE_DB_PASSWORD`: contraseña de la base de datos del proyecto.
 - `SUPABASE_URL`: URL raíz `https://<project-ref>.supabase.co`.
 - `SUPABASE_ANON_KEY`: clave pública anon/publishable correspondiente al proyecto.
 
-El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. En este repositorio ya se validó que `SUPABASE_URL` y `SUPABASE_ANON_KEY` están disponibles para compilar; lo que falta para desplegar es configurar `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD`.
+El workflow deriva automáticamente `SUPABASE_PROJECT_ID` de `SUPABASE_URL`, así que no hace falta guardar un secreto separado para ese dato. Que el APK compile no demuestra que `SUPABASE_ACCESS_TOKEN` y `SUPABASE_DB_PASSWORD` estén configurados para el entorno `production`. Confirmá que los cuatro secretos estén presentes en el entorno de GitHub Actions `production`; no los pegues en el chat. El workflow ahora rechaza explícitamente cualquier proyecto cuyo ref no sea el de producción esperado.
 
-No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes.
+No pegues tokens, contraseñas ni claves en el chat ni en archivos versionados. El workflow valida que el ID y la URL coincidan, ejecuta `supabase db push`, revisa el historial y comprueba las columnas requeridas. Si falla por historial de migraciones o por esquema, no fuerces la ejecución: revisá el log y resolvé la causa antes de reintentar. El workflow no reemplaza una copia de seguridad ni una revisión de cambios sobre datos existentes. No actives `apply_migrations` si el plan incluye migraciones antiguas que no reconocés o si no confirmaste el historial del proyecto.
 
 ## 2. Normalizar categorías de TV en vivo
 
@@ -77,7 +77,7 @@ En SQL Editor, ejecutá una sola vez el contenido actualizado de:
 
 `supabase/migrations/20261013090200_user_content_submissions.sql`
 
-Esta migración crea `content_submissions`, habilita RLS, permite a usuarios autenticados enviar propuestas pendientes y permite que el público lea únicamente las aprobadas. Los moderadores solo pueden cambiar el campo `moderation_status`.
+Esta migración crea `content_submissions`, habilita RLS, permite a usuarios autenticados enviar propuestas pendientes y permite que usuarios autenticados lean únicamente las aprobadas. Los moderadores autorizados pueden revisar propuestas pendientes y cambiar `moderation_status`.
 
 Si el SQL Editor devuelve un error, no continúes como si la migración hubiera quedado aplicada. Copiá el error completo (sin claves ni tokens) y corregilo antes de probar el flujo.
 
@@ -98,19 +98,30 @@ where lower(email) = lower('moderador@tu-dominio.com');
 
 Confirmá que la consulta de verificación devuelva exactamente una cuenta con el rol `moderator`. Cerrá sesión y volvé a iniciar sesión en MILTVPLUS para renovar el JWT y cargar el rol. No asignes este rol a cuentas que no deban aprobar publicaciones.
 
-## 5. Verificar las políticas del catálogo
+## 5. Política vigente de acceso al catálogo
 
-Las tablas `channels`, `movies`, `series` y `episodes` deben tener RLS habilitado y políticas de lectura para filas publicadas. El esquema base `supabase/schema.sql` incluye esas políticas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
+El requisito vigente en esta rama es **catálogo solo para usuarios autenticados**. La migración correctiva `20261022100000_enforce_authenticated_catalog_access.sql` revoca la lectura del rol `anon` y permite a `authenticated` leer únicamente canales, películas y series publicados, episodios cuyo padre esté publicado y propuestas aprobadas. Reemplaza solo las políticas de lectura conocidas y restaura las políticas owner-only de películas, series y episodios, además de las políticas de moderación. Aun así, antes de aplicarla en producción, compará las políticas reales del proyecto con las migraciones y verificá los permisos de publicación de canales, porque el historial anterior pudo haber eliminado políticas personalizadas.
 
-## 6. Prueba de aceptación
+Las migraciones históricas `20261021210000_catalog_rls_hardening.sql` y `20261022090000_content_submissions_column_privileges.sql` contienen concesiones previas a `anon`; no las interpretes aisladamente. La migración correctiva posterior debe quedar registrada y aplicada en el proyecto destino. No ejecutes la migración de producción sin verificar primero el ID del proyecto, el historial de migraciones y las políticas personalizadas. No agregues políticas de escritura pública ni incluyas una clave `service_role` en la app.
 
-1. Verificá que las tablas `channels`, `movies`, `series` y `episodes` existan y tengan las columnas consultadas por la app.
-2. Confirmá que `content_submissions` exista después de aplicar su migración.
-3. Registrá una cuenta normal e iniciá sesión.
-4. En **PUBLICAR**, enviá una película de prueba cuya URL HTTPS sea tuya o esté autorizada.
-5. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'`.
-6. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**.
-7. Aprobá la propuesta y verificá que aparezca en el catálogo público.
-8. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
+## 6. Archivos de medios del propietario
+
+La pantalla **PUBLICAR** sube archivos al bucket `owner-media` y guarda una URL pública para que el reproductor pueda abrirla. La migración `20261022110000_owner_media_storage_policies.sql` crea el bucket si no existe y limita las operaciones de escritura a sesiones autenticadas cuyo `app_metadata.role` sea `owner`. Si ya existe un bucket privado con ese nombre, la migración se detiene en vez de hacerlo público automáticamente; revisá sus objetos y la política de acceso antes de decidir un cambio de visibilidad.
+
+**Importante:** el bucket es público para lectura por diseño: cualquier persona que obtenga la URL de un archivo puede intentar abrirlo, aunque el catálogo requiera iniciar sesión. Subí únicamente medios que tengas derecho a distribuir públicamente. Si el requisito es que el video también quede protegido detrás de autenticación, no alcanza con RLS del catálogo: habrá que cambiar el flujo para guardar la ruta del objeto y emitir URLs firmadas al reproducir; no se debe resolver haciendo privado el bucket sin adaptar antes el reproductor.
+
+Tras aplicar la migración, probá con una cuenta normal que no pueda subir, reemplazar ni borrar objetos en `owner-media`, y con el rol `owner` que pueda subir y reproducir un archivo autorizado. La compilación de CI no ejecuta esta prueba contra producción.
+
+## 7. Prueba de aceptación
+
+1. Verificá que las tablas `channels`, `movies`, `series`, `episodes` y `content_submissions` existan y tengan las columnas consultadas por la app.
+2. Confirmá en el historial de Supabase que la migración `20261022100000_enforce_authenticated_catalog_access.sql` se haya aplicado al proyecto correcto.
+3. Con la clave pública y sin sesión, comprobá que las lecturas del catálogo no expongan filas (esperado: acceso denegado o cero filas según el endpoint y la política).
+4. Registrá una cuenta normal e iniciá sesión; comprobá que puede leer únicamente el contenido publicado.
+5. En **PUBLICAR**, enviá una propuesta de prueba cuya URL HTTPS sea tuya o esté autorizada.
+6. Confirmá en Supabase que la fila queda con `moderation_status = 'pending'` y que un usuario no puede enviar propuestas asignándolas a otro `user_id` ni establecerlas como aprobadas.
+7. Iniciá sesión con la cuenta moderadora y abrí **MODERACIÓN**; verificá que las acciones de moderación sigan funcionando con los permisos de servidor previstos.
+8. Aprobá la propuesta y verificá que aparezca para un usuario autenticado autorizado.
+9. Abrí el título y confirmá reproducción real. Una URL que responda HTTP sin cifrar, una página web o una señal caída no cuenta como reproducción válida.
 
 La compilación de GitHub Actions solo verifica el código y construye el APK; no confirma que esta configuración ya esté aplicada a la base de datos real.

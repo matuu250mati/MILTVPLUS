@@ -63,7 +63,7 @@ class TvChannel {
       return 'HBO/Cine';
     }
     if (RegExp(
-      r'\b(sport|sports|deporte|deportivo|espn|tyc|fox sports|tnt sports|dsports|d sports|directv sports|deportv|eurosport|sportv|bein sports|nba|nfl|mlb|nhl|ufc|wwe|dazn|formula 1|formula one|f1|motorsport|racing|golf|tennis|boxing|cricket|rugby|volleyball|basketball|baseball|football|soccer|fútbol|futbol|olympics|olympic|atp|wta|uefa|fifa|premier league|laliga|fight network)\b',
+      r'\b(sport|sports|deporte|deportes|deportivo|deportiva|deportivas|espn|tyc|fox sports|tnt sports|dsports|d sports|directv sports|deportv|eurosport|sportv|bein sports|nba|nfl|mlb|nhl|ufc|wwe|dazn|formula 1|formula one|f1|motorsport|racing|golf|tennis|boxing|cricket|rugby|volleyball|basketball|baseball|football|soccer|fútbol|futbol|olympics|olympic|atp|wta|uefa|fifa|premier league|laliga|fight network)\b',
     ).hasMatch(searchable)) {
       return 'Deportes';
     }

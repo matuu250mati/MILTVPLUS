@@ -63,6 +63,7 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
             });
           },
           onPageFinished: (_) async {
+            await _applyAdFiltering();
             final canGoBack = await _controller.canGoBack();
             if (!mounted) return;
             setState(() {
@@ -84,6 +85,9 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
             if (uri == null || uri.scheme != 'https') {
               return NavigationDecision.prevent;
             }
+            if (_isBlockedAdHost(uri.host)) {
+              return NavigationDecision.prevent;
+            }
             return NavigationDecision.navigate;
           },
         ),
@@ -96,6 +100,111 @@ class _AdultBrowserScreenState extends State<AdultBrowserScreen> {
         _loading = false;
         _errorMessage = 'No se pudo iniciar el navegador integrado.';
       });
+    }
+  }
+
+  // In-app, best-effort protection: block known ad-network navigations and
+  // hide common ad placements. WebView's public Flutter API does not expose
+  // a full per-subresource network filter, so this cannot stop every ad request.
+  static const Set<String> _blockedAdDomains = {
+    'doubleclick.net',
+    'googlesyndication.com',
+    'googleadservices.com',
+    'adservice.google.com',
+    'adnxs.com',
+    'adform.net',
+    'taboola.com',
+    'outbrain.com',
+    'popads.net',
+    'popcash.net',
+    'propellerads.com',
+    'exoclick.com',
+    'trafficjunky.net',
+  };
+
+  bool _isBlockedAdHost(String host) {
+    var normalized = host.toLowerCase();
+    if (normalized.endsWith('.')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return _blockedAdDomains.any(
+      (domain) => normalized == domain || normalized.endsWith('.$domain'),
+    );
+  }
+
+  Future<void> _applyAdFiltering() async {
+    const script = r'''
+      (() => {
+        const blocked = [
+          'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+          'adservice.google.com', 'adnxs.com', 'adform.net', 'taboola.com',
+          'outbrain.com', 'popads.net', 'popcash.net', 'propellerads.com',
+          'exoclick.com', 'trafficjunky.net'
+        ];
+        const isBlocked = (raw) => {
+          try {
+            const host = new URL(raw, location.href).hostname.toLowerCase();
+            return blocked.some((domain) => host === domain || host.endsWith('.' + domain));
+          } catch (_) { return false; }
+        };
+        const selectors = [
+          'iframe[src*="doubleclick.net"]',
+          'iframe[src*="googlesyndication.com"]',
+          'iframe[src*="googleadservices.com"]',
+          'iframe[src*="adnxs.com"]',
+          'iframe[src*="taboola.com"]',
+          'iframe[src*="outbrain.com"]',
+          'ins.adsbygoogle',
+          '[id^="google_ads"]',
+          '[id^="ad-slot"]',
+          '[class~="ad-container"]',
+          '[class~="ad-placement"]',
+          '[class~="advertisement"]',
+          '[data-ad]',
+          '[data-ad-slot]'
+        ];
+        const clean = (root) => {
+          if (!root || !root.querySelectorAll) return;
+          for (const selector of selectors) {
+            root.querySelectorAll(selector).forEach((node) => {
+              node.style.setProperty('display', 'none', 'important');
+              node.setAttribute('aria-hidden', 'true');
+            });
+          }
+          root.querySelectorAll('iframe[src], a[href]').forEach((node) => {
+            const url = node.getAttribute('src') || node.getAttribute('href');
+            if (url && isBlocked(url)) {
+              if (node.tagName === 'IFRAME') node.remove();
+              else node.addEventListener('click', (event) => event.preventDefault(), { once: true });
+            }
+          });
+        };
+        clean(document);
+        if (window.__miltvAdFilterObserver) window.__miltvAdFilterObserver.disconnect();
+        window.__miltvAdFilterObserver = new MutationObserver((records) => {
+          for (const record of records) {
+            for (const node of record.addedNodes) if (node.nodeType === 1) clean(node.parentNode || document);
+          }
+        });
+        window.__miltvAdFilterObserver.observe(document.documentElement, { childList: true, subtree: true });
+        const originalOpen = window.open;
+        window.open = function(url) {
+          if (url && isBlocked(url)) return null;
+          return originalOpen.apply(window, arguments);
+        };
+        document.addEventListener('click', (event) => {
+          const anchor = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+          if (anchor && isBlocked(anchor.href)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    ''';
+    try {
+      await _controller.runJavaScript(script);
+    } catch (_) {
+      // Some provider pages disable script execution; navigation filtering remains active.
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../models/tv_channel.dart';
 import '../../services/hls_variant_service.dart';
@@ -24,6 +25,8 @@ class LivePlayerScreen extends StatefulWidget {
 class _LivePlayerScreenState extends State<LivePlayerScreen> {
   final _variantService = HlsVariantService();
   VideoPlayerController? _controller;
+  WebViewController? _webController;
+  bool _webMode = false;
   List<HlsVariant> _variants = const [];
   int _index = 0;
   int _requestId = 0;
@@ -81,7 +84,9 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
     setState(() => _controlsVisible = true);
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted && _controller?.value.isPlaying == true) {
+      // Embedded official web players have no VideoPlayerController; their
+      // overlay must still auto-hide so the page remains interactive.
+      if (mounted && (_webMode || _controller?.value.isPlaying == true)) {
         setState(() => _controlsVisible = false);
       }
     });
@@ -107,6 +112,8 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
 
     final previous = _controller;
     _controller = null;
+    _webController = null;
+    _webMode = false;
     setState(() {
       _index = index;
       _loading = true;
@@ -133,6 +140,42 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           uri.scheme != 'https') {
         lastFailure = 'Se omitió una URL de transmisión no válida.';
         continue;
+      }
+
+      // Some broadcasters publish their official live signal as a YouTube
+      // live page instead of a direct HLS URL. Keep this limited to YouTube
+      // hosts; arbitrary web pages are still rejected by the playlist parser.
+      if (_isSupportedWebPlayerUrl(uri)) {
+        try {
+          final pageLoaded = Completer<void>();
+          final web = WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..setBackgroundColor(Colors.black)
+            ..setNavigationDelegate(
+              NavigationDelegate(
+                onPageFinished: (_) {
+                  if (!pageLoaded.isCompleted) pageLoaded.complete();
+                },
+              ),
+            );
+          await web.loadRequest(uri);
+          await pageLoaded.future.timeout(const Duration(seconds: 12));
+          if (!mounted || request != _requestId) return;
+          _webController = web;
+          _webMode = true;
+          _activeStreamIndex = candidateIndex;
+          setState(() {
+            _loading = false;
+            _error = null;
+            _recovering = false;
+          });
+          _showControls();
+          return;
+        } catch (_) {
+          if (!mounted || request != _requestId) return;
+          lastFailure = 'No se pudo abrir el reproductor oficial de YouTube.';
+          continue;
+        }
       }
 
       final next = VideoPlayerController.networkUrl(
@@ -179,6 +222,24 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
           ? 'Este canal todavía no tiene una URL de transmisión publicada.'
           : 'No se pudo reproducir esta señal con las fuentes disponibles. $lastFailure';
     });
+  }
+
+  bool _isSupportedWebPlayerUrl(Uri uri) {
+    if (uri.scheme != 'https') return false;
+    final host = uri.host.toLowerCase();
+    const youtubeHosts = <String>{
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'youtu.be',
+      'youtube-nocookie.com',
+      'www.youtube-nocookie.com',
+    };
+    // Telefe's own live page hosts its player on mitelefe.com. Allow only
+    // that broadcaster domain and YouTube, not arbitrary web pages.
+    return youtubeHosts.contains(host) ||
+        host == 'mitelefe.com' ||
+        host.endsWith('.mitelefe.com');
   }
 
   void _handleControllerUpdate(VideoPlayerController controller, int request) {
@@ -280,11 +341,19 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
         backgroundColor: Colors.black,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _showControls,
+          onTap: _webMode ? null : _showControls,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (ready)
+              if (_webMode && _webController != null)
+                Listener(
+                  // Pointer listeners do not claim the gesture, so the web
+                  // player remains tappable while a hidden app overlay can be
+                  // brought back with a touch.
+                  onPointerDown: (_) => _showControls(),
+                  child: WebViewWidget(controller: _webController!),
+                )
+              else if (ready)
                 Center(
                   child: AspectRatio(
                     aspectRatio: controller!.value.aspectRatio > 0
@@ -335,13 +404,15 @@ class _LivePlayerScreenState extends State<LivePlayerScreen> {
                 ),
               if (_controlsVisible)
                 const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xCC000000), Colors.transparent, Color(0xD9000000)],
-                        stops: [0, .42, 1],
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xCC000000), Colors.transparent, Color(0xD9000000)],
+                          stops: [0, .42, 1],
+                        ),
                       ),
                     ),
                   ),

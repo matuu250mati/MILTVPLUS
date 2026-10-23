@@ -1,11 +1,14 @@
 name: Deploy Supabase database migrations
 
+# Production schema changes must be reviewed and explicitly dispatched; never deploy on merge alone.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/migrations/**'
+    inputs:
+      apply_migrations:
+        description: "Apply the pending migrations after reviewing a separate dry-run"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,7 +19,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
     env:
@@ -26,7 +29,7 @@ jobs:
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate deployment credentials
         shell: bash
@@ -38,12 +41,23 @@ jobs:
               exit 1
             fi
           done
+          # Normalize an optional PostgREST suffix, but reject any other URL path.
           normalized="${SUPABASE_URL%/}"
-          if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be the canonical https://<project-ref>.supabase.co URL. No migration was applied."
+          if [[ "$normalized" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
+            normalized="${BASH_REMATCH[1]}"
+          fi
+          if [[ "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
+            SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+          else
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally ending in /rest/v1. No migration was applied."
             exit 1
           fi
-          SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+          SUPABASE_URL="$normalized"
+          echo "SUPABASE_URL=$SUPABASE_URL" >> "$GITHUB_ENV"
+          if [[ "$SUPABASE_PROJECT_ID" != "mkdubrwdgorpobbrxdzy" ]]; then
+            echo "::error::Production migration workflow is restricted to project mkdubrwdgorpobbrxdzy; refusing to touch $SUPABASE_PROJECT_ID."
+            exit 1
+          fi
           echo "SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID" >> "$GITHUB_ENV"
 
       - name: Validate migration filenames
@@ -66,7 +80,7 @@ jobs:
           printf 'Validated %s timestamped migration files.\n' "${#migrations[@]}"
 
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -77,39 +91,26 @@ jobs:
         run: supabase db push --dry-run
 
       - name: Apply tracked migrations
+        if: ${{ inputs.apply_migrations }}
         run: supabase db push
 
       - name: Verify migration history
+        if: ${{ inputs.apply_migrations }}
         run: supabase migration list
 
-      - name: Verify required PostgREST schema
+      - name: Verify deployed database schema using pg_dump
+        if: ${{ inputs.apply_migrations }}
         shell: bash
         run: |
           set -euo pipefail
-          declare -A required_columns=(
-            [channels]="title,url_stream,is_published,sort_order,logo"
-            [movies]="title,url_stream,is_published,created_at"
-            [series]="title,is_published"
-            [episodes]="series_id,title,url_stream,is_published,season_number,episode_number"
-            [content_submissions]="title,description,stream_url,poster_url,duration_seconds,series_title,season_number,episode_number,media_type,moderation_status,created_at"
-          )
-          failed=0
-          for table in channels movies series episodes content_submissions; do
-            query="select=${required_columns[$table]}&limit=0"
-            status="$(curl --silent --show-error --max-time 12 \
-              --output /tmp/supabase-schema-body.txt \
-              --write-out '%{http_code}' \
-              --header "apikey: $SUPABASE_ANON_KEY" \
-              "$SUPABASE_URL/rest/v1/$table?$query" || true)"
-            if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
-              detail="$(head -c 400 /tmp/supabase-schema-body.txt 2>/dev/null || true)"
-              echo "::error::Post-deploy schema verification failed for $table (HTTP ${status:-no-response}): $detail"
-              failed=1
-            else
-              echo "Verified $table required columns (HTTP $status)."
-            fi
-          done
-          if [[ "$failed" -ne 0 ]]; then
-            echo "::error::One or more Supabase tables failed post-deployment verification."
-            exit 1
-          fi
+          # Use the linked database connection, not anon PostgREST SELECTs. The
+          # intended RLS policy denies anon catalog reads after deployment.
+          supabase db dump --linked --schema public --file /tmp/supabase-public-schema.sql --password "$SUPABASE_DB_PASSWORD"
+          python3 tool/validate_supabase_schema_dump.py /tmp/supabase-public-schema.sql
+
+      - name: Explain dry-run-only result
+        if: ${{ !inputs.apply_migrations }}
+        shell: bash
+        run: |
+          echo "### Dry run only — no production migrations applied" >> "$GITHUB_STEP_SUMMARY"
+          echo "Review the planned migration list and the remote migration history. If any old migrations are unexpectedly pending, stop and reconcile history before a separate run with apply_migrations enabled." >> "$GITHUB_STEP_SUMMARY"

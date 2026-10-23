@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
+import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
-import '../catalog/catalog_player_screen.dart';
+import '../catalog/catalog_screen.dart';
+import '../live/live_player_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -111,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _SectionHeader(
                     title: 'Canales en vivo',
                     icon: Icons.live_tv_rounded,
-                    color: const Color(0xFF18F17B),
+                    color: AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(0),
                   ),
                   const SizedBox(height: 10),
@@ -125,13 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     _ChannelRail(
                       channels: data.channels.take(compact ? 8 : 12).toList(),
                       compact: compact,
-                      onOpenLive: () => widget.onNavigate(0),
+                      onSelect: _openChannel,
                     ),
                   SizedBox(height: compact ? 20 : 26),
                   _SectionHeader(
                     title: 'Películas populares',
                     icon: Icons.local_movies_rounded,
-                    color: const Color(0xFF18F17B),
+                    color: AppTheme.accent,
                     onSeeAll: () => widget.onNavigate(2),
                   ),
                   const SizedBox(height: 10),
@@ -177,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (item.releaseYear != null) item.releaseYear.toString(),
                         item.category,
                       ].join(' · '),
-                      onTap: (item) => widget.onNavigate(3),
+                      onTap: (item) => CatalogScreen.openSeriesDetail(context, item),
                     ),
                   if (snapshot.hasError) ...[
                     const SizedBox(height: 12),
@@ -206,16 +208,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _openMovie(MovieModel movie) async {
-    if (movie.urlStream.trim().isEmpty) {
-      widget.onNavigate(2);
+  Future<void> _openMovie(MovieModel movie) =>
+      CatalogScreen.openMovieDetail(context, movie);
+
+  Future<void> _openChannel(ChannelModel channel) async {
+    final urls = channel.streamUrls
+        .map((url) => url.trim())
+        .where((url) => url.isNotEmpty)
+        .toSet()
+        .toList();
+    if (urls.isEmpty && channel.urlStream.trim().isNotEmpty) {
+      urls.add(channel.urlStream.trim());
+    }
+    if (urls.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${channel.title} todavía no tiene un enlace de reproducción publicado.')),
+      );
       return;
     }
-    await Navigator.of(context).push(
+
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => CatalogPlayerScreen(
-          title: movie.title,
-          streamUrl: movie.urlStream,
+        builder: (_) => LivePlayerScreen(
+          channels: [
+            TvChannel(
+              name: channel.title,
+              streamUrl: urls.first,
+              category: channel.category,
+              country: channel.countryCode,
+              logoUrl: channel.logo,
+              backupStreamUrls: urls.skip(1).toList(growable: false),
+            ),
+          ],
+          initialIndex: 0,
         ),
       ),
     );
@@ -266,7 +291,7 @@ class _DashboardHeader extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(13),
             gradient: const LinearGradient(
-              colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
+              colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -277,7 +302,7 @@ class _DashboardHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 32),
+          child: const Icon(Icons.live_tv_rounded, color: Color(0xFF031018), size: 29),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -298,10 +323,44 @@ class _DashboardHeader extends StatelessWidget {
             ),
           ),
         ),
+        if (!compact) ...[
+          const SizedBox(width: 12),
+          StreamBuilder<int>(
+            stream: Stream<int>.periodic(const Duration(minutes: 1), (tick) => tick),
+            builder: (context, snapshot) {
+              final now = DateTime.now();
+              const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+              const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+              final label = '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+              return Text(label, style: const TextStyle(color: Color(0xFFDCE7F5), fontSize: 11, fontWeight: FontWeight.w600));
+            },
+          ),
+        ],
         IconButton(
           tooltip: 'Buscar contenido',
           onPressed: () => onNavigate(8),
           icon: const Icon(Icons.search_rounded),
+        ),
+        IconButton(
+          tooltip: 'Notificaciones',
+          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No hay notificaciones nuevas.')),
+          ),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.notifications_none_rounded),
+              Positioned(
+                right: -1,
+                top: -1,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(color: Color(0xFFFF3B4E), shape: BoxShape.circle),
+                ),
+              ),
+            ],
+          ),
         ),
         IconButton(
           tooltip: 'Configuración',
@@ -326,7 +385,7 @@ class _HeroBanner extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF17608B).withValues(alpha: .75)),
+        border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: .75)),
         gradient: const LinearGradient(
           colors: [Color(0xFF102D4D), Color(0xFF07101E), Color(0xFF030812)],
           begin: Alignment.topRight,
@@ -342,7 +401,7 @@ class _HeroBanner extends StatelessWidget {
             child: Icon(
               Icons.sports_soccer_rounded,
               size: compact ? 190 : 285,
-              color: const Color(0xFFB8FF35).withValues(alpha: .16),
+              color: const Color(0xFF00FF66).withValues(alpha: .16),
             ),
           ),
           const DecoratedBox(
@@ -452,11 +511,11 @@ class _CategoryStrip extends StatelessWidget {
   final ValueChanged<int> onNavigate;
 
   static const _categories = <_CategoryInfo>[
-    _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF18CFFF), 0),
-    _CategoryInfo('Deportes', Icons.sports_soccer_rounded, Color(0xFF18F17B), 5),
-    _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF598CFF), 2),
-    _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFCA5BFF), 3),
-    _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF674F), 4),
+    _CategoryInfo('TV en vivo', Icons.live_tv_rounded, Color(0xFF00E5FF), 0),
+    _CategoryInfo('Deportes', Icons.sports_soccer_rounded, Color(0xFF00FF66), 5),
+    _CategoryInfo('Películas', Icons.local_movies_rounded, Color(0xFF7C4DFF), 2),
+    _CategoryInfo('Series', Icons.video_library_rounded, Color(0xFFE040FB), 3),
+    _CategoryInfo('Anime', Icons.animation_rounded, Color(0xFFFF3D00), 4),
   ];
 
   @override
@@ -570,10 +629,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _ChannelRail extends StatelessWidget {
-  const _ChannelRail({required this.channels, required this.compact, required this.onOpenLive});
+  const _ChannelRail({required this.channels, required this.compact, required this.onSelect});
   final List<ChannelModel> channels;
   final bool compact;
-  final VoidCallback onOpenLive;
+  final ValueChanged<ChannelModel> onSelect;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -594,12 +653,12 @@ class _ChannelRail extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13),
                   focusColor: AppTheme.selectedAccent.withValues(alpha: .24),
                   hoverColor: AppTheme.selectedAccent.withValues(alpha: .14),
-                  onTap: onOpenLive,
+                  onTap: () => onSelect(channel),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: const Color(0xFF17436C)),
+                      border: Border.all(color: const Color(0xFF00E5FF)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +684,7 @@ class _ChannelRail extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF087B43),
+                                color: AppTheme.accent,
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: const Text('VIVO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900)),
@@ -701,7 +760,7 @@ class _PosterRail<T> extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.panel,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF1D527A)),
+                        border: Border.all(color: const Color(0xFF00E5FF)),
                       ),
                       child: image == null || image.trim().isEmpty
                           ? const Center(child: Icon(Icons.movie_outlined, color: AppTheme.accent, size: 40))

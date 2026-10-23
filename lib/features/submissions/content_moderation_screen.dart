@@ -79,7 +79,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
       setState(() => _pendingFuture = _loadPending());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(status == 'approved'
-            ? 'Contenido aprobado y agregado al catálogo público.'
+            ? 'Contenido aprobado. Quedará disponible para usuarios autenticados autorizados.'
             : 'Propuesta rechazada.')),
       );
     } on PostgrestException catch (error) {
@@ -124,7 +124,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
           const Text(
-            'Revisá derechos, calidad, seguridad y adecuación antes de publicar. Solo se mostrarán al público las propuestas aprobadas.',
+            'Revisá derechos, calidad, seguridad y adecuación antes de aprobar. Las propuestas aprobadas solo estarán disponibles para usuarios autenticados autorizados.',
             style: TextStyle(color: AppTheme.muted, height: 1.4),
           ),
           const SizedBox(height: 14),

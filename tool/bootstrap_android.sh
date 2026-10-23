@@ -8,6 +8,69 @@ fi
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Align the generated Android toolchain with Flutter 3.47's forward-compatible
+# AGP 9 migration path. Keep legacy KGP/DSL enabled until every Flutter plugin
+# is migrated; CI must prove the combination still builds before release.
+configure_android_build_toolchain() {
+  python3 - "$root_dir/android/settings.gradle.kts" "$root_dir/android/gradle/wrapper/gradle-wrapper.properties" "$root_dir/android/gradle.properties" <<'PY_ANDROID_TOOLCHAIN'
+import pathlib
+import re
+import sys
+
+settings_path, wrapper_path, properties_path = map(pathlib.Path, sys.argv[1:])
+for path in (settings_path, wrapper_path, properties_path):
+    if not path.is_file():
+        raise SystemExit(f"Android toolchain file is missing: {path}")
+
+settings = settings_path.read_text(encoding="utf-8")
+settings, agp_count = re.subn(
+    r'(id\(["\']com\.android\.application["\']\)\s+version\s+["\'])[^"\']+(["\'])',
+    r'\g<1>9.0.1\2',
+    settings,
+)
+settings, kotlin_count = re.subn(
+    r'(id\(["\']org\.jetbrains\.kotlin\.android["\']\)\s+version\s+["\'])[^"\']+(["\'])',
+    r'\g<1>2.3.20\2',
+    settings,
+)
+if agp_count != 1 or kotlin_count != 1:
+    raise SystemExit(
+        "Unexpected Android plugin declarations: expected exactly one "
+        "com.android.application and one org.jetbrains.kotlin.android version."
+    )
+if 'id("com.android.application") version "9.0.1"' not in settings:
+    raise SystemExit("Android Gradle Plugin version normalization failed.")
+if 'id("org.jetbrains.kotlin.android") version "2.3.20"' not in settings:
+    raise SystemExit("Kotlin Gradle Plugin version normalization failed.")
+settings_path.write_text(settings, encoding="utf-8")
+
+wrapper = wrapper_path.read_text(encoding="utf-8")
+wrapper, wrapper_count = re.subn(
+    r"(?m)^distributionUrl=.*$",
+    lambda _match: r"distributionUrl=https\://services.gradle.org/distributions/gradle-9.1.0-all.zip",
+    wrapper,
+)
+if wrapper_count != 1:
+    raise SystemExit("Expected exactly one Gradle distributionUrl in wrapper properties.")
+wrapper_path.write_text(wrapper, encoding="utf-8")
+
+properties = properties_path.read_text(encoding="utf-8")
+def set_property(content, key, value):
+    pattern = re.compile(rf"(?m)^\s*{re.escape(key)}=.*$")
+    line = f"{key}={value}"
+    if pattern.search(content):
+        return pattern.sub(line, content)
+    return content.rstrip() + "\n" + line + "\n"
+
+# Flutter 3.44+ supports AGP 9 with legacy KGP and DSL while plugins migrate.
+properties = set_property(properties, "android.builtInKotlin", "false")
+properties = set_property(properties, "android.newDsl", "false")
+properties_path.write_text(properties, encoding="utf-8")
+print("Android toolchain configured: Gradle 9.1.0, AGP 9.0.1, Kotlin 2.3.20; legacy plugin/DSL compatibility retained.")
+PY_ANDROID_TOOLCHAIN
+}
+
+
 # Keep Android 5.0 (API 21) as the declared minimum in generated Android projects.
 # Apply this on both fresh scaffolds and already-complete Android directories.
 ensure_min_android_sdk() {
@@ -27,11 +90,37 @@ PY_MIN_SDK
   fi
 }
 
+# Keep compileSdk aligned with Android dependencies that require API 36.
+# Do not change targetSdk or minSdk as part of this compatibility fix.
+ensure_compile_android_sdk() {
+  local gradle_file="$root_dir/android/app/build.gradle.kts"
+  if [[ -f "$gradle_file" ]]; then
+    python3 - "$gradle_file" <<'PY_COMPILE_SDK'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+content = path.read_text(encoding="utf-8")
+pattern = re.compile(r"(?m)^(\s*compileSdk\s*=\s*)(?:flutter\.compileSdkVersion|[0-9]+)(\s*(?://.*)?)$")
+content, count = pattern.subn(r"\g<1>36\g<2>", content)
+if count != 1:
+    raise SystemExit("Android compileSdk validation failed: expected exactly one compileSdk assignment that can be safely set to API 36.")
+if not re.search(r"(?m)^\s*compileSdk\s*=\s*36\s*(?://.*)?$", content):
+    raise SystemExit("Android compileSdk validation failed: API 36 was not retained.")
+path.write_text(content, encoding="utf-8")
+print("Android compileSdk configured and validated: API 36.")
+PY_COMPILE_SDK
+  fi
+}
+
 # Preservar Android si está completo. En repositorios con una carpeta android/
 # parcial, completar únicamente los archivos que faltan; nunca borrar el directorio.
 if [[ -f "$root_dir/android/app/build.gradle.kts" && -f "$root_dir/android/app/src/main/AndroidManifest.xml" && -f "$root_dir/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" && -f "$root_dir/android/app/miltvplus_branding_version.txt" && -f "$root_dir/android/app/miltvplus_signing_configured.txt" && -f "$root_dir/android/app/src/main/res/drawable-nodpi/tv_banner.png" ]]; then
   ensure_min_android_sdk
-  echo "El proyecto Android y los recursos de marca están completos; se conservan sin regenerarlos."
+  ensure_compile_android_sdk
+  configure_android_build_toolchain
+  echo "El proyecto Android y los recursos de marca están completos; se conservan y se actualiza el toolchain compatible."
   exit 0
 fi
 
@@ -41,8 +130,25 @@ trap 'rm -rf "$tmp_dir"' EXIT
 flutter create --platforms=android --project-name miltv_plus --org com.miltvplus "$tmp_dir/miltv-scaffold"
 mkdir -p "$root_dir/android"
 # -n evita sobrescribir cualquier archivo nativo que ya exista.
-cp -Rn "$tmp_dir/miltv-scaffold/android/." "$root_dir/android/"
+python3 - "$tmp_dir/miltv-scaffold/android" "$root_dir/android" <<'PY_COPY_MISSING'
+import pathlib
+import shutil
+import sys
+
+source = pathlib.Path(sys.argv[1])
+destination = pathlib.Path(sys.argv[2])
+for item in source.rglob("*"):
+    relative = item.relative_to(source)
+    target = destination / relative
+    if item.is_dir():
+        target.mkdir(parents=True, exist_ok=True)
+    elif not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, target)
+PY_COPY_MISSING
 ensure_min_android_sdk
+ensure_compile_android_sdk
+configure_android_build_toolchain
 
 # Configuración de firma de release opcional. La clave se inyecta solo desde GitHub Actions
 # y nunca se almacena en el repositorio. Sin key.properties, Flutter conserva la firma debug

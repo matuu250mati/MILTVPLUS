@@ -46,3 +46,4 @@ String? get supabaseConfigurationError {
 }
 
 bool get isSupabaseConfigured => supabaseConfigurationError == null;
+

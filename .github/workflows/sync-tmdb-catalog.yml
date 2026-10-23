@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       pages:
-        description: "TMDB pages to import per type (1-5)"
+        description: "TMDB pages per discovery source and media type (1-5)"
         required: false
-        default: "2"
+        default: "5"
   schedule:
     - cron: "23 9 * * *"
 
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Validate configuration
@@ -38,25 +38,31 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          for name in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_ACCESS_TOKEN MILTVPLUS_CATALOG_SYNC_SECRET; do
-            case "$name" in
-              MILTVPLUS_CATALOG_SYNC_SECRET) value="$SYNC_SECRET" ;;
-              *) value="${!name}" ;;
-            esac
-            if [[ -z "${value//[[:space:]]/}" ]]; then
-              missing+=("$name")
-            fi
-          done
+          [[ -n "${SUPABASE_URL//[[:space:]]/}" ]] || missing+=("SUPABASE_URL")
+          [[ -n "${SUPABASE_ANON_KEY//[[:space:]]/}" ]] || missing+=("SUPABASE_ANON_KEY")
+          [[ -n "${SUPABASE_ACCESS_TOKEN//[[:space:]]/}" ]] || missing+=("SUPABASE_ACCESS_TOKEN")
+          [[ -n "${SYNC_SECRET//[[:space:]]/}" ]] || missing+=("MILTVPLUS_CATALOG_SYNC_SECRET")
           if (( ${#missing[@]} > 0 )); then
             printf '::error::Catalog sync cannot run. Missing repository secrets: %s\n' "${missing[*]}"
             exit 1
           fi
+
+          # Accept only the canonical Supabase host, optionally followed by /rest/v1.
+          # Strip that API suffix so the function URL is built from the project root.
           normalized="${SUPABASE_URL%/}"
+          if [[ "$normalized" =~ ^(https://[a-z0-9-]+[.]supabase[.]co)/rest/v1$ ]]; then
+            normalized="${BASH_REMATCH[1]}"
+          fi
           if [[ ! "$normalized" =~ ^https://([a-z0-9-]+)[.]supabase[.]co$ ]]; then
-            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co."
+            echo "::error::SUPABASE_URL must be https://<project-ref>.supabase.co, optionally ending in /rest/v1. No sync was run."
             exit 1
           fi
-          echo "SUPABASE_PROJECT_ID=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+          project_ref="${BASH_REMATCH[1]}"
+          if [[ "$project_ref" != "mkdubrwdgorpobbrxdzy" ]]; then
+            echo "::error::Catalog sync is production-only and must target project mkdubrwdgorpobbrxdzy; got $project_ref."
+            exit 1
+          fi
+          echo "SUPABASE_PROJECT_ID=$project_ref" >> "$GITHUB_ENV"
           echo "SUPABASE_URL_NORMALIZED=$normalized" >> "$GITHUB_ENV"
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
@@ -66,11 +72,11 @@ jobs:
 
       - name: Install Supabase CLI
         if: steps.config.outputs.configured == 'true'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 
-      - name: Deploy catalog sync function to configured project
+      - name: Deploy catalog sync function to production
         if: steps.config.outputs.configured == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -85,11 +91,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SYNC_SECRET: ${{ secrets.MILTVPLUS_CATALOG_SYNC_SECRET }}
-          REQUESTED_PAGES: ${{ inputs.pages || '2' }}
+          REQUESTED_PAGES: ${{ inputs.pages || '5' }}
         shell: bash
         run: |
           set -euo pipefail
-          SUPABASE_URL="${SUPABASE_URL%/}"
           pages="$REQUESTED_PAGES"
           case "$pages" in
             1|2|3|4|5) ;;
@@ -97,9 +102,10 @@ jobs:
           esac
 
           body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
           status="$(curl --silent --show-error --max-time 180 \
             --output "$body_file" --write-out '%{http_code}' \
-            --request POST "$SUPABASE_URL/functions/v1/sync-tmdb-catalog" \
+            --request POST "$SUPABASE_URL_NORMALIZED/functions/v1/sync-tmdb-catalog" \
             --header "apikey: $SUPABASE_ANON_KEY" \
             --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
             --header "Content-Type: application/json" \
@@ -112,18 +118,18 @@ jobs:
           cat "$body_file"
           if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
             if [[ "$status" == "404" ]]; then
-              echo "::error::Supabase returned 404 after deployment. Confirm SUPABASE_URL points to the intended project and the function deployment succeeded."
+              echo "::error::Supabase returned 404 after deployment. Confirm the URL and function deployment."
             elif [[ "$status" == "401" ]]; then
-              echo "::error::Supabase rejected the sync request. Check SUPABASE_ANON_KEY and ensure MILTVPLUS_CATALOG_SYNC_SECRET exactly matches the Edge Function SYNC_SECRET."
+              echo "::error::Supabase rejected the sync request. Check SUPABASE_ANON_KEY and ensure the repository sync secret matches the Edge Function SYNC_SECRET."
             elif [[ "$status" == "500" ]]; then
-              echo "::error::The Edge Function is deployed but missing required runtime secrets. Configure TMDB_API_KEY, SYNC_SECRET, and the server-side Supabase service-role key in Supabase Edge Function secrets."
+              echo "::error::The function may be missing TMDB_API_KEY, SYNC_SECRET, or the server-side Supabase service-role key."
             else
               echo "::error::Catalog sync endpoint returned HTTP $status."
             fi
             exit 1
           fi
           grep -q '"ok":true' "$body_file" || {
-            echo "::error::Catalog sync endpoint returned success HTTP status without an ok=true result."
+            echo "::error::Catalog sync returned HTTP success without an ok=true result."
             exit 1
           }
           echo "Catalog metadata synchronization completed successfully."

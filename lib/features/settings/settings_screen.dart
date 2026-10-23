@@ -153,7 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_importingPlaylist) return;
     setState(() => _importingPlaylist = true);
     try {
-      final imported = await _playlistService.importFromUrl(normalizedUrl);
+      final report = await _playlistService.importReportFromUrl(normalizedUrl);
+      final imported = report.channels;
       final merged = <String, TvChannel>{};
       for (final channel in await _channelStorage.load()) {
         merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
@@ -162,7 +163,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         merged.putIfAbsent(_streamIdentity(channel.streamUrl), () => channel);
       }
       await _channelStorage.save(merged.values.toList(growable: false));
-      _showMessage('$title: ${imported.length} señales leídas; ${merged.length} señales únicas guardadas en este dispositivo.');
+      _showMessage(
+        '$title — entradas: ${report.totalEntries}; importadas: ${report.imported}; '
+        'duplicadas en la lista: ${report.duplicates}; incompletas: ${report.incomplete}; '
+        'fuentes no compatibles: ${report.unsupported}; '
+        'total único local: ${merged.length}.',
+      );
     } catch (_) {
       _showMessage('No se pudo cargar $title. Verificá que la lista sea pública, HTTPS y compatible con M3U.');
     } finally {
@@ -224,6 +230,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Settings detail pages contain dense forms and help text. Clamp only the
+    // inherited system text scale here so extreme Android font settings cannot
+    // overflow cards or make the page impossible to scroll, while retaining a
+    // modest accessibility increase and the app's own text-size preference.
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: media.copyWith(
+        textScaler: media.textScaler.clamp(maxScaleFactor: 1.2),
+      ),
+      child: _buildSettingsContent(context),
+    );
+  }
+
+  Widget _buildSettingsContent(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
 
@@ -831,11 +851,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // mapped to its own widgets; stale indices previously mixed account,
     // storage, accessibility and help content between sections.
     final sectionIndices = <String, List<int>>{
-      'account': [4, 5, 14],
+      // allSections indices: 4 security, 6 profile, 8 provider, 10 playlists,
+      // 12 account, 14 storage, 16 information, 18 accessibility, 20 guide,
+      // 22 FAQ, 24 updates. Keep each group isolated to its own destination.
+      'account': [4, 5, 12, 13],
       'profile': [6, 7],
-      'content': [8, 9, 10, 11, 12],
-      'app': [16, 17, 20, 21, 26],
-      'help': [18, 19, 22, 23, 24, 25],
+      'content': [8, 9, 10, 11],
+      'app': [14, 15, 18, 19, 24],
+      'help': [16, 17, 20, 21, 22, 23],
     };
     final indices = sectionIndices[section] ?? const <int>[];
     final titles = <String, String>{

@@ -5,9 +5,16 @@ import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, this.onAuthenticated});
+  const AuthScreen({
+    super.key,
+    this.onAuthenticated,
+    this.backendReady = true,
+    this.onRetryBackend,
+  });
 
   final VoidCallback? onAuthenticated;
+  final bool backendReady;
+  final VoidCallback? onRetryBackend;
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -89,7 +96,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final phone = _pendingPhone ??
             '+549${_phone.text.replaceAll(RegExp(r'\D'), '')}';
         if (!_otpSent) {
-          await auth.signInWithOtp(phone: phone);
+          await auth.signInWithOtp(phone: phone).timeout(const Duration(seconds: 20));
           if (!mounted) return;
           setState(() {
             _pendingPhone = phone;
@@ -102,14 +109,14 @@ class _AuthScreenState extends State<AuthScreen> {
             type: OtpType.sms,
             phone: phone,
             token: _otp.text.trim(),
-          );
+          ).timeout(const Duration(seconds: 20));
           if (mounted) widget.onAuthenticated?.call();
         }
       } else if (_register) {
         final response = await auth.signUp(
           email: _email.text.trim(),
           password: _password.text,
-        );
+        ).timeout(const Duration(seconds: 20));
         if (!mounted) return;
         setState(() {
           _error = false;
@@ -122,21 +129,35 @@ class _AuthScreenState extends State<AuthScreen> {
         await auth.signInWithPassword(
           email: _email.text.trim(),
           password: _password.text,
-        );
+        ).timeout(const Duration(seconds: 20));
         if (mounted) widget.onAuthenticated?.call();
       }
     } on AuthException catch (e) {
       if (mounted) {
+        final detail = e.message.toLowerCase();
+        final isNetworkError = detail.contains('socket') ||
+            detail.contains('network') || detail.contains('connection') ||
+            detail.contains('timed out') || detail.contains('timeout') ||
+            detail.contains('host lookup') || detail.contains('fetch');
         setState(() {
           _error = true;
-          _message = e.message;
+          _message = isNetworkError
+              ? 'No hay conexión con el servicio. Revisá tu internet e intentá nuevamente.'
+              : e.message;
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final detail = error.toString().toLowerCase();
+        final isNetworkError = detail.contains('socket') ||
+            detail.contains('network') || detail.contains('connection') ||
+            detail.contains('timed out') || detail.contains('timeout') ||
+            detail.contains('host lookup') || detail.contains('clientexception');
         setState(() {
           _error = true;
-          _message = 'No se pudo completar la operación. Revisá tu conexión e intentá de nuevo.';
+          _message = isNetworkError
+              ? 'No hay conexión con el servicio. Revisá tu internet e intentá nuevamente.'
+              : 'No se pudo completar la operación. El servidor no confirmó el resultado; revisá el mensaje e intentá de nuevo.';
         });
       }
     } finally {
@@ -155,7 +176,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
     setState(() { _busy = true; _message = null; });
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      await Supabase.instance.client.auth.resetPasswordForEmail(email).timeout(const Duration(seconds: 20));
       if (mounted) {
         setState(() {
           _error = false;
@@ -164,11 +185,18 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) { setState(() { _error = true; _message = e.message; }); }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final detail = error.toString().toLowerCase();
+        final isNetworkError = detail.contains('socket') ||
+            detail.contains('network') || detail.contains('connection') ||
+            detail.contains('timed out') || detail.contains('timeout') ||
+            detail.contains('host lookup') || detail.contains('clientexception');
         setState(() {
           _error = true;
-          _message = 'No se pudo enviar el correo. Intentá más tarde.';
+          _message = isNetworkError
+              ? 'No hay conexión con el servicio. Revisá tu internet e intentá nuevamente.'
+              : 'No se pudo enviar el correo. Intentá más tarde.';
         });
       }
     } finally {
@@ -233,6 +261,20 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 8),
                     Text(_register ? 'Creá tu cuenta para continuar' : 'Iniciá sesión para acceder al catálogo',
                       textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted)),
+                    if (!widget.backendReady) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Preparando el acceso a tu cuenta. Podés reintentar sin salir de esta pantalla.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppTheme.muted, height: 1.4),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : widget.onRetryBackend,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('REINTENTAR ACCESO'),
+                      ),
+                    ],
                     const SizedBox(height: 26),
                     if (!_phoneMode) ...[
                     TextFormField(
@@ -268,7 +310,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     if (!_register) Align(
                       alignment: Alignment.centerRight,
-                      child: TextButton(onPressed: _busy ? null : _resetPassword, child: const Text('Olvidé mi contraseña')),
+                      child: TextButton(onPressed: _busy || !widget.backendReady ? null : _resetPassword, child: const Text('Olvidé mi contraseña')),
                     ) else const SizedBox(height: 10),
                     if (_message != null) ...[
                       Container(
@@ -285,7 +327,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ],
                     FilledButton(
                       focusNode: _submitFocus,
-                      onPressed: _busy ? null : _submit,
+                      onPressed: _busy || !widget.backendReady ? null : _submit,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         child: _busy
@@ -360,7 +402,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ],
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: _busy ? null : _submit,
+                        onPressed: _busy || !widget.backendReady ? null : _submit,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           child: _busy

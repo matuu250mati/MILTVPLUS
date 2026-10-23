@@ -84,14 +84,10 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
   }
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      allowMultiple: false,
-      withData: false,
-    );
-    if (!mounted || result == null || result.files.isEmpty) return;
+    final selected = await FilePicker.pickFile(type: FileType.video);
+    if (!mounted || selected == null) return;
     setState(() {
-      _video = result.files.single;
+      _video = selected;
       _streamUrl.clear();
       _status = null;
     });
@@ -267,7 +263,7 @@ class _OwnerPublishingScreenState extends State<OwnerPublishingScreen> {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text(
-          'Panel privado del propietario. Lo que publiques aparece en el catálogo para los espectadores.',
+          'Panel privado del propietario. Lo que publiques aparece en el catálogo para usuarios autenticados autorizados.',
           style: TextStyle(color: AppTheme.muted, height: 1.45),
         ),
         const SizedBox(height: 18),

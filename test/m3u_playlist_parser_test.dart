@@ -4,7 +4,7 @@ import 'package:miltv_plus/services/m3u_playlist_parser.dart';
 void main() {
   const parser = M3uPlaylistParser();
 
-  test('parses named HTTPS channels and skips metadata and HTTP rows', () {
+  test('imports HTTPS channels and reports HTTP streams as unsupported', () {
     final channels = parser.parse('''
 #EXTM3U
 #EXTINF:-1 tvg-id="one" tvg-name="Canal Uno" group-title="Argentina",Canal Uno
@@ -18,6 +18,43 @@ http://example.com/two/index.m3u8?token=abc
     expect(channels.single.name, 'Canal Uno');
     expect(channels.single.streamUrl, 'https://example.com/live/one.m3u8');
     expect(channels.single.groupTitle, 'Argentina');
+
+    final report = parser.parseWithReport('''
+#EXTM3U
+#EXTINF:-1,HTTPS channel
+https://example.com/live/one.m3u8
+#EXTINF:-1,HTTP legacy channel
+http://example.com/two/index.m3u8?token=abc
+''');
+    expect(report.totalEntries, 2);
+    expect(report.imported, 1);
+    expect(report.unsupported, 1);
+  });
+
+  test('reports imported, duplicate, incomplete and unsupported entries', () {
+    final report = parser.parseWithReport('''
+#EXTM3U
+#EXTINF:-1,Valid channel
+https://example.com/live.m3u8?token=keep
+#EXTINF:-1,Duplicate label
+https://example.com/live.m3u8?token=keep
+#EXTINF:-1,Missing URL
+#EXTINF:-1,Invalid scheme
+file:///tmp/channel.m3u8
+#EXTINF:-1,HTTP legacy
+http://example.com/live.m3u8
+#EXTINF:-1,Web player
+https://www.twitch.tv/example
+''');
+
+    expect(report.totalEntries, 6);
+    expect(report.imported, 1);
+    expect(report.duplicates, 1);
+    expect(report.incomplete, 2);
+    expect(report.unsupported, 2);
+    expect(report.channels.single.streamUrl, 'https://example.com/live.m3u8?token=keep');
+    expect(report.imported + report.duplicates + report.incomplete + report.unsupported,
+        report.totalEntries);
   });
 
   test('extracts category, country, and language metadata from M3U', () {
@@ -99,10 +136,10 @@ https://example.com/news.m3u8
     expect(channels.single.name, 'News');
   });
 
-  test('skips web-player pages that are not direct streams', () {
+  test('keeps official YouTube live pages for embedded playback and rejects unrelated web players', () {
     final channels = parser.parse('''
 #EXTM3U
-#EXTINF:-1,YouTube page
+#EXTINF:-1,YouTube live page
 https://www.youtube.com/c/todonoticias/live
 #EXTINF:-1,Twitch page
 https://www.twitch.tv/examplechannel
@@ -110,9 +147,10 @@ https://www.twitch.tv/examplechannel
 https://cdn.example.org/live/playlist.m3u8
 ''');
 
-    expect(channels, hasLength(1));
-    expect(channels.single.name, 'Direct HLS');
-    expect(channels.single.streamUrl, 'https://cdn.example.org/live/playlist.m3u8');
+    expect(channels, hasLength(2));
+    expect(channels.map((channel) => channel.name), containsAll(['YouTube live page', 'Direct HLS']));
+    expect(channels.map((channel) => channel.streamUrl), contains('https://www.youtube.com/c/todonoticias/live'));
+    expect(channels.map((channel) => channel.streamUrl), contains('https://cdn.example.org/live/playlist.m3u8'));
   });
 
   test('parses tvg-name, logo, id and quoted commas without breaking metadata', () {
@@ -136,11 +174,93 @@ https://example.com/news.m3u8
 #EXTM3U
 #EXTINF:-1,Player page
 https://www.twitch.tv/example
+#EXTINF:-1,Mobile Twitch subdomain
+https://m.twitch.tv/example
+#EXTINF:-1,Embedded Vimeo subdomain
+https://player.vimeo.com/video/123
 #EXTINF:-1,Direct stream
 https://example.com/live.m3u8
 ''');
 
     expect(channels, hasLength(1));
     expect(channels.single.name, 'Direct stream');
+  });
+
+  test('stream parser matches integrity counts without buffering the full playlist', () async {
+    final report = await parser.parseStream(Stream<String>.fromIterable([
+      '#EXTM3U',
+      '#EXTINF:-1 tvg-name="Canal Uno" group-title="Argentina",Canal Uno',
+      '#EXTVLCOPT:http-user-agent=Example',
+      'https://example.com/live.m3u8',
+      '#EXTINF:-1,Duplicado',
+      'https://example.com/live.m3u8',
+      '#EXTINF:-1,URL HTTP no compatible',
+      'http://example.com/live.m3u8',
+      '#EXTINF:-1,Entrada incompleta',
+    ]));
+
+    expect(report.totalEntries, 4);
+    expect(report.imported, 1);
+    expect(report.duplicates, 1);
+    expect(report.unsupported, 1);
+    expect(report.incomplete, 1);
+    expect(report.channels.single.name, 'Canal Uno');
+    expect(report.channels.single.groupTitle, 'Argentina');
+  });
+
+  test('buffered and streaming parsers produce identical integrity reports', () async {
+    const playlist = '''
+#EXTM3U
+#EXTINF:-1 tvg-name="Canal, Noticias" group-title="Argentina",Canal de noticias
+https://EXAMPLE.com/live/../news.m3u8?token=keep#first
+#EXTINF:-1,Alias duplicado
+https://example.com/news.m3u8?token=keep#second
+#EXTINF:-1,Entrada sin URL
+#EXTINF:-1,URL HTTP
+http://example.com/live.m3u8
+#EXTINF:-1,URL con credenciales
+https://user:password@example.com/private.m3u8
+#EXTINF:-1,Reproductor web
+https://m.twitch.tv/example
+#EXTINF:-1,YouTube en vivo
+https://www.youtube.com/c/example/live
+''';
+    final buffered = parser.parseWithReport(playlist);
+    final streamed = await parser.parseStream(
+      Stream<String>.fromIterable(playlist.split('\n')),
+    );
+
+    expect(streamed.totalEntries, buffered.totalEntries);
+    expect(streamed.imported, buffered.imported);
+    expect(streamed.duplicates, buffered.duplicates);
+    expect(streamed.incomplete, buffered.incomplete);
+    expect(streamed.unsupported, buffered.unsupported);
+    expect(
+      streamed.channels.map((channel) => [
+        channel.name,
+        channel.streamUrl,
+        channel.groupTitle,
+        channel.country,
+        channel.language,
+        channel.logoUrl,
+        channel.tvgId,
+      ]).toList(),
+      buffered.channels.map((channel) => [
+        channel.name,
+        channel.streamUrl,
+        channel.groupTitle,
+        channel.country,
+        channel.language,
+        channel.logoUrl,
+        channel.tvgId,
+      ]).toList(),
+    );
+    expect(
+      buffered.imported +
+          buffered.duplicates +
+          buffered.incomplete +
+          buffered.unsupported,
+      buffered.totalEntries,
+    );
   });
 }

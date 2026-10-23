@@ -14,6 +14,7 @@ import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
 import '../submissions/content_moderation_screen.dart';
+import '../theater/teatrix_screen.dart';
 import '../../services/ota_update_service.dart';
 
 class AppShell extends StatefulWidget {
@@ -38,6 +39,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _NavItem('+18', Icons.lock_outline_rounded),
     _NavItem('CONFIGURACIÓN', Icons.settings_rounded),
     _NavItem('MODERACIÓN', Icons.fact_check_outlined),
+    _NavItem('TEATRO', Icons.theater_comedy_outlined),
   ];
 
   int selected = 1;
@@ -111,7 +113,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               backgroundColor: const Color(0xFF111521),
               title: Row(
                 children: [
-                  const Icon(Icons.system_update_rounded, color: Color(0xFF5BE58B)),
+                  const Icon(Icons.system_update_rounded, color: Color(0xFF00FF66)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(info.mandatory
@@ -211,6 +213,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         return const AdultGateScreen();
       case 12:
         return const ContentModerationScreen();
+      case 13:
+        return const TeatrixScreen();
       default:
         return const SettingsScreen();
     }
@@ -237,7 +241,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF20243C), Color(0xFF10131E)],
+                  colors: [Color(0xFF0A0F1D), Color(0xFF030712)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -250,7 +254,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     height: 60,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF5BE58B), Color(0xFFB5FF35)],
+                        colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -313,6 +317,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
+                  _drawerItem(13),
                   if (_isOwner) _drawerItem(9),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(10),
@@ -344,51 +349,123 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget _drawerItem(int index) {
     final item = items[index];
     final active = selected == index;
+    final label = switch (item.label) {
+      'TV EN VIVO' => 'TV en Vivo',
+      'PELÍCULAS' => 'Películas',
+      'SERIES' => 'Series',
+      'ANIME' => 'Anime',
+      'DEPORTES' => 'Deportes',
+      'INFANTIL' => 'Infantil / Kids',
+      'GRATIS' => 'Catálogo global',
+      'EXPLORAR' => 'Explorar',
+      'PUBLICAR' => 'Publicación de contenido',
+      '+18' => 'Zona +18',
+      'CONFIGURACIÓN' => 'Configuración',
+      'MODERACIÓN' => 'Moderación de contenido',
+      'TEATRO' => 'Teatro · Teatrix',
+      _ => 'Inicio',
+    };
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-        selected: active,
-        selectedTileColor: AppTheme.accent.withValues(alpha: .13),
-        leading: Icon(
-          item.icon,
-          color: active ? AppTheme.accent : AppTheme.muted,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFF00E5FF), Color(0xFF00FF66)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          color: active ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: active
+              ? [BoxShadow(color: AppTheme.accent.withValues(alpha: .13), blurRadius: 14)]
+              : const [],
         ),
-        title: Text(
-          item.label == 'TV EN VIVO'
-              ? 'TV en Vivo'
-              : item.label == 'PELÍCULAS'
-                  ? 'Películas'
-                  : item.label == 'SERIES'
-                      ? 'Series'
-                      : item.label == 'ANIME'
-                          ? 'Anime'
-                          : item.label == 'DEPORTES'
-                  ? 'Deportes'
-                  : item.label == 'INFANTIL'
-                      ? 'Infantil / Kids'
-                      : item.label == 'GRATIS'
-                          ? 'Contenido gratis'
-                          : item.label == 'EXPLORAR'
-                              ? 'Explorar'
-                              : item.label == 'PUBLICAR'
-                              ? 'Publicación de contenido'
-                              : item.label == '+18'
-                                  ? 'Zona +18'
-                                  : item.label == 'CONFIGURACIÓN'
-                                      ? 'Perfil y configuración'
-                                      : item.label == 'MODERACIÓN'
-                                          ? 'Moderación de contenido'
-                                          : 'Inicio',
-          style: TextStyle(
-            color: active ? Colors.white : AppTheme.muted,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+          selected: active,
+          selectedTileColor: Colors.transparent,
+          leading: Icon(item.icon, color: active ? const Color(0xFF031018) : AppTheme.muted),
+          title: Text(
+            label,
+            style: TextStyle(
+              color: active ? const Color(0xFF031018) : AppTheme.muted,
+              fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+            ),
           ),
+          onTap: () {
+            Navigator.of(context).pop();
+            setState(() => selected = index);
+          },
         ),
-        onTap: () {
-          Navigator.of(context).pop();
-          setState(() => selected = index);
-        },
+      ),
+    );
+  }
+
+  Widget _buildStatusFooter() {
+    final user = isSupabaseConfigured ? Supabase.instance.client.auth.currentUser : null;
+    final profile = user?.email?.trim();
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF050A14),
+        border: Border(top: BorderSide(color: Color(0xFF15324A))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: SafeArea(
+        top: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 560;
+            final textSize = compact ? 9.0 : 11.0;
+            return Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.circle, color: AppTheme.accent, size: 7),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          'MILTVPLUS v3.10.8',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppTheme.muted, fontSize: textSize, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    compact ? (profile == null || profile.isEmpty ? 'Usuario: Invitado' : profile) : 'Usuario: ${profile == null || profile.isEmpty ? 'Invitado' : profile}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.muted, fontSize: textSize),
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.wifi_rounded, color: AppTheme.accent, size: compact ? 12 : 15),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          compact ? 'ARG 🇦🇷' : 'Red · ARG 🇦🇷',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppTheme.accent, fontSize: textSize, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -399,7 +476,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF06101F), Color(0xFF050914)],
+          colors: [Color(0xFF0A0F1D), Color(0xFF030712)],
         ),
       ),
       child: SafeArea(
@@ -415,10 +492,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(13),
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFB8FF35), Color(0xFF00B8FF)],
+                        colors: [Color(0xFF00FF66), Color(0xFF00E5FF)],
                       ),
                     ),
-                    child: const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101B), size: 30),
+                    child: const Icon(Icons.live_tv_rounded, color: Color(0xFF031018), size: 29),
                   ),
                   const SizedBox(width: 9),
                   const Expanded(
@@ -453,6 +530,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
+                  _drawerItem(13),
                   if (_isModerator) _drawerItem(9),
                   const Divider(height: 20, color: Color(0x303A91C5)),
                   _drawerItem(10),
@@ -517,13 +595,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       backgroundColor: AppTheme.background,
       // Inicio already renders its own header inside the scrollable dashboard.
       appBar: selected == 1 ? null : ((selected == 10 || selected == 0 || selected == 5) ? AppBar(
-        backgroundColor: const Color(0xFF080A10),
+        backgroundColor: AppTheme.background,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
         titleSpacing: 4,
         title: const SizedBox.shrink(),
       ) : AppBar(
-        backgroundColor: const Color(0xFF080A10),
+        backgroundColor: AppTheme.background,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: AppTheme.accent),
         titleSpacing: 4,
@@ -546,6 +624,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ),
       )),
       drawer: _buildDrawer(),
+      bottomNavigationBar: _buildStatusFooter(),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wideLayout = constraints.maxWidth >= 1000;
