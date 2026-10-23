@@ -482,6 +482,24 @@ class _CatalogCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted, fontSize: 11),
           ),
+          if ((entry.streamUrl == null || entry.streamUrl!.trim().isEmpty) &&
+              entry.seriesId == null) ...[
+            const SizedBox(height: 5),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'CATÁLOGO · SIN ENLACE',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppTheme.muted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .4,
+                ),
+              ),
+            ),
+          ],
           if (entry.synopsis != null && entry.synopsis!.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(

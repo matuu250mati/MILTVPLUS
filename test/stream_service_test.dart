@@ -48,8 +48,8 @@ void main() {
 void m3uParserTests() {
   const parser = M3uPlaylistParser();
 
-  group('M3uPlaylistParser HTTPS policy', () {
-    test('keeps valid HTTPS channels and filters HTTP or credential URLs', () {
+  group('M3uPlaylistParser URL retention policy', () {
+    test('keeps HTTP and HTTPS channels while filtering credential URLs', () {
       const playlist = '''
 #EXTM3U
 #EXTINF:-1,HTTPS News
@@ -61,13 +61,15 @@ https://user:pass@stream.example/private.m3u8
 ''';
       final channels = parser.parse(playlist);
 
-      expect(channels, hasLength(1));
-      expect(channels.single, isA<TvChannel>());
-      expect(channels.single.name, 'HTTPS News');
-      expect(channels.single.streamUrl, 'https://stream.example/news/index.m3u8');
+      expect(channels, hasLength(2));
+      expect(channels.first, isA<TvChannel>());
+      expect(channels.first.name, 'HTTPS News');
+      expect(channels.first.streamUrl, 'https://stream.example/news/index.m3u8');
+      expect(channels.last.name, 'HTTP Legacy');
+      expect(channels.last.streamUrl, 'http://legacy.example/live.m3u8');
     });
 
-    test('deduplicates stream URLs that differ only by fragment', () {
+    test('preserves differently named aliases whose URLs differ only by fragment', () {
       const playlist = '''
 #EXTM3U
 #EXTINF:-1,Channel A
@@ -75,7 +77,7 @@ https://stream.example/live.m3u8#first
 #EXTINF:-1,Channel A duplicate
 https://stream.example/live.m3u8#second
 ''';
-      expect(parser.parse(playlist), hasLength(1));
+      expect(parser.parse(playlist), hasLength(2));
     });
   });
 }
