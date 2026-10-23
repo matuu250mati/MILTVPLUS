@@ -1,9 +1,36 @@
 -- Add ordered playback mirrors to published live TV channels.
 -- Existing primary URLs are retained as the first candidate; no source URLs are invented.
+-- Some existing databases created stream_urls as text[] before this migration.
+-- Normalize that legacy column to jsonb while preserving its stored values.
 begin;
 
 alter table public.channels
   add column if not exists stream_urls jsonb not null default '[]'::jsonb;
+
+do $$
+declare
+  stream_urls_data_type text;
+begin
+  select data_type
+    into stream_urls_data_type
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'channels'
+    and column_name = 'stream_urls';
+
+  if stream_urls_data_type = 'ARRAY' then
+    alter table public.channels
+      alter column stream_urls drop default;
+
+    alter table public.channels
+      alter column stream_urls type jsonb
+      using to_jsonb(stream_urls);
+
+    alter table public.channels
+      alter column stream_urls set default '[]'::jsonb;
+  end if;
+end
+$$;
 
 update public.channels
 set stream_urls = jsonb_build_array(url_stream)
