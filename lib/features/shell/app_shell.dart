@@ -14,6 +14,7 @@ import '../live/live_tv_screen.dart';
 import '../settings/settings_screen.dart';
 import '../onboarding/miltvplus_guide.dart';
 import '../submissions/content_moderation_screen.dart';
+import '../theater/teatrix_screen.dart';
 import '../../services/ota_update_service.dart';
 
 class AppShell extends StatefulWidget {
@@ -38,6 +39,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _NavItem('+18', Icons.lock_outline_rounded),
     _NavItem('CONFIGURACIÓN', Icons.settings_rounded),
     _NavItem('MODERACIÓN', Icons.fact_check_outlined),
+    _NavItem('TEATRO', Icons.theater_comedy_outlined),
   ];
 
   int selected = 1;
@@ -211,6 +213,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         return const AdultGateScreen();
       case 12:
         return const ContentModerationScreen();
+      case 13:
+        return const TeatrixScreen();
       default:
         return const SettingsScreen();
     }
@@ -313,6 +317,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
+                  _drawerItem(13),
                   if (_isOwner) _drawerItem(9),
                   const Divider(height: 18, color: Color(0x30FFFFFF)),
                   _drawerItem(10),
@@ -357,6 +362,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       '+18' => 'Zona +18',
       'CONFIGURACIÓN' => 'Configuración',
       'MODERACIÓN' => 'Moderación de contenido',
+      'TEATRO' => 'Teatro · Teatrix',
       _ => 'Inicio',
     };
     return Padding(
@@ -524,6 +530,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   _drawerItem(6),
                   _drawerItem(7),
                   _drawerItem(8),
+                  _drawerItem(13),
                   if (_isModerator) _drawerItem(9),
                   const Divider(height: 20, color: Color(0x303A91C5)),
                   _drawerItem(10),
