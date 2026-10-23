@@ -207,4 +207,60 @@ https://example.com/live.m3u8
     expect(report.channels.single.name, 'Canal Uno');
     expect(report.channels.single.groupTitle, 'Argentina');
   });
+
+  test('buffered and streaming parsers produce identical integrity reports', () async {
+    const playlist = '''
+#EXTM3U
+#EXTINF:-1 tvg-name="Canal, Noticias" group-title="Argentina",Canal de noticias
+https://EXAMPLE.com/live/../news.m3u8?token=keep#first
+#EXTINF:-1,Alias duplicado
+https://example.com/news.m3u8?token=keep#second
+#EXTINF:-1,Entrada sin URL
+#EXTINF:-1,URL HTTP
+http://example.com/live.m3u8
+#EXTINF:-1,URL con credenciales
+https://user:password@example.com/private.m3u8
+#EXTINF:-1,Reproductor web
+https://m.twitch.tv/example
+#EXTINF:-1,YouTube en vivo
+https://www.youtube.com/c/example/live
+''';
+    final buffered = parser.parseWithReport(playlist);
+    final streamed = await parser.parseStream(
+      Stream<String>.fromIterable(playlist.split('\n')),
+    );
+
+    expect(streamed.totalEntries, buffered.totalEntries);
+    expect(streamed.imported, buffered.imported);
+    expect(streamed.duplicates, buffered.duplicates);
+    expect(streamed.incomplete, buffered.incomplete);
+    expect(streamed.unsupported, buffered.unsupported);
+    expect(
+      streamed.channels.map((channel) => [
+        channel.name,
+        channel.streamUrl,
+        channel.groupTitle,
+        channel.country,
+        channel.language,
+        channel.logoUrl,
+        channel.tvgId,
+      ]).toList(),
+      buffered.channels.map((channel) => [
+        channel.name,
+        channel.streamUrl,
+        channel.groupTitle,
+        channel.country,
+        channel.language,
+        channel.logoUrl,
+        channel.tvgId,
+      ]).toList(),
+    );
+    expect(
+      buffered.imported +
+          buffered.duplicates +
+          buffered.incomplete +
+          buffered.unsupported,
+      buffered.totalEntries,
+    );
+  });
 }
