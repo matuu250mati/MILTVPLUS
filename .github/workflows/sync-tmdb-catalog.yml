@@ -115,7 +115,7 @@ jobs:
             if [[ "$status" == "404" ]]; then
               echo "::error::Supabase returned 404 after deployment. Confirm SUPABASE_QA_URL points to the intended project and the function deployment succeeded."
             elif [[ "$status" == "401" ]]; then
-              echo "::error::Supabase rejected the sync request. Check SUPABASE_QA_ANON_KEY and ensure MILTVPLUS_QA_CATALOG_SYNC_SECRET exactly matches the Edge Function SYNC_SECRET."
+              echo "::error::The function itself returned HTTP 401: its SYNC_SECRET is missing or does not exactly match MILTVPLUS_QA_CATALOG_SYNC_SECRET in GitHub Environment miltvplus-qa. Set the same value in Supabase QA > Edge Functions > Secrets; do not rotate or print it in logs."
             elif [[ "$status" == "500" ]]; then
               echo "::error::The Edge Function is deployed but missing required runtime secrets. Configure TMDB_API_KEY, SYNC_SECRET, and the server-side Supabase service-role key in Supabase Edge Function secrets."
             else
