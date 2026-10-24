@@ -117,14 +117,25 @@ Deno.serve(async (req) => {
           // Never overwrite a stream URL an owner already added: existing rows get metadata only.
           const { data: existing, error: lookupError } = await supabase
             .from("movies")
-            .select("tmdb_id")
+            .select("tmdb_id, url_stream, duration_seconds")
             .in("tmdb_id", rows.map((row: any) => row.tmdb_id));
           if (lookupError) throw new Error(`Supabase movies lookup failed: ${lookupError.message}`);
-          const existingIds = new Set((existing ?? []).map((row: any) => Number(row.tmdb_id)));
-          const fresh = rows.filter((row: any) => !existingIds.has(row.tmdb_id));
+          const existingById = new Map<number, any>(
+            (existing ?? []).map((row: any) => [Number(row.tmdb_id), row]),
+          );
+          const fresh = rows.filter((row: any) => !existingById.has(row.tmdb_id));
+          // Carry forward owner-managed playback fields explicitly: upsert can
+          // otherwise write NULL for omitted columns on conflicting rows.
           const known = rows
-            .filter((row: any) => existingIds.has(row.tmdb_id))
-            .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => metadata);
+            .filter((row: any) => existingById.has(row.tmdb_id))
+            .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => {
+              const prior = existingById.get(metadata.tmdb_id);
+              return {
+                ...metadata,
+                url_stream: prior.url_stream ?? "",
+                duration_seconds: prior.duration_seconds ?? null,
+              };
+            });
           if (fresh.length) {
             const { error } = await supabase.from("movies").upsert(fresh, { onConflict: "tmdb_id" });
             if (error) throw new Error(`Supabase movies insert failed: ${error.message}`);
@@ -189,15 +200,25 @@ Deno.serve(async (req) => {
                 // Keep stream URLs already set on existing episodes.
                 const { data: existingEpisodes, error: episodeLookupError } = await supabase
                   .from("episodes")
-                  .select("episode_number")
+                  .select("episode_number, url_stream, duration_seconds")
                   .eq("series_id", seriesRow.id)
                   .eq("season_number", episodeRows[0].season_number);
                 if (episodeLookupError) throw new Error(`Supabase episodes lookup failed: ${episodeLookupError.message}`);
-                const existingNumbers = new Set((existingEpisodes ?? []).map((row: any) => Number(row.episode_number)));
-                const freshEpisodes = episodeRows.filter((row: any) => !existingNumbers.has(row.episode_number));
+                const existingEpisodeByNumber = new Map<number, any>(
+                  (existingEpisodes ?? []).map((row: any) => [Number(row.episode_number), row]),
+                );
+                const freshEpisodes = episodeRows.filter((row: any) => !existingEpisodeByNumber.has(row.episode_number));
+                // Preserve manually configured streams and durations on existing episodes.
                 const knownEpisodes = episodeRows
-                  .filter((row: any) => existingNumbers.has(row.episode_number))
-                  .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => metadata);
+                  .filter((row: any) => existingEpisodeByNumber.has(row.episode_number))
+                  .map(({ url_stream: _urlStream, duration_seconds: _duration, ...metadata }: any) => {
+                    const prior = existingEpisodeByNumber.get(metadata.episode_number);
+                    return {
+                      ...metadata,
+                      url_stream: prior.url_stream ?? "",
+                      duration_seconds: prior.duration_seconds ?? null,
+                    };
+                  });
                 const conflict = "series_id,season_number,episode_number";
                 if (freshEpisodes.length) {
                   const { error } = await supabase.from("episodes").upsert(freshEpisodes, { onConflict: conflict });
