@@ -230,7 +230,12 @@ class _AuthScreenState extends State<AuthScreen> {
       token: _code.text.trim(),
     );
     if (response.session == null) {
-      throw AuthException('No se pudo verificar el código. Pedí uno nuevo.');
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _message = 'No se pudo verificar el código. Pedí uno nuevo.';
+      });
+      return;
     }
     await CountryPreference.syncFromMetadata(response.user?.userMetadata);
     if (mounted) widget.onAuthenticated?.call();
