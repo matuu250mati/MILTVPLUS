@@ -176,14 +176,21 @@ class _CatalogPlayerScreenState extends State<CatalogPlayerScreen> {
     });
   }
 
-  void _retry() {
+  Future<void> _retry() async {
+    // Stop and release any previous direct-stream controller before retrying.
+    // A WebViewController has no dispose API; dropping the reference replaces
+    // the embedded view on the next build.
+    final previousController = _controller;
+    _controller = null;
+    _webViewController = null;
+    _youtubeVideoId = null;
+    await previousController?.dispose();
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
-      _youtubeVideoId = null;
-      _webViewController = null;
     });
-    _initialize();
+    await _initialize();
   }
 
   Future<void> _closePlayer() async {
