@@ -1,7 +1,7 @@
 name: miltv_plus
 description: MILTVPLUS - experiencia multimedia multiplataforma.
 publish_to: "none"
-version: 3.10.8+408
+version: 3.10.9+409
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
