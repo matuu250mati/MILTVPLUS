@@ -32,6 +32,10 @@ bool isValidSupabaseUrl(String value) {
 
 String get normalizedSupabaseUrl => normalizeSupabaseUrl(supabaseUrl);
 
+/// Set by main() when Supabase fails to initialize or times out, so the app can
+/// show a clear message instead of staying on the launch logo.
+String? supabaseInitializationError;
+
 String? get supabaseConfigurationError {
   if (supabaseUrl.trim().isEmpty) {
     return 'Falta SUPABASE_URL. Configurá la URL del proyecto en los secretos de GitHub Actions.';
@@ -42,7 +46,7 @@ String? get supabaseConfigurationError {
   if (supabaseAnonKey.trim().isEmpty) {
     return 'Falta SUPABASE_ANON_KEY. Configurá la clave publishable/anon del proyecto; nunca uses service_role en la app.';
   }
-  return null;
+  return supabaseInitializationError;
 }
 
 bool get isSupabaseConfigured => supabaseConfigurationError == null;
