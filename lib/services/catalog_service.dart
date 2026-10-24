@@ -120,21 +120,14 @@ class CatalogService {
         .eq('is_published', true)
         .order('title', ascending: true);
 
-    final movies = (response as List<dynamic>)
+    // Keep metadata-only titles in the catalog. Playback is guarded by the UI
+    // and only starts when a valid stream URL is configured; filtering them here
+    // hid the entire TMDB metadata catalog before an owner attached a stream.
+    return (response as List<dynamic>)
         .map((item) => MovieModel.fromJson(
               Map<String, dynamic>.from(item as Map),
             ))
-        .where((movie) {
-          final url = movie.urlStream.trim();
-          final uri = Uri.tryParse(url);
-
-          return uri != null &&
-              (uri.scheme == 'http' || uri.scheme == 'https') &&
-              uri.host.isNotEmpty;
-        })
         .toList(growable: false);
-
-    return movies;
   }
 
   Future<List<SeriesModel>> getSeries() async {
