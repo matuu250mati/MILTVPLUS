@@ -19,19 +19,15 @@ En el proyecto **Supabase QA**, abrí **Edge Functions → Secrets** y configur�
 - `SYNC_SECRET`: debe ser exactamente el mismo valor que `MILTVPLUS_QA_CATALOG_SYNC_SECRET` de GitHub Actions.
 - `SUPABASE_SERVICE_ROLE_KEY`: service-role key del propio proyecto QA. Debe permanecer únicamente en los secretos del servidor Supabase; nunca en Flutter, APK, commits ni logs.
 
-### Diagnóstico del HTTP 401
+### Diagnóstico y recuperación de errores de sincronización
 
-La ejecución de GitHub Actions del 23/10/2026 desplegó correctamente la función al proyecto configurado como QA, pero la llamada devolvió:
+Una ejecución anterior del 23/10/2026 devolvió HTTP 401 con `{"error":"Unauthorized catalog sync request."}`, porque el secreto de ejecución de la Edge Function no coincidía con el encabezado `x-sync-secret`.
 
-```json
-{"error":"Unauthorized catalog sync request."}
-```
+El workflow actual de GitHub Actions incluye un paso previo que configura el secreto de runtime `SYNC_SECRET` en el proyecto QA usando el valor de `MILTVPLUS_QA_CATALOG_SYNC_SECRET` del entorno de GitHub `miltvplus-qa`, y luego vuelve a desplegar la función. Por eso, no hace falta copiar manualmente ese mismo secreto a Supabase si el workflow puede autenticarse y desplegar correctamente. No imprimas ni compartas el valor del secreto.
 
-Ese texto lo devuelve el código de la propia Edge Function cuando `SYNC_SECRET` falta o no coincide exactamente con la cabecera `x-sync-secret`. Por tanto, el fallo observado está en la correspondencia del secreto de sincronización, no en la compilación ni en la instalación de Supabase CLI.
+Para validar la recuperación, ejecutá **Actions → Sync TMDB catalog metadata → Run workflow** con `pages=1`. La ejecución solo se considera correcta si termina con HTTP 2xx y `"ok":true`, y muestra conteos de metadatos procesados.
 
-Para corregirlo, copiá el mismo secreto generado en GitHub (`MILTVPLUS_QA_CATALOG_SYNC_SECRET`) al secreto `SYNC_SECRET` de **Supabase QA**. No lo pegues en el chat ni lo imprimas en logs. Luego ejecutá manualmente **Actions → Sync TMDB catalog metadata → Run workflow** con 1 página para la primera comprobación. La ejecución solo se considera correcta si termina con HTTP 2xx y `"ok":true`.
-
-Un HTTP 500 posterior indicaría que falta algún secreto de runtime (normalmente `TMDB_API_KEY`, `SYNC_SECRET` o `SUPABASE_SERVICE_ROLE_KEY`) o que la función no puede escribir en el esquema. Revisá el error sin compartir valores secretos.
+Si devuelve HTTP 401, confirmá que `MILTVPLUS_QA_CATALOG_SYNC_SECRET` existe en el entorno `miltvplus-qa` y que el paso **Align QA Edge Function sync secret** se ejecutó en el proyecto QA correcto. Si devuelve HTTP 500, verificá en **Supabase QA → Edge Functions → Secrets** que existan `TMDB_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY` para ese mismo proyecto. Nunca compartas esos valores. Si falla antes de invocar la función, revisá los secretos de GitHub QA y los permisos del token de acceso.
 
 ## Despliegue de la función
 
