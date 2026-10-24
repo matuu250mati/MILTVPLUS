@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
-import 'catalog_player_screen.dart';
 import 'catalog_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -333,82 +332,6 @@ class _CatalogEntry {
           ? <String>[(item['stream_url'] as String).trim()]
           : const <String>[],
       seriesId: null,
-    );
-  }
-}
-
-Future<void> _openSeriesEpisodes(
-  BuildContext context,
-  _CatalogEntry entry,
-) async {
-  final service = CatalogService();
-  try {
-    final episodes = await service.getEpisodes(entry.seriesId!);
-    if (!context.mounted) return;
-    if (episodes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Esta serie todavía no tiene episodios disponibles.')),
-      );
-      return;
-    }
-    final selectedEpisode = await showModalBottomSheet<EpisodeModel>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.72,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Text(entry.title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: episodes.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final episode = episodes[index];
-                    return ListTile(
-                      leading: const Icon(Icons.play_circle_outline_rounded),
-                      title: Text(episode.title),
-                      subtitle: Text('Temporada ${episode.seasonNumber} · Episodio ${episode.episodeNumber}'),
-                      onTap: () => Navigator.pop(sheetContext, episode),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (selectedEpisode == null || !context.mounted) return;
-    if (selectedEpisode.streamUrls.isEmpty && selectedEpisode.urlStream.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este episodio todavía no está disponible para reproducir.')),
-      );
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CatalogPlayerScreen(
-          title: '${entry.title} · T${selectedEpisode.seasonNumber}E${selectedEpisode.episodeNumber}',
-          streamUrl: selectedEpisode.streamUrls.isNotEmpty
-              ? selectedEpisode.streamUrls.first
-              : selectedEpisode.urlStream,
-          backupStreamUrls: selectedEpisode.streamUrls.length > 1
-              ? selectedEpisode.streamUrls.skip(1).toList(growable: false)
-              : const <String>[],
-        ),
-      ),
-    );
-  } catch (_) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No se pudieron cargar los episodios. Revisá Supabase y las políticas de lectura.')),
     );
   }
 }
