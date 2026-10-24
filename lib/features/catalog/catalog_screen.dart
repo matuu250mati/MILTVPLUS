@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
 import 'catalog_player_screen.dart';
+import 'catalog_detail_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key, required this.category});
@@ -420,27 +421,23 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.streamUrl != null && entry.streamUrl!.trim().isNotEmpty
-            ? () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => CatalogPlayerScreen(
-                      title: entry.title,
-                      streamUrl: entry.streamUrls.isNotEmpty
-                          ? entry.streamUrls.first
-                          : entry.streamUrl!,
-                      backupStreamUrls: entry.streamUrls.length > 1
-                          ? entry.streamUrls.skip(1).toList(growable: false)
-                          : const <String>[],
-                    ),
-                  ),
-                )
-            : entry.seriesId != null
-                ? () => _openSeriesEpisodes(context, entry)
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Este título todavía no está disponible para reproducir.'),
-                      ),
-                    ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CatalogDetailScreen(
+              title: entry.title,
+              category: entry.category,
+              genres: entry.genres,
+              posterUrl: entry.posterUrl,
+              year: entry.year,
+              synopsis: entry.synopsis,
+              streamUrl: entry.streamUrl,
+              backupStreamUrls: entry.streamUrls.length > 1
+                  ? entry.streamUrls.skip(1).toList(growable: false)
+                  : const <String>[],
+              seriesId: entry.seriesId,
+            ),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
