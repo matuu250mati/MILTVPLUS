@@ -78,7 +78,26 @@ Deno.serve(async (req) => {
     let episodesProcessed = 0;
     for (let page = 1; page <= pages; page++) {
       if (includeMovies) {
-        const data = await api(`movie/popular?page=${page}`);
+        // Import current/popular titles plus year-scoped discovery so older popular
+        // titles do not crowd out 2021-2026 releases and announced future films.
+        // This imports metadata only; it never fabricates playback URLs.
+        const movieSourcePaths = [
+          `movie/popular?page=${page}`,
+          `movie/now_playing?page=${page}`,
+          `movie/upcoming?page=${page}`,
+          ...[2021, 2022, 2023, 2024, 2025, 2026].map((year) =>
+            `discover/movie?primary_release_year=${year}&region=AR&sort_by=popularity.desc&page=${page}`),
+          `discover/movie?primary_release_date.gte=2027-01-01&primary_release_date.lte=2035-12-31&region=AR&sort_by=popularity.desc&page=${page}`,
+        ];
+        const sourceResponses = await Promise.all(movieSourcePaths.map(api));
+        const uniqueItems = new Map<number, any>();
+        for (const source of sourceResponses) {
+          for (const item of source.results ?? []) {
+            const id = Number(item.id);
+            if (id > 0) uniqueItems.set(id, item);
+          }
+        }
+        const data = { results: [...uniqueItems.values()] };
         const rows = (data.results ?? []).map((item: any) => ({
           tmdb_id: Number(item.id),
           title: String(item.title ?? item.original_title ?? "").trim(),
@@ -202,7 +221,7 @@ Deno.serve(async (req) => {
       moviesProcessed,
       seriesProcessed,
       episodesProcessed,
-      note: "Metadata imported; existing stream URLs were preserved. Titles and episodes without an authorized stream remain non-playable until an owner adds one.",
+      note: "Metadata imported from popular, now-playing, upcoming, and year-scoped movie discovery (2021-2035); existing stream URLs were preserved. Metadata does not grant playback rights, and titles without an authorized stream remain non-playable.",
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Catalog sync failed." }, 502);
