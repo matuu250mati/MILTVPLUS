@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
-import '../catalog/catalog_player_screen.dart';
+import '../catalog/catalog_detail_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
 /// published catalog; no sample channels or fictional titles are injected.
@@ -177,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (item.releaseYear != null) item.releaseYear.toString(),
                         item.category,
                       ].join(' · '),
-                      onTap: (item) => widget.onNavigate(3),
+                      onTap: (item) => _openSeries(item),
                     ),
                   if (snapshot.hasError) ...[
                     const SizedBox(height: 12),
@@ -207,15 +207,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openMovie(MovieModel movie) async {
-    if (movie.urlStream.trim().isEmpty) {
-      widget.onNavigate(2);
-      return;
-    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => CatalogPlayerScreen(
+        builder: (_) => CatalogDetailScreen(
           title: movie.title,
-          streamUrl: movie.urlStream,
+          category: movie.category,
+          genres: movie.genres,
+          posterUrl: movie.logo,
+          backdropUrl: movie.backdropUrl,
+          year: movie.releaseYear,
+          synopsis: movie.synopsis,
+          streamUrl: movie.streamUrls.isNotEmpty ? movie.streamUrls.first : movie.urlStream,
+          backupStreamUrls: movie.streamUrls.length > 1
+              ? movie.streamUrls.skip(1).toList(growable: false)
+              : const <String>[],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSeries(SeriesModel series) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CatalogDetailScreen(
+          title: series.title,
+          category: series.category,
+          genres: series.genres,
+          posterUrl: series.logo,
+          backdropUrl: series.backdropUrl,
+          year: series.releaseYear,
+          synopsis: series.synopsis,
+          seriesId: series.id,
         ),
       ),
     );
