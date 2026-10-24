@@ -1,0 +1,62 @@
+name: Import open-licence films to QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Maximum films to import (1-100)"
+        required: false
+        default: "25"
+      apply:
+        description: "Write to the QA database (false = dry run, manifest only)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miltvplus-archive-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    # QA only. Never falls back to production secrets.
+    environment: miltvplus-qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Run importer unit tests
+        run: node --test tool/import_archive_catalog.test.mjs
+
+      - name: Import films from Internet Archive
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_QA_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_QA_SERVICE_ROLE_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          LIMIT: ${{ inputs.limit || '25' }}
+          APPLY: ${{ inputs.apply }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--limit "$LIMIT" --out archive_manifest.json)
+          if [ -f config/public_domain_ids.txt ]; then args+=(--ids-file config/public_domain_ids.txt); fi
+          if [ "$APPLY" = "true" ]; then args+=(--apply); fi
+          node tool/import_archive_catalog.mjs "${args[@]}"
+
+      - name: Upload manifest
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: archive-import-manifest
+          path: archive_manifest.json
+          if-no-files-found: ignore

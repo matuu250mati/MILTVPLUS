@@ -1,0 +1,8 @@
+# Internet Archive identifiers que el dueño del catálogo verificó a mano como
+# dominio público o con licencia abierta. Un identificador por línea.
+# Es el de la URL: https://archive.org/details/<identificador>
+# El importador también acepta, sin estar acá, los ítems cuya licencia de
+# metadatos sea dominio público, CC0, CC BY o CC BY-SA.
+#
+# ejemplo:
+# nombre-del-identificador

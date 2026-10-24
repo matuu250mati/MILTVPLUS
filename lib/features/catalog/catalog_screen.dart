@@ -79,7 +79,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     ];
     final category = widget.category.toLowerCase();
 
-    if (widget.category == 'EXPLORAR' || category == 'películas' || category == 'peliculas') return entries;
+    if (widget.category == 'EXPLORAR') return entries;
+    if (category == 'películas' || category == 'peliculas') {
+      // Free / public-domain titles live in their own GRATIS catalog.
+      return entries
+          .where((entry) => !entry.category.toLowerCase().contains('gratis'))
+          .toList(growable: false);
+    }
 
     return entries.where((entry) {
       final searchable = '${entry.category} ${entry.genres.join(' ')} ${entry.title}'.toLowerCase();
