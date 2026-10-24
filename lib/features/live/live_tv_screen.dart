@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/country_preference.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/tv_channel.dart';
 import '../../services/catalog_service.dart';
@@ -92,6 +93,15 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   void initState() {
     super.initState();
     loadSavedChannels();
+    _applySavedCountry();
+  }
+
+  /// Opens Live TV already filtered to the country the user picked at sign-up.
+  /// If no channel matches that country the list falls back to "Todos".
+  Future<void> _applySavedCountry() async {
+    final code = await CountryPreference.load();
+    if (code == null || !mounted) return;
+    setState(() => _selectedCountry = _countryLabel(code));
   }
 
   Future<void> loadSavedChannels({bool showFeedback = false}) async {
