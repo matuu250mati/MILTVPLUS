@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
-import '../catalog/catalog_player_screen.dart';
 import '../catalog/catalog_detail_screen.dart';
 
 /// Responsive streaming dashboard. All media rows are populated from the
