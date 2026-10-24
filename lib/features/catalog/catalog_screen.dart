@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/media_models.dart';
 import '../../services/catalog_service.dart';
+import 'catalog_detail_screen.dart';
 import 'catalog_player_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -262,6 +263,7 @@ String _catalogCategoryIcon(String value) {
 
 class _CatalogEntry {
   const _CatalogEntry({
+    required this.itemKey,
     required this.title,
     required this.category,
     required this.genres,
@@ -271,8 +273,11 @@ class _CatalogEntry {
     required this.streamUrl,
     this.streamUrls = const [],
     required this.seriesId,
+    this.backdropUrl,
   });
 
+  final String itemKey;
+  final String? backdropUrl;
   final String title;
   final String category;
   final List<String> genres;
@@ -283,7 +288,11 @@ class _CatalogEntry {
   final List<String> streamUrls;
   final String? seriesId;
 
+  bool get canPlay => (streamUrl != null && streamUrl!.trim().isNotEmpty) || seriesId != null;
+
   factory _CatalogEntry.fromMovie(MovieModel movie) => _CatalogEntry(
+        itemKey: 'movie:${movie.id}',
+        backdropUrl: movie.backdropUrl,
         title: movie.title,
         category: movie.category,
         genres: movie.genres,
@@ -296,6 +305,8 @@ class _CatalogEntry {
       );
 
   factory _CatalogEntry.fromSeries(SeriesModel series) => _CatalogEntry(
+        itemKey: 'series:${series.id}',
+        backdropUrl: series.backdropUrl,
         title: series.title,
         category: series.category,
         genres: series.genres,
@@ -315,6 +326,7 @@ class _CatalogEntry {
     final rawTitle = item['title'] as String? ?? 'Sin título';
     final seriesTitle = item['series_title'] as String?;
     return _CatalogEntry(
+      itemKey: 'submission:${item['id'] ?? rawTitle}',
       title: isEpisode && seriesTitle != null && seriesTitle.trim().isNotEmpty
           ? '$seriesTitle · $rawTitle'
           : rawTitle,
@@ -412,6 +424,32 @@ Future<void> _openSeriesEpisodes(
   }
 }
 
+/// Reproduce un título dentro de la app: película directa o episodio de serie.
+Future<void> _playEntry(BuildContext context, _CatalogEntry entry) async {
+  final streamUrl = entry.streamUrl;
+  if (streamUrl != null && streamUrl.trim().isNotEmpty) {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CatalogPlayerScreen(
+          title: entry.title,
+          streamUrl: entry.streamUrls.isNotEmpty ? entry.streamUrls.first : streamUrl,
+          backupStreamUrls: entry.streamUrls.length > 1
+              ? entry.streamUrls.skip(1).toList(growable: false)
+              : const <String>[],
+        ),
+      ),
+    );
+    return;
+  }
+  if (entry.seriesId != null) {
+    await _openSeriesEpisodes(context, entry);
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Este título todavía no está disponible para reproducir.')),
+  );
+}
+
 class _CatalogCard extends StatelessWidget {
   const _CatalogCard({required this.entry});
 
@@ -420,27 +458,22 @@ class _CatalogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(17),
-        onTap: entry.streamUrl != null && entry.streamUrl!.trim().isNotEmpty
-            ? () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => CatalogPlayerScreen(
-                      title: entry.title,
-                      streamUrl: entry.streamUrls.isNotEmpty
-                          ? entry.streamUrls.first
-                          : entry.streamUrl!,
-                      backupStreamUrls: entry.streamUrls.length > 1
-                          ? entry.streamUrls.skip(1).toList(growable: false)
-                          : const <String>[],
-                    ),
-                  ),
-                )
-            : entry.seriesId != null
-                ? () => _openSeriesEpisodes(context, entry)
-                : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Este título todavía no está disponible para reproducir.'),
-                      ),
-                    ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CatalogDetailScreen(
+              itemKey: entry.itemKey,
+              title: entry.title,
+              category: entry.category,
+              genres: entry.genres,
+              posterUrl: entry.posterUrl,
+              backdropUrl: entry.backdropUrl,
+              year: entry.year,
+              synopsis: entry.synopsis,
+              canPlay: entry.canPlay,
+              onPlay: (playContext) => _playEntry(playContext, entry),
+            ),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
