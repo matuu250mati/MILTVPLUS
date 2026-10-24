@@ -24,7 +24,26 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Analyze Dart and Flutter code
-        run: flutter analyze
+        shell: bash
+        run: |
+          # Keep the analyzer's real output visible: log it, add it to the run
+          # summary and publish it as a single annotation. Any issue, including
+          # infos, still fails the build.
+          set +e
+          flutter analyze 2>&1 | tee analyze.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '### flutter analyze'
+              echo '```'
+              grep -E '^\s*(error|warning|info) ' analyze.txt | head -60
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            msg="$(grep -E '^\s*(error|warning|info) ' analyze.txt | head -30 | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            echo "::error title=flutter analyze::${msg}"
+          fi
+          exit "$status"
       - name: Run tests
         run: flutter test
 

@@ -991,6 +991,8 @@ cat > "$root_dir/android/app/src/main/AndroidManifest.xml" <<'MANIFEST'
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Required so the in-app OTA can hand the downloaded APK to the system installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name="${applicationName}"

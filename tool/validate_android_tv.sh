@@ -82,6 +82,8 @@ for category in ("android.intent.category.LAUNCHER", "android.intent.category.LE
 permissions = {item.get(android + "name") for item in root.findall("uses-permission")}
 if "android.permission.INTERNET" not in permissions:
     raise SystemExit("Android validation failed: INTERNET permission is missing")
+if "android.permission.REQUEST_INSTALL_PACKAGES" not in permissions:
+    raise SystemExit("Android validation failed: REQUEST_INSTALL_PACKAGES is missing; OTA updates cannot open the installer")
 
 metadata = {item.get(android + "name"): item.get(android + "value") for item in application.findall("meta-data")}
 if metadata.get("flutterEmbedding") != "2":

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/country_catalog.dart';
+import '../../core/country_preference.dart';
 import '../../core/supabase_config.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -18,15 +22,27 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   final _phone = TextEditingController();
   final _otp = TextEditingController();
+  final _name = TextEditingController();
+  final _code = TextEditingController();
   final _emailFocus = FocusNode(debugLabel: 'login-email');
   final _passwordFocus = FocusNode(debugLabel: 'login-password');
   final _submitFocus = FocusNode(debugLabel: 'login-submit');
   final _registerFocus = FocusNode(debugLabel: 'login-register');
   final _phoneModeFocus = FocusNode(debugLabel: 'login-phone-mode');
 
+  late CountryOption _country;
+  bool _verifying = false;
+  int _resendIn = 0;
+  Timer? _cooldownTimer;
+
   @override
   void initState() {
     super.initState();
+    // Pre-select the country the device reports; Argentina is the fallback.
+    _country = countryByCode(
+          WidgetsBinding.instance.platformDispatcher.locale.countryCode,
+        ) ??
+        countryByCode('AR')!;
     // Explicit D-pad routing avoids traversal getting trapped in helper controls
     // between the email, password and primary action on Android TV remotes.
     _emailFocus.onKeyEvent = (_, event) =>
@@ -68,6 +84,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
+    _name.dispose();
+    _code.dispose();
     _email.dispose();
     _password.dispose();
     _phone.dispose();
@@ -85,7 +104,9 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() { _busy = true; _message = null; });
     try {
       final auth = Supabase.instance.client.auth;
-      if (_phoneMode) {
+      if (_verifying) {
+        await _verifyEmailCode();
+      } else if (_phoneMode) {
         final phone = _pendingPhone ??
             '+549${_phone.text.replaceAll(RegExp(r'\D'), '')}';
         if (!_otpSent) {
@@ -109,29 +130,53 @@ class _AuthScreenState extends State<AuthScreen> {
         final response = await auth.signUp(
           email: _email.text.trim(),
           password: _password.text,
+          data: <String, dynamic>{
+            'full_name': _name.text.trim(),
+            'country': _country.code,
+          },
         );
         if (!mounted) return;
-        setState(() {
-          _error = false;
-          _message = response.session == null
-              ? 'Cuenta creada. Revisá tu correo y confirmá la dirección antes de iniciar sesión.'
-              : 'Cuenta creada correctamente.';
-        });
-        if (response.session != null) widget.onAuthenticated?.call();
+        if (response.session != null) {
+          // Email verification is mandatory. A session at this point means the
+          // server has "Confirm email" turned off, so do not let the user in.
+          await auth.signOut();
+          if (!mounted) return;
+          setState(() {
+            _error = true;
+            _message = 'La verificación por correo no está activada en el servidor. Avisale al administrador.';
+          });
+          return;
+        }
+        await CountryPreference.save(_country.code);
+        _enterVerification(
+          'Te enviamos un código de 6 dígitos a ${_email.text.trim()}. Ingresalo para activar tu cuenta.',
+        );
       } else {
-        await auth.signInWithPassword(
+        final response = await auth.signInWithPassword(
           email: _email.text.trim(),
           password: _password.text,
         );
+        await CountryPreference.syncFromMetadata(response.user?.userMetadata);
         if (mounted) widget.onAuthenticated?.call();
       }
     } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = true;
-          _message = e.message;
-        });
+      if (!mounted) return;
+      final unverified = !_register &&
+          !_phoneMode &&
+          !_verifying &&
+          e.message.toLowerCase().contains('not confirmed');
+      if (unverified) {
+        await _resendCode(force: true);
+        if (!mounted) return;
+        _enterVerification(
+          'Tu correo todavía no está verificado. Te enviamos un código nuevo a ${_email.text.trim()}.',
+        );
+        return;
       }
+      setState(() {
+        _error = true;
+        _message = e.message;
+      });
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -142,6 +187,138 @@ class _AuthScreenState extends State<AuthScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _enterVerification(String message) {
+    setState(() {
+      _verifying = true;
+      _error = false;
+      _message = message;
+      _code.clear();
+    });
+    _startCooldown();
+  }
+
+  void _leaveVerification() {
+    _cooldownTimer?.cancel();
+    setState(() {
+      _verifying = false;
+      _resendIn = 0;
+      _code.clear();
+      _message = null;
+    });
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    setState(() => _resendIn = 60);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _resendIn <= 1) {
+        timer.cancel();
+        if (mounted) setState(() => _resendIn = 0);
+        return;
+      }
+      setState(() => _resendIn -= 1);
+    });
+  }
+
+  Future<void> _verifyEmailCode() async {
+    final auth = Supabase.instance.client.auth;
+    final response = await auth.verifyOTP(
+      type: OtpType.signup,
+      email: _email.text.trim(),
+      token: _code.text.trim(),
+    );
+    if (response.session == null) {
+      if (!mounted) return;
+      setState(() {
+        _error = true;
+        _message = 'No se pudo verificar el código. Pedí uno nuevo.';
+      });
+      return;
+    }
+    await CountryPreference.syncFromMetadata(response.user?.userMetadata);
+    if (mounted) widget.onAuthenticated?.call();
+  }
+
+  Future<void> _resendCode({bool force = false}) async {
+    if (!force && (_busy || _resendIn > 0)) return;
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: _email.text.trim(),
+      );
+      if (!mounted || force) return;
+      _startCooldown();
+      setState(() {
+        _error = false;
+        _message = 'Te enviamos un código nuevo a ${_email.text.trim()}.';
+      });
+    } on AuthException catch (e) {
+      if (!mounted || force) return;
+      setState(() {
+        _error = true;
+        _message = e.message;
+      });
+    } catch (_) {
+      if (!mounted || force) return;
+      setState(() {
+        _error = true;
+        _message = 'No se pudo reenviar el código. Intentá en unos minutos.';
+      });
+    }
+  }
+
+  Future<void> _pickCountry() async {
+    final picked = await showModalBottomSheet<CountryOption>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * .75,
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Text('¿Desde qué país mirás?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final country in supportedCountries)
+                    ListTile(
+                      leading: Text(country.flag, style: const TextStyle(fontSize: 26)),
+                      title: Text(country.name),
+                      trailing: country.code == _country.code
+                          ? const Icon(Icons.check_circle_rounded, color: AppTheme.accent)
+                          : null,
+                      onTap: () => Navigator.of(sheetContext).pop(country),
+                    ),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _country = picked);
+  }
+
+  Widget _messageBox() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: (_error ? Colors.redAccent : AppTheme.accent).withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(_message!, style: TextStyle(
+        color: _error ? Colors.redAccent.shade100 : AppTheme.accent, height: 1.4,
+      )),
+    );
   }
 
   Future<void> _resetPassword() async {
@@ -231,10 +408,70 @@ class _AuthScreenState extends State<AuthScreen> {
                     const Text('MILTV PLUS', textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
                     const SizedBox(height: 8),
-                    Text(_register ? 'Creá tu cuenta para continuar' : 'Iniciá sesión para acceder al catálogo',
+                    Text(
+                      _verifying
+                          ? 'Verificá tu correo para activar la cuenta'
+                          : _register
+                              ? 'Creá tu cuenta para continuar'
+                              : 'Iniciá sesión para acceder al catálogo',
                       textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted)),
                     const SizedBox(height: 26),
-                    if (!_phoneMode) ...[
+                    if (_verifying) ...[
+                      TextFormField(
+                        controller: _code,
+                        keyboardType: TextInputType.number,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        maxLength: 6,
+                        textAlign: TextAlign.center,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        style: const TextStyle(fontSize: 26, letterSpacing: 8, fontWeight: FontWeight.w800),
+                        decoration: const InputDecoration(
+                          labelText: 'Código de verificación',
+                          counterText: '',
+                          prefixIcon: Icon(Icons.verified_user_outlined),
+                        ),
+                        validator: (v) => RegExp(r'^\d{6}$').hasMatch((v ?? '').trim())
+                            ? null
+                            : 'Ingresá el código de 6 dígitos.',
+                      ),
+                      const SizedBox(height: 14),
+                      if (_message != null) ...[
+                        _messageBox(),
+                        const SizedBox(height: 14),
+                      ],
+                      FilledButton(
+                        onPressed: _busy ? null : _submit,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          child: _busy
+                              ? const SizedBox(width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Text('VERIFICAR Y ENTRAR'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: (_busy || _resendIn > 0) ? null : _resendCode,
+                        child: Text(_resendIn > 0
+                            ? 'Reenviar código en ${_resendIn}s'
+                            : 'Reenviar código'),
+                      ),
+                      TextButton(
+                        onPressed: _busy ? null : _leaveVerification,
+                        child: const Text('Usar otro correo'),
+                      ),
+                    ] else if (!_phoneMode) ...[
+                    if (_register) ...[
+                      TextFormField(
+                        controller: _name,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.name],
+                        decoration: const InputDecoration(labelText: 'Nombre', prefixIcon: Icon(Icons.person_outline_rounded)),
+                        validator: (v) => (v ?? '').trim().length >= 2 ? null : 'Ingresá tu nombre.',
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     TextFormField(
                       focusNode: _emailFocus,
                       controller: _email,
@@ -266,6 +503,22 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       validator: (v) => (v ?? '').length >= 6 ? null : 'Usá al menos 6 caracteres.',
                     ),
+                    if (_register) ...[
+                      const SizedBox(height: 14),
+                      OutlinedButton(
+                        onPressed: _busy ? null : _pickCountry,
+                        style: OutlinedButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                        ),
+                        child: Row(children: [
+                          Text(_country.flag, style: const TextStyle(fontSize: 22)),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text('País: ${_country.name}')),
+                          const Icon(Icons.expand_more_rounded),
+                        ]),
+                      ),
+                    ],
                     if (!_register) Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(onPressed: _busy ? null : _resetPassword, child: const Text('Olvidé mi contraseña')),
