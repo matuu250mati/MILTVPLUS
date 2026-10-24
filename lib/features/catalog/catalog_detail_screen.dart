@@ -126,6 +126,27 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
     );
   }
 
+  Future<void> _playFirstAvailableEpisode() async {
+    try {
+      final episodes = await _episodesFuture;
+      for (final episode in episodes) {
+        if (episode.urlStream.trim().isNotEmpty || episode.streamUrls.isNotEmpty) {
+          await _playEpisode(episode);
+          return;
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Esta serie todavía no tiene episodios con una fuente de reproducción configurada.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudieron consultar los episodios de esta serie.')),
+      );
+    }
+  }
+
   Future<void> _playEpisode(EpisodeModel episode) async {
     final urls = episode.streamUrls.isNotEmpty
         ? episode.streamUrls
@@ -220,9 +241,9 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
             children: [
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: isSeries ? null : _playMovie,
+                  onPressed: isSeries ? _playFirstAvailableEpisode : _playMovie,
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Reproducir'),
+                  label: Text(isSeries ? 'Reproducir serie' : 'Reproducir'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.accent,
                     foregroundColor: const Color(0xFF06101B),
